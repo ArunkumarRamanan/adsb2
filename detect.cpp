@@ -49,7 +49,14 @@ int main(int argc, char **argv) {
 
     Mat norm;
     normalize(prob, norm, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-    imwrite(output_path, norm);
+
+    BOOST_VERIFY(norm.size() == image.size());
+
+    image.convertTo(image, CV_8UC1);
+
+    Mat out;
+    hconcat(image, norm, out);
+    imwrite(output_path, out);
 
     delete det;
     return 0;
