@@ -1,0 +1,3 @@
+[submodule "caffex-fcn"]
+	path = caffex-fcn
+	url = https://github.com/aaalgo/caffex-fcn
