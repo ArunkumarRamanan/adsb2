@@ -1,13 +1,23 @@
 CXX = g++
-CXXFLAGS = -g -O3 -std=c++11 -fopenmp
-LDFLAGS += -fopenmp -L/usr/local/lib
+CXXFLAGS = -g -O3 -std=c++11 -fopenmp -I/home/wdong/caffe-fcn/include
+LDFLAGS += -fopenmp -L/home/wdong/caffe-fcn/build/lib -static
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
-LDLIBS = -lopencv_imgproc -lopencv_highgui -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
-HEADERS =
-COMMON = 
+LDLIBS = caffex.o \
+ 	 -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
+	 -lopencv_ml -lopencv_imgproc -lopencv_highgui -lopencv_core \
+	 -lboost_timer -lboost_chrono -lboost_thread -lboost_filesystem -lboost_system -lboost_program_options \
+	 -lprotoc -lprotobuf -lglog -lgflags -lleveldb -llmdb \
+	 -lhdf5_hl -lhdf5 \
+	 -ljpeg -lpng -ltiff -lgif -ljasper  \
+	 -lsnappy -lz \
+	 -lopenblas \
+	 -lunwind -lrt -lm -ldl
+	 
+HEADERS = heart.h
+COMMON = detector-caffe.o
 
 
-PROGS = heart
+PROGS = detect #heart detect
 
 all:	$(PROGS)
 
