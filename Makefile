@@ -13,7 +13,7 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lunwind -lrt -lm -ldl
 	 
 HEADERS = heart.h
-COMMON = detector-caffe.o caffex.o
+COMMON = detector-caffe.o caffex-fcn/caffex.o
 
 
 PROGS = detect #heart detect
