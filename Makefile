@@ -1,6 +1,6 @@
 CXX = g++
-CXXFLAGS = -g -O3 -std=c++11 -fopenmp -I/home/wdong/caffe-fcn/include
-LDFLAGS += -fopenmp -L/home/wdong/caffe-fcn/build/lib -static
+CXXFLAGS = -g -O3 -std=c++11 -fopenmp -I/home/wdong/src/caffe-fcn/include -I/opt/chain/include
+LDFLAGS += -fopenmp -L/home/wdong/src/caffe-fcn/lib -L/opt/chain/lib
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
 LDLIBS = caffex.o \
  	 -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
