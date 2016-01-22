@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <boost/assert.hpp>
 #include <glog/logging.h>
@@ -8,6 +9,36 @@
 
 using namespace std;
 using namespace cv;
+namespace fs = boost::filesystem;
+
+Mat imreadx (string const &path) {
+    Mat v = imread(path, -1);
+    if (!v.data) {
+        // failed, resort to convert
+        ostringstream ss;
+        fs::path tmp(fs::unique_path("%%%%-%%%%-%%%%-%%%%.pgm"));
+        ss << "convert " << path << " " << tmp.native();
+        ::system(ss.str().c_str());
+        v = imread(tmp.native(), -1);
+        fs::remove(tmp);
+    }
+    if (!v.data) return v;
+    if (v.cols < v.rows) {
+        transpose(v, v);
+    }
+    // TODO! support color image
+    if (v.channels() == 3) {
+        cv::cvtColor(v, v, CV_BGR2GRAY);
+    }
+    else CHECK(v.channels() == 1);
+    // always to gray
+    if (v.type() == CV_16UC1
+            || v.type() == CV_32FC1) {
+        normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    }
+    else CHECK(v.type() == CV_8UC1);
+    return v;
+}
 
 int main(int argc, char **argv) {
     //Stack stack("sax", "tmp");
@@ -43,7 +74,7 @@ int main(int argc, char **argv) {
     heart::Detector *det = heart::make_caffe_detector(model_dir);
     BOOST_VERIFY(det);
 
-    Mat image = imread(input_path, -1);
+    Mat image = imreadx(input_path);
     Mat prob;
     det->apply(image, &prob);
 
@@ -51,8 +82,6 @@ int main(int argc, char **argv) {
     normalize(prob, norm, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
     BOOST_VERIFY(norm.size() == image.size());
-
-    image.convertTo(image, CV_8UC1);
 
     Mat out;
     hconcat(image, norm, out);

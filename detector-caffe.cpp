@@ -1,8 +1,8 @@
 #include <vector>
-#include "caffex.h"
-#include "heart.h"
+#include <caffex.h>
+#include "adsb2.h"
 
-namespace heart {
+namespace adsb2 {
     class CaffeDetector: public Detector {
         caffex::Caffex impl;
     public:
