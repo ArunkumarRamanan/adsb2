@@ -146,7 +146,7 @@ namespace adsb2 {
             (*mat)(roi).setTo(v);
         }
 
-        void eval (cv::Mat mat, float *s1, float *s2) const;
+        void eval (cv::Mat mat, Meta const &meta, float *s1, float *s2) const;
     };
 
     class Samples: public vector<Sample> {

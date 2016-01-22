@@ -27,7 +27,7 @@ namespace adsb2 {
         }
     }
 
-    void Sample::eval (cv::Mat mat, float *s1, float *s2) const {
+    void Sample::eval (cv::Mat mat, Meta const &meta, float *s1, float *s2) const {
         cv::Rect rect;
         round(box, &rect);
         cv::Mat roi = mat(rect);
@@ -38,6 +38,6 @@ namespace adsb2 {
         cv::meanStdDev(roi, avg, stv);
         */
         *s1 = covered / total;
-        *s2 = roi.total();
+        *s2 = std::sqrt(roi.total() * meta.pixel_spacing);
     }
 }

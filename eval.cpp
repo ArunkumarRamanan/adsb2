@@ -58,11 +58,12 @@ int main(int argc, char **argv) {
     CHECK(det) << " cannot create detector.";
 
     for (auto const &s: samples) {
-        cv::Mat image = loader.load(root_dir + s.path);
+        Meta meta;
+        cv::Mat image = loader.load(root_dir + s.path, &meta);
         Mat prob;
         det->apply(image, &prob);
         float s1, s2;
-        s.eval(prob, &s1, &s2);
+        s.eval(prob, meta, &s1, &s2);
         cout << s1 << '\t' << s2 << endl;
         /*
         Rect bb;
