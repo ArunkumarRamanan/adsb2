@@ -33,9 +33,11 @@ namespace adsb2 {
         cv::Mat roi = mat(rect);
         float total = cv::sum(mat)[0];
         float covered = cv::sum(roi)[0];
+        /*
         cv::Scalar avg, stv;
         cv::meanStdDev(roi, avg, stv);
+        */
         *s1 = covered / total;
-        *s2 = stv[0] / avg[0];
+        *s2 = roi.total();
     }
 }

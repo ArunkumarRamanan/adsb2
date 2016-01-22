@@ -37,39 +37,16 @@ namespace adsb2 {
     Detector *make_caffe_detector (string const &);
     Detector *make_cascade_detector (string const &);
 
+    struct Meta {
+        float pixel_spacing;
+    };
+
     class ImageLoader {
     public:
         ImageLoader (Config const &config) {
         }
 
-        cv::Mat load (string const &path) const {
-            cv::Mat v = cv::imread(path, -1);
-            if (!v.data) {
-                // failed, resort to convert
-                ostringstream ss;
-                fs::path tmp(fs::unique_path("%%%%-%%%%-%%%%-%%%%.pgm"));
-                ss << "convert " << path << " " << tmp.native();
-                ::system(ss.str().c_str());
-                v = cv::imread(tmp.native(), -1);
-                fs::remove(tmp);
-            }
-            if (!v.data) return v;
-            if (v.cols < v.rows) {
-                transpose(v, v);
-            }
-            // TODO! support color image
-            if (v.channels() == 3) {
-                cv::cvtColor(v, v, CV_BGR2GRAY);
-            }
-            else CHECK(v.channels() == 1);
-            // always to gray
-            if (v.type() == CV_16UC1
-                    || v.type() == CV_32FC1) {
-                normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-            }
-            else CHECK(v.type() == CV_8UC1);
-            return v;
-        }
+        cv::Mat load (string const &path, Meta *meta = nullptr) const;
     };
 
     class Stack: public vector<cv::Mat> {
