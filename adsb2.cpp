@@ -26,4 +26,16 @@ namespace adsb2 {
             config->put<std::string>(D.substr(0, o), D.substr(o + 1));
         }
     }
+
+    void Sample::eval (cv::Mat mat, float *s1, float *s2) const {
+        cv::Rect rect;
+        round(box, &rect);
+        cv::Mat roi = mat(rect);
+        float total = cv::sum(mat)[0];
+        float covered = cv::sum(roi)[0];
+        cv::Scalar avg, stv;
+        cv::meanStdDev(roi, avg, stv);
+        *s1 = covered / total;
+        *s2 = stv[0] / avg[0];
+    }
 }

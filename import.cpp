@@ -27,20 +27,6 @@ using namespace adsb2;
 
 string backend("lmdb");
 
-struct Sample {
-    int id;
-    string line;
-    string path;
-    Rect_<float> box;
-};
-
-void round (Rect_<float> const &from, Rect *to) {
-    to->x = round(from.x);
-    to->y = round(from.y);
-    to->width = round(from.x + from.width) - to->x;
-    to->height = round(from.y + from.height) - to->y;
-}
-
 void import (ImageLoader const &loader, vector<Sample> const &samples, string const &prefix, fs::path const &dir) {
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
@@ -68,10 +54,8 @@ void import (ImageLoader const &loader, vector<Sample> const &samples, string co
         Mat label(image.size(), CV_8UC1);
 
         // save label
-        Rect roi;
-        round(sample.box, &roi);
         label.setTo(Scalar(0));
-        label(roi).setTo(Scalar(1)); // TODO!
+        sample.fill_roi(&label, cv::Scalar(1));
         caffe::CVMatToDatum(label, &datum);
         datum.set_label(0);
         CHECK(datum.SerializeToString(&value));
@@ -154,34 +138,7 @@ int main(int argc, char **argv) {
 
     ImageLoader loader(config);
 
-    vector<Sample> samples;
-    {
-        Sample s;
-        ifstream is(list_path.c_str());
-	CHECK(is) << "Cannot open list file: " << list_path;
-        s.id = 0;
-        string line;
-        while (getline(is, line)) {
-            istringstream ss(line);
-            string path;
-            float x, y, w, h;
-            ss >> path >> x >> y >> w >> h;
-            if (!ss) {
-                LOG(ERROR) << "Bad line: " << line;
-                continue;
-            }
-            s.line = line;
-            s.path = path;
-            s.box = cv::Rect_<float>(x, y, w, h);
-            if (!fs::is_regular_file(fs::path(root_dir + path))) {
-                LOG(ERROR) << "Cannot find regular file: " << path;
-                continue;
-            }
-            samples.push_back(s);
-            ++s.id;
-        }
-        LOG(INFO) << "Loaded " << samples.size() << " samples." << endl;
-    }
+    Samples samples(list_path, root_dir);
 
     if (F == 1) {
         import(loader, samples, root_dir, fs::path(output_dir));

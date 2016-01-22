@@ -12,7 +12,7 @@ namespace adsb2 {
         virtual void apply (cv::Mat input, cv::Mat *output) {
             std::vector<float> prob;
             impl.apply(input, &prob);
-            std::cerr << prob.size() << ' ' << input.total() << std::endl;
+            //std::cerr << prob.size() << ' ' << input.total() << std::endl;
             BOOST_VERIFY(prob.size() == input.total() * 2);
             cv::Mat m(input.size(), CV_32F, &prob[input.total()]);
             *output = m.clone();

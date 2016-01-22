@@ -1,7 +1,8 @@
 #pragma once
 #include <string>
-#include <sstream>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <opencv2/opencv.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -15,6 +16,8 @@ namespace adsb2 {
     using std::string;
     using std::vector;
     using std::ostringstream;
+    using std::istringstream;
+    using std::ifstream;
     namespace fs = boost::filesystem;
 
     // XML configuration
@@ -137,4 +140,60 @@ namespace adsb2 {
             }
         }
     };
+
+    static inline void round (cv::Rect_<float> const &from, cv::Rect *to) {
+        to->x = std::round(from.x);
+        to->y = std::round(from.y);
+        to->width = std::round(from.x + from.width) - to->x;
+        to->height = std::round(from.y + from.height) - to->y;
+    }
+
+
+    struct Sample {
+        int id;
+        string line;
+        string path;
+        cv::Rect_<float> box;
+
+        bool load (string const &txt) {
+            istringstream ss(txt);
+            ss >> path >> box.x >> box.y >> box.width >> box.height;
+            if (!ss) return false;
+            line = txt;
+            return true;
+        }
+
+        void fill_roi (cv::Mat *mat, cv::Scalar const &v) const {
+            cv::Rect roi;
+            round(box, &roi);
+            (*mat)(roi).setTo(v);
+        }
+
+        void eval (cv::Mat mat, float *s1, float *s2) const;
+    };
+
+    class Samples: public vector<Sample> {
+    public:
+        Samples (string const &path, string const &root_dir) {
+            ifstream is(path.c_str());
+            CHECK(is) << "Cannot open list file: " << path;
+            Sample s;
+            s.id = 0;
+            string line;
+            while (getline(is, line)) {
+                if (!s.load(line)) {
+                    LOG(ERROR) << "Bad line: " << line;
+                    continue;
+                }
+                if (!fs::is_regular_file(fs::path(root_dir + s.path))) {
+                    LOG(ERROR) << "Cannot find regular file: " << s.path;
+                    continue;
+                }
+                push_back(s);
+                ++s.id;
+            }
+            LOG(INFO) << "Loaded " << size() << " samples.";
+        }
+    };
+
 }
