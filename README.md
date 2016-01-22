@@ -1,4 +1,4 @@
-# ADSB2
+# ADSB2: Annual Data Science Bow
 
 ## Build programs
 
@@ -9,17 +9,12 @@ ln -s Makefile.shared Makefile
 make 
 ```
 
-## Check Configuration
-
-Check the content of file adsb2.xml. The path specified
-in data_dir should contain the training data.
-
 ## import images
 
 The bbox.txt is a bounding box listing file.
 
 ```
-./import -f 50 bbox.txt f50
+./import --root /ssd/wdong/adsb2/train/ -f 50 bbox.txt f50
 ```
 
 After that, f50/train and f50/val will be produced
@@ -61,9 +56,17 @@ After traing is done, copy one of the caffemodel files
 into model/caffe.params.  The model directory should then
 be ready to go.
 
+To change Caffe setting, either edit config.json and run
+finetune-generate.py again, or directly modify the Caffe
+prototxt files (those will be overwritten by subsequent
+runs of finetune-generate.py).
+
 ## Testing Model
 
 ```
-./detect sax --gif x.gif
+./detect /ssd/wdong/adsb2/train/337/study/sax_17 --gif x.gif
 ```
+The detect command assumes a "model" directory under the
+current directory.  Otherwise, specify the model with
+"-D adsb2.caffe.model=model-dir".
 
