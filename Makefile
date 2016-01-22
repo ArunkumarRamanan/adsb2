@@ -1,3 +1,4 @@
+.PHONY:	all clean caffex
 CXX = g++
 CXXFLAGS = -g -O3 -std=c++11 -fopenmp -I/opt/caffe-fcn/include -Icaffex-fcn
 LDFLAGS += -fopenmp -L/opt/caffe-fcn/lib -static
@@ -13,16 +14,18 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lunwind -lrt -lm -ldl
 	 
 HEADERS = adsb2.h
-COMMON = detector-caffe.o caffex-fcn/caffex.o
+COMMON = adsb2.o detector-caffe.o caffex-fcn/caffex.o
 
 
-PROGS = heart import-images
+PROGS = detect import eval
 
 all:	$(PROGS)
 
-$(PROGS):	%:      %.o $(COMMON)
+$(PROGS):	%:      %.o caffex $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
 
 %.o:	%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
+caffex:
+	make -C caffex-fcn caffex.o

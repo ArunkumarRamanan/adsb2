@@ -1,11 +1,12 @@
-#ifndef ADSB2
-#define ADSB2 
+#pragma once
 #include <string>
 #include <sstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
+#define BOOST_SPIRIT_THREADSAFE
+#include <boost/property_tree/ptree.hpp>
 #include <boost/assert.hpp>
 #include <glog/logging.h>
 
@@ -16,6 +17,14 @@ namespace adsb2 {
     using std::ostringstream;
     namespace fs = boost::filesystem;
 
+    // XML configuration
+    typedef boost::property_tree::ptree Config;
+
+    void LoadConfig (string const &path, Config *);
+    void SaveConfig (string const &path, Config const &);
+    // Overriding configuration options in the form of "KEY=VALUE"
+    void OverrideConfig (std::vector<std::string> const &overrides, Config *);
+
     class Detector {
     public:
         virtual ~Detector () {}
@@ -25,34 +34,40 @@ namespace adsb2 {
     Detector *make_caffe_detector (string const &);
     Detector *make_cascade_detector (string const &);
 
-    static inline cv::Mat imreadx (string const &path) {
-        cv::Mat v = cv::imread(path, -1);
-        if (!v.data) {
-            // failed, resort to convert
-            ostringstream ss;
-            fs::path tmp(fs::unique_path("%%%%-%%%%-%%%%-%%%%.pgm"));
-            ss << "convert " << path << " " << tmp.native();
-            ::system(ss.str().c_str());
-            v = cv::imread(tmp.native(), -1);
-            fs::remove(tmp);
+    class ImageLoader {
+    public:
+        ImageLoader (Config const &config) {
         }
-        if (!v.data) return v;
-        if (v.cols < v.rows) {
-            transpose(v, v);
+
+        cv::Mat load (string const &path) const {
+            cv::Mat v = cv::imread(path, -1);
+            if (!v.data) {
+                // failed, resort to convert
+                ostringstream ss;
+                fs::path tmp(fs::unique_path("%%%%-%%%%-%%%%-%%%%.pgm"));
+                ss << "convert " << path << " " << tmp.native();
+                ::system(ss.str().c_str());
+                v = cv::imread(tmp.native(), -1);
+                fs::remove(tmp);
+            }
+            if (!v.data) return v;
+            if (v.cols < v.rows) {
+                transpose(v, v);
+            }
+            // TODO! support color image
+            if (v.channels() == 3) {
+                cv::cvtColor(v, v, CV_BGR2GRAY);
+            }
+            else CHECK(v.channels() == 1);
+            // always to gray
+            if (v.type() == CV_16UC1
+                    || v.type() == CV_32FC1) {
+                normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+            }
+            else CHECK(v.type() == CV_8UC1);
+            return v;
         }
-        // TODO! support color image
-        if (v.channels() == 3) {
-            cv::cvtColor(v, v, CV_BGR2GRAY);
-        }
-        else CHECK(v.channels() == 1);
-        // always to gray
-        if (v.type() == CV_16UC1
-                || v.type() == CV_32FC1) {
-            normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-        }
-        else CHECK(v.type() == CV_8UC1);
-        return v;
-    }
+    };
 
     class Stack: public vector<cv::Mat> {
     public:
@@ -85,7 +100,7 @@ namespace adsb2 {
     class DcmStack: public Stack {
         vector<fs::path> names;
     public:
-        DcmStack (std::string const &dir) {
+        DcmStack (std::string const &dir, ImageLoader const &loader) {
             // enumerate DCM files
             fs::path input_dir(dir);
             fs::directory_iterator end_itr;
@@ -111,7 +126,7 @@ namespace adsb2 {
                 auto dcm_path = input_dir;
                 dcm_path /= name;
                 dcm_path += ".dcm";
-                cv::Mat image = imreadx(dcm_path.native());
+                cv::Mat image = loader.load(dcm_path.native());
                 BOOST_VERIFY(image.total());
                 BOOST_VERIFY(image.type() == CV_8UC1);
                 BOOST_VERIFY(image.isContinuous());
@@ -122,6 +137,4 @@ namespace adsb2 {
             }
         }
     };
-
 }
-#endif
