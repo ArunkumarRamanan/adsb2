@@ -16,7 +16,7 @@ HEADERS = adsb2.h
 COMMON = detector-caffe.o caffex-fcn/caffex.o
 
 
-PROGS = heart
+PROGS = heart import-images
 
 all:	$(PROGS)
 
