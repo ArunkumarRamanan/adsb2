@@ -25,7 +25,7 @@ namespace adsb2 {
     Detector *make_caffe_detector (string const &);
     Detector *make_cascade_detector (string const &);
 
-    cv::Mat imreadx (string const &path) {
+    static inline cv::Mat imreadx (string const &path) {
         cv::Mat v = cv::imread(path, -1);
         if (!v.data) {
             // failed, resort to convert
