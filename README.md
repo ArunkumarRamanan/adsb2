@@ -1,4 +1,13 @@
-#
+# ADSB2
+
+## Build programs
+
+```
+git submodule init
+git submodule update
+ln -s Makefile.shared Makefile
+make 
+```
 
 ## Check Configuration
 
@@ -6,11 +15,19 @@ Check the content of file adsb2.xml. The path specified
 in data_dir should contain the training data.
 
 ## import images
-# after that, f50/train and f50/val will be produced
-# these dirs will be used by Caffe
+
+The bbox.txt is a bounding box listing file.
+
 ```
-./import --list bbox.txt -f 50 f50
+./import -f 50 bbox.txt f50
 ```
+
+After that, f50/train and f50/val will be produced
+these dirs will be used by Caffe.
+"-f" specify the number of fold.  The command
+only generate one of the 50 cross validation
+configurations.  To generate all, add "--full" to
+command line.
 
 ## Generate Caffe Training Directory
 
