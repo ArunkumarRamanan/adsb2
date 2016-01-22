@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
+    string root_dir;
     string list_path;
     string output_dir;
     bool full = false;
@@ -120,6 +121,7 @@ int main(int argc, char **argv) {
     ("help,h", "produce help message.")
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
+    ("root", po::value(&root_dir), "")
     ("list", po::value(&list_path), "")
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
@@ -152,11 +154,11 @@ int main(int argc, char **argv) {
 
     ImageLoader loader(config);
 
-    string root_dir = config.get<string>("adsb2.data_dir");
     vector<Sample> samples;
     {
         Sample s;
         ifstream is(list_path.c_str());
+	CHECK(is) << "Cannot open list file: " << list_path;
         s.id = 0;
         string line;
         while (getline(is, line)) {
