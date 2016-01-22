@@ -111,7 +111,6 @@ int main(int argc, char **argv) {
     string config_path;
     vector<string> overrides;
     string list_path;
-    string root_dir;
     string output_dir;
     bool full = false;
     int F;
@@ -122,7 +121,6 @@ int main(int argc, char **argv) {
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
     ("list", po::value(&list_path), "")
-    ("root", po::value(&root_dir)->default_value(""), "make sure dir ends with /")
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
     ("output,o", po::value(&output_dir), "")
@@ -154,6 +152,7 @@ int main(int argc, char **argv) {
 
     ImageLoader loader(config);
 
+    string root_dir = config.get<string>("adsb2.data_dir");
     vector<Sample> samples;
     {
         Sample s;
