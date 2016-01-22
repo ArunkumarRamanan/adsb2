@@ -3,7 +3,7 @@
 ROOT=/ssd/wdong/adsb2/train
 
 mkdir gif
-cut -f 1 val.list | while read a
+cut -f 1 f50/val.list | while read a
 do
     DIR=`dirname $ROOT/$a`
     N=`echo $a |cut -f 1 -d /`
