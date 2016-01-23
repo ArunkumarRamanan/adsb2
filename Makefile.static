@@ -8,13 +8,14 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lboost_timer -lboost_chrono -lboost_thread -lboost_filesystem -lboost_system -lboost_program_options \
 	 -lprotoc -lprotobuf -lglog -lgflags -lleveldb -llmdb \
 	 -lhdf5_hl -lhdf5 \
+	 -ldcmimgle -ldcmdata -loflog -lofstd \
 	 -ljpeg -lpng -ltiff -lgif -ljasper  \
 	 -lsnappy -lz \
 	 -lopenblas \
 	 -lunwind -lrt -lm -ldl
 	 
 HEADERS = adsb2.h
-COMMON = adsb2.o detector-caffe.o caffex-fcn/caffex.o
+COMMON = adsb2.o dicom.o detector-caffe.o caffex-fcn/caffex.o
 
 
 PROGS = detect import eval
