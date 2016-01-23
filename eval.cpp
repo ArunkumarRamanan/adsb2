@@ -52,18 +52,18 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
-    Samples samples(list_path, root_dir);
+    vector<Sample> samples;
     ImageLoader loader(config);
+    loader.load(list_path, root_dir, &samples);
     Detector *det = make_caffe_detector(config.get<string>("adsb2.caffe.model", "model"));
     CHECK(det) << " cannot create detector.";
 
-    for (auto const &s: samples) {
-        Meta meta;
-        cv::Mat image = loader.load(root_dir + s.path, &meta);
+    for (auto &s: samples) {
         Mat prob;
-        det->apply(image, &prob);
+        ImageAdaptor::apply(&s.image);
+        det->apply(s.image, &prob);
         float s1, s2;
-        s.eval(prob, meta, &s1, &s2);
+        s.eval(prob, &s1, &s2);
         cout << s1 << '\t' << s2 << endl;
         /*
         Rect bb;

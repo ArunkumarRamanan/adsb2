@@ -27,52 +27,65 @@ namespace adsb2 {
         }
     }
 
-    void Sample::eval (cv::Mat mat, Meta const &meta, float *s1, float *s2) const {
+    void Sample::eval (cv::Mat mat, float *s1, float *s2) const {
         cv::Rect rect;
         round(box, &rect);
         cv::Mat roi = mat(rect);
         float total = cv::sum(mat)[0];
         float covered = cv::sum(roi)[0];
+        /*
         cv::Scalar avg, stv;
         cv::meanStdDev(roi, avg, stv);
+        */
         *s1 = covered / total;
-        *s2 = stv[0] / avg[0];
+        //*s2 = stv[0] / avg[0];
+        *s2 = std::sqrt(roi.total()) * meta.spacing;
     }
 
-    bool ImageLoader::load (Sample *sample) const {
+    cv::Mat ImageLoader::load (string const &path, Meta *pmeta) const {
         cv::Mat raw;
         Meta meta;
-        raw = load_raw(sample->path, &meta);
+        raw = load_raw(path, &meta);
         if (!raw.data) {
-            sample->image = cv::Mat();
-            return false;
-        }
-
-        if (raw.rows > raw.cols) {
-            std::swap(sample->box.x, sample->box.y);
-            std::swap(sample->box.width, sample->box.height);
+            return raw;
         }
 
         if (spacing > 0) {
             //float scale = spacing / meta.spacing;
-            float scale = meta.spacing / spacing;
+            meta.spacing = spacing;
+            float scale = meta.raw_spacing / meta.spacing;
             cv::Size sz(std::round(raw.cols * scale),
                         std::round(raw.rows * scale));
-            cv::resize(raw, sample->image, sz);
-            meta.spacing = spacing;
-            sample->box.x *= scale;
-            sample->box.y *= scale;
-            sample->box.width *= scale;
-            sample->box.height *= scale;
+            cv::resize(raw, raw, sz);
         }
-        else {
-            sample->image = raw;
+
+        if (raw.rows > raw.cols) {
+            cv::transpose(raw, raw);
+        }
+
+        if (pmeta) *pmeta = meta;
+
+        return raw;
+    }
+
+    bool ImageLoader::load (Sample *sample) const {
+        Meta meta;
+        cv::Mat image = load(sample->path, &meta);;
+        if (!image.data) {
+            sample->image = cv::Mat();
+            return false;
+        }
+
+        if (meta.spacing != meta.raw_spacing) {
+            //float scale = spacing / meta.spacing;
+            sample->box *= meta.raw_spacing / meta.spacing;
         }
         sample->meta = meta;
+        sample->image = image;
         return true;
     }
 
-    void ImageLoader::load (string const &path, string const &root, vector<Sample> *samples) {
+    void ImageLoader::load (string const &path, string const &root, vector<Sample> *samples) const {
         ifstream is(path.c_str());
         CHECK(is) << "Cannot open list file: " << path;
         Sample s;
@@ -93,7 +106,8 @@ namespace adsb2 {
                 LOG(ERROR) << "Fail to load file: " << s.path;
                 continue;
             }
-            samples->push_back(std::move(s));
+            samples->emplace_back();
+            std::swap(s, samples->back());
             ++id;
         }
         LOG(INFO) << "Loaded " << samples->size() << " samples.";

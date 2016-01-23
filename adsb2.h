@@ -36,10 +36,11 @@ namespace adsb2 {
 
     Detector *make_caffe_detector (string const &);
     Detector *make_cascade_detector (string const &);
+    Detector *make_scd_detector (string const &);
 
     struct Meta {
-        float spacing;
-        float raw_spacing;
+        float spacing;      // 
+        float raw_spacing;  // original spacing as in file
     };
 
     static inline void round (cv::Rect_<float> const &from, cv::Rect *to) {
@@ -47,6 +48,13 @@ namespace adsb2 {
         to->y = std::round(from.y);
         to->width = std::round(from.x + from.width) - to->x;
         to->height = std::round(from.y + from.height) - to->y;
+    }
+
+    static inline void operator *= (cv::Rect_<float> &from, float scale) {
+        from.x *= scale;
+        from.y *= scale;
+        from.width *= scale;
+        from.height *= scale;
     }
 
     struct Sample {
@@ -71,7 +79,7 @@ namespace adsb2 {
             (*mat)(roi).setTo(v);
         }
 
-        void eval (cv::Mat mat, Meta const &meta, float *s1, float *s2) const;
+        void eval (cv::Mat mat, float *s1, float *s2) const;
     };
 
     class ImageLoader {
@@ -85,7 +93,8 @@ namespace adsb2 {
         static cv::Mat load_raw (string const &path, Meta *meta = nullptr);
 
         bool load (Sample *sample) const;
-        void load (string const &, string const &root, vector<Sample> *samples);
+        cv::Mat load (string const &path, Meta *meta = nullptr) const;
+        void load (string const &path, string const &root, vector<Sample> *samples) const;
     };
 
     class ImageAugment {
@@ -93,10 +102,12 @@ namespace adsb2 {
         ImageAugment (Config const &config)
         {
         }
+    };
 
-        void id (Sample *sample, cv::Mat *image, cv::Mat *label) const
-        {
-            cv::Mat v = sample->image.clone();
+    class ImageAdaptor {
+    public:
+        static void apply (cv::Mat *to) {
+            cv::Mat v = *to;
             // TODO! support color image
             if (v.channels() == 3) {
                 cv::cvtColor(v, v, CV_BGR2GRAY);
@@ -108,6 +119,11 @@ namespace adsb2 {
                 normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
             }
             else CHECK(v.type() == CV_8UC1);
+            *to = v;
+        }
+        static void apply (Sample *sample, cv::Mat *image, cv::Mat *label) {
+            cv::Mat v = sample->image.clone();
+            apply(&v);
             *image = v;
             label->create(v.size(), CV_8UC1);
             // save label
@@ -146,6 +162,7 @@ namespace adsb2 {
 
     class DcmStack: public Stack {
         vector<fs::path> names;
+        vector<Meta> metas;
     public:
         DcmStack (std::string const &dir, ImageLoader const &loader) {
             // enumerate DCM files
@@ -168,12 +185,14 @@ namespace adsb2 {
             }
             std::sort(names.begin(), names.end());
             resize(names.size());
+            metas.resize(names.size());
             for (unsigned i = 0; i < names.size(); ++i) {
                 auto const &name = names[i];
                 auto dcm_path = input_dir;
                 dcm_path /= name;
                 dcm_path += ".dcm";
-                cv::Mat image = loader.load_raw(dcm_path.native());
+                cv::Mat image = loader.load(dcm_path.native(), &metas[i]);
+                ImageAdaptor::apply(&image);
                 BOOST_VERIFY(image.total());
                 BOOST_VERIFY(image.type() == CV_8UC1);
                 BOOST_VERIFY(image.isContinuous());

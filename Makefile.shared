@@ -18,7 +18,7 @@ HEADERS = adsb2.h
 COMMON = adsb2.o dicom.o detector-caffe.o caffex-fcn/caffex.o
 
 
-PROGS = detect import eval stat
+PROGS = detect import eval stat xx
 
 all:	$(PROGS)
 

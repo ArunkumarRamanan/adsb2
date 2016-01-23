@@ -50,7 +50,7 @@ void import (ImageAugment const &aug,
         CHECK(sample->image.data);
 
         cv::Mat image, label;
-        aug.id(sample, &image, &label);
+        ImageAdaptor::apply(sample, &image, &label);
 
         caffe::CVMatToDatum(image, &datum);
         datum.set_label(0);
