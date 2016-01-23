@@ -27,7 +27,9 @@ using namespace adsb2;
 
 string backend("lmdb");
 
-void import (ImageLoader const &loader, vector<Sample> const &samples, string const &prefix, fs::path const &dir) {
+void import (ImageAugment const &aug,
+             vector<Sample *> const &samples,
+             string const &prefix, fs::path const &dir) {
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
@@ -42,20 +44,19 @@ void import (ImageLoader const &loader, vector<Sample> const &samples, string co
 
 
     int count = 0;
-    for (auto const &sample: samples) {
+    for (Sample *sample: samples) {
         Datum datum;
-        string key = lexical_cast<string>(sample.id), value;
-        Mat image = loader.load(prefix + sample.path);
+        string key = lexical_cast<string>(sample->id), value;
+        CHECK(sample->image.data);
+
+        cv::Mat image, label;
+        aug.id(sample, &image, &label);
+
         caffe::CVMatToDatum(image, &datum);
         datum.set_label(0);
         CHECK(datum.SerializeToString(&value));
         image_txn->Put(key, value);
 
-        Mat label(image.size(), CV_8UC1);
-
-        // save label
-        label.setTo(Scalar(0));
-        sample.fill_roi(&label, cv::Scalar(1));
         caffe::CVMatToDatum(label, &datum);
         datum.set_label(0);
         CHECK(datum.SerializeToString(&value));
@@ -83,10 +84,10 @@ void import (ImageLoader const &loader, vector<Sample> const &samples, string co
     }
 }
 
-void save_list (vector<Sample> const &samples, fs::path path) {
+void save_list (vector<Sample *> const &samples, fs::path path) {
     fs::ofstream os(path);
-    for (auto const &s: samples) {
-        os << s.line << endl;
+    for (auto const s: samples) {
+        os << s->line << endl;
     }
 }
 
@@ -94,8 +95,8 @@ int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
-    string root_dir;
     string list_path;
+    string root_dir;
     string output_dir;
     bool full = false;
     int F;
@@ -105,8 +106,8 @@ int main(int argc, char **argv) {
     ("help,h", "produce help message.")
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
-    ("root", po::value(&root_dir), "")
     ("list", po::value(&list_path), "")
+    ("root", po::value(&root_dir), "")
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
     ("output,o", po::value(&output_dir), "")
@@ -137,24 +138,30 @@ int main(int argc, char **argv) {
     OverrideConfig(overrides, &config);
 
     ImageLoader loader(config);
+    ImageAugment aug(config);
 
-    Samples samples(list_path, root_dir);
+    vector<Sample> samples;
+    loader.load(list_path, root_dir, &samples);
 
     if (F == 1) {
-        import(loader, samples, root_dir, fs::path(output_dir));
+        vector<Sample *> ss(samples.size());
+        for (unsigned i = 0; i < ss.size(); ++i) {
+            ss[i] = &samples[i];
+        }
+        import(aug, ss, root_dir, fs::path(output_dir));
         return 0;
     }
     // N-fold cross validation
-    vector<vector<Sample>> folds(F);
+    vector<vector<Sample *>> folds(F);
     random_shuffle(samples.begin(), samples.end());
     for (unsigned i = 0; i < samples.size(); ++i) {
-        folds[i % F].push_back(samples[i]);
+        folds[i % F].push_back(&samples[i]);
     }
 
     for (unsigned f = 0; f < F; ++f) {
-        vector<Sample> const &val = folds[f];
+        vector<Sample *> const &val = folds[f];
         // collect training examples
-        vector<Sample> train;
+        vector<Sample *> train;
         for (unsigned i = 0; i < F; ++i) {
             if (i == f) continue;
             train.insert(train.end(), folds[i].begin(), folds[i].end());
@@ -166,8 +173,8 @@ int main(int argc, char **argv) {
         CHECK(fs::create_directories(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(loader, train, root_dir, fold_path / fs::path("train"));
-        import(loader, val, root_dir, fold_path / fs::path("val"));
+        import(aug, train, root_dir, fold_path / fs::path("train"));
+        import(aug, val, root_dir, fold_path / fs::path("val"));
         if (!full) break;
     }
 

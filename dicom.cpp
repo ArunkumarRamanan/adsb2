@@ -4,7 +4,7 @@
 #include "adsb2.h"
 
 namespace adsb2 {
-    cv::Mat ImageLoader::load (string const &path, Meta *pmeta) const {
+    cv::Mat ImageLoader::load_raw (string const &path, Meta *pmeta) {
         Meta meta;
         DcmFileFormat fileformat;
         OFCondition status = fileformat.loadFile(path.c_str());
@@ -12,7 +12,8 @@ namespace adsb2 {
         OFString pixelSpacing;
         status = fileformat.getDataset()->findAndGetOFString(DCM_PixelSpacing, pixelSpacing);
         CHECK(status.good()) << "cannot find pixel spacing: " << path;
-        meta.pixel_spacing = boost::lexical_cast<float>(pixelSpacing);
+        meta.spacing = boost::lexical_cast<float>(pixelSpacing);
+        meta.raw_spacing = meta.spacing;
 
         cv::Mat v;
 #ifdef DO_NOT_USE_DICOM
@@ -38,23 +39,10 @@ namespace adsb2 {
         dcm->getOutputData(v.ptr<uint16_t>(0), v.total() * sizeof(uint16_t), 16);
         delete dcm;
 #endif
-        if (v.cols < v.rows) {
-            transpose(v, v);
-        }
-        // TODO! support color image
-        if (v.channels() == 3) {
-            cv::cvtColor(v, v, CV_BGR2GRAY);
-        }
-        else CHECK(v.channels() == 1);
-        // always to gray
-        if (v.type() == CV_16UC1
-                || v.type() == CV_32FC1) {
-            normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-        }
-        else CHECK(v.type() == CV_8UC1);
         if (pmeta) {
             *pmeta = meta;
         }
         return v;
     }
+
 }

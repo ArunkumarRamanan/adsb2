@@ -38,15 +38,82 @@ namespace adsb2 {
     Detector *make_cascade_detector (string const &);
 
     struct Meta {
-        float pixel_spacing;
+        float spacing;
+        float raw_spacing;
+    };
+
+    static inline void round (cv::Rect_<float> const &from, cv::Rect *to) {
+        to->x = std::round(from.x);
+        to->y = std::round(from.y);
+        to->width = std::round(from.x + from.width) - to->x;
+        to->height = std::round(from.y + from.height) - to->y;
+    }
+
+    struct Sample {
+        int id;
+        string line;
+        string path;
+        Meta meta;
+        cv::Mat image;
+        cv::Rect_<float> box;
+
+        bool parse (string const &txt) {
+            istringstream ss(txt);
+            ss >> path >> box.x >> box.y >> box.width >> box.height;
+            if (!ss) return false;
+            line = txt;
+            return true;
+        }
+
+        void fill_roi (cv::Mat *mat, cv::Scalar const &v) const {
+            cv::Rect roi;
+            round(box, &roi);
+            (*mat)(roi).setTo(v);
+        }
+
+        void eval (cv::Mat mat, Meta const &meta, float *s1, float *s2) const;
     };
 
     class ImageLoader {
+        float spacing;
     public:
-        ImageLoader (Config const &config) {
+        ImageLoader (Config const &config):
+            spacing(config.get<float>("adsb2.loader.spacing", 1.0))
+        {
         }
 
-        cv::Mat load (string const &path, Meta *meta = nullptr) const;
+        static cv::Mat load_raw (string const &path, Meta *meta = nullptr);
+
+        bool load (Sample *sample) const;
+        void load (string const &, string const &root, vector<Sample> *samples);
+    };
+
+    class ImageAugment {
+    public:
+        ImageAugment (Config const &config)
+        {
+        }
+
+        void id (Sample *sample, cv::Mat *image, cv::Mat *label) const
+        {
+            cv::Mat v = sample->image.clone();
+            // TODO! support color image
+            if (v.channels() == 3) {
+                cv::cvtColor(v, v, CV_BGR2GRAY);
+            }
+            else CHECK(v.channels() == 1);
+            // always to gray
+            if (v.type() == CV_16UC1
+                    || v.type() == CV_32FC1) {
+                normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+            }
+            else CHECK(v.type() == CV_8UC1);
+            *image = v;
+            label->create(v.size(), CV_8UC1);
+            // save label
+            label->setTo(cv::Scalar(0));
+            sample->fill_roi(label, cv::Scalar(1));
+        }
     };
 
     class Stack: public vector<cv::Mat> {
@@ -106,7 +173,7 @@ namespace adsb2 {
                 auto dcm_path = input_dir;
                 dcm_path /= name;
                 dcm_path += ".dcm";
-                cv::Mat image = loader.load(dcm_path.native());
+                cv::Mat image = loader.load_raw(dcm_path.native());
                 BOOST_VERIFY(image.total());
                 BOOST_VERIFY(image.type() == CV_8UC1);
                 BOOST_VERIFY(image.isContinuous());
@@ -115,61 +182,6 @@ namespace adsb2 {
                 }
                 at(i) = image;
             }
-        }
-    };
-
-    static inline void round (cv::Rect_<float> const &from, cv::Rect *to) {
-        to->x = std::round(from.x);
-        to->y = std::round(from.y);
-        to->width = std::round(from.x + from.width) - to->x;
-        to->height = std::round(from.y + from.height) - to->y;
-    }
-
-
-    struct Sample {
-        int id;
-        string line;
-        string path;
-        cv::Rect_<float> box;
-
-        bool load (string const &txt) {
-            istringstream ss(txt);
-            ss >> path >> box.x >> box.y >> box.width >> box.height;
-            if (!ss) return false;
-            line = txt;
-            return true;
-        }
-
-        void fill_roi (cv::Mat *mat, cv::Scalar const &v) const {
-            cv::Rect roi;
-            round(box, &roi);
-            (*mat)(roi).setTo(v);
-        }
-
-        void eval (cv::Mat mat, Meta const &meta, float *s1, float *s2) const;
-    };
-
-    class Samples: public vector<Sample> {
-    public:
-        Samples (string const &path, string const &root_dir) {
-            ifstream is(path.c_str());
-            CHECK(is) << "Cannot open list file: " << path;
-            Sample s;
-            s.id = 0;
-            string line;
-            while (getline(is, line)) {
-                if (!s.load(line)) {
-                    LOG(ERROR) << "Bad line: " << line;
-                    continue;
-                }
-                if (!fs::is_regular_file(fs::path(root_dir + s.path))) {
-                    LOG(ERROR) << "Cannot find regular file: " << s.path;
-                    continue;
-                }
-                push_back(s);
-                ++s.id;
-            }
-            LOG(INFO) << "Loaded " << size() << " samples.";
         }
     };
 
