@@ -1,5 +1,5 @@
 2016-01-22	0.838
-	- # it from 15000 ~ 34000
+	- increase iteration from 15000 to 34000
 	- scale by pixel spacing, using target spacing 1.4
 
 2016-01-21	0.767
