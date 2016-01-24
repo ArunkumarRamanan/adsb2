@@ -58,16 +58,17 @@ int main(int argc, char **argv) {
     Detector *det = make_caffe_detector(config.get<string>("adsb2.caffe.model", "model"));
     CHECK(det) << " cannot create detector.";
 
+    float th = config.get<float>("adsb2.bound_th", 0.95);
     for (auto &s: samples) {
         Mat prob;
         ImageAdaptor::apply(&s.image);
         det->apply(s.image, &prob);
-        float s1, s2;
-        s.eval(prob, &s1, &s2);
-        cout << s1 << '\t' << s2 << endl;
-        /*
         Rect bb;
         bound(prob, &bb, th);
+        float s1, s2;
+        s.eval(prob, &s1, &s2);
+        cout << s1 << '\t' << bb.width * bb.height * s.meta.spacing << endl;
+        /*
         cv::rectangle(image, bb, cv::Scalar(0xFF));
         */
     }

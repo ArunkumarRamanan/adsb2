@@ -52,12 +52,23 @@ int main(int argc, char **argv) {
     string path;
     while (getline(cin, path)) {
         Meta meta;
-        cv::Mat image = loader.load(path, &meta);
+        cv::Mat image = ImageLoader::load_raw(path, &meta);
+        /*
         cout << meta.pixel_spacing <<
             '\t' << image.rows <<
             '\t' << image.cols <<
             '\t' << image.rows * meta.pixel_spacing <<
             '\t' << image.cols * meta.pixel_spacing << endl;
+            */
+        CHECK(image.data);
+        CHECK(image.type() == CV_16UC1);
+        for (unsigned i = 0; i < image.rows; ++i) {
+            uint16_t const *p = image.ptr<uint16_t const>(i);
+            for (unsigned j = 0; j < image.cols; ++j) {
+                cout << p[j] << endl;
+            }
+        }
+        break;
     }
 }
 

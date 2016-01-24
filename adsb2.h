@@ -73,6 +73,12 @@ namespace adsb2 {
             return true;
         }
 
+        cv::Mat roi () {
+            cv::Rect roi;
+            round(box, &roi);
+            return image(roi);
+        }
+
         void fill_roi (cv::Mat *mat, cv::Scalar const &v) const {
             cv::Rect roi;
             round(box, &roi);
@@ -104,6 +110,11 @@ namespace adsb2 {
         }
     };
 
+    struct ColorRange {
+        int min, max;
+        int umin, umax;
+    };
+
     class ImageAdaptor {
     public:
         static void apply (cv::Mat *to) {
@@ -130,6 +141,8 @@ namespace adsb2 {
             label->setTo(cv::Scalar(0));
             sample->fill_roi(label, cv::Scalar(1));
         }
+        static void apply (cv::Mat *to,
+                        ColorRange const &, uint8_t tlow = 10, uint8_t thigh = 245);
     };
 
     class Stack: public vector<cv::Mat> {
@@ -192,9 +205,9 @@ namespace adsb2 {
                 dcm_path /= name;
                 dcm_path += ".dcm";
                 cv::Mat image = loader.load(dcm_path.native(), &metas[i]);
-                ImageAdaptor::apply(&image);
+                //ImageAdaptor::apply(&image);
                 BOOST_VERIFY(image.total());
-                BOOST_VERIFY(image.type() == CV_8UC1);
+                BOOST_VERIFY(image.type() == CV_16U);
                 BOOST_VERIFY(image.isContinuous());
                 if (i) {
                     BOOST_VERIFY(image.size() == at(0).size());
@@ -202,6 +215,63 @@ namespace adsb2 {
                 at(i) = image;
             }
         }
+
+        void getAvgStdDev (cv::Mat *avg, cv::Mat *stddev);
+        void getColorRange (ColorRange *, float th = 0.9);
     };
 
+    template <typename I>
+    void bound (I begin, I end, int *b, float margin) {
+        float cc = 0;
+        I it = begin;
+        while (it < end) {
+            cc += *it;
+            if (cc >= margin) break;
+            ++it;
+        }
+        *b = it - begin;
+    }
+
+    static inline void bound (vector<float> const &v, int *x, int *w, float margin) {
+        int b, e;
+        bound(v.begin(), v.end(), &b, margin);
+        bound(v.rbegin(), v.rend(), &e, margin);
+        e = v.size() - e;
+        if (e < b) e = b;
+        *x = b;
+        *w = e - b;
+    }
+
+    static inline void bound (cv::Mat const &image, cv::Rect *rect, float th) {
+        vector<float> X(image.cols, 0);
+        vector<float> Y(image.rows, 0);
+        float total = 0;
+        CHECK(image.type() == CV_32F);
+        for (int y = 0; y < image.rows; ++y) {
+            float const *row = image.ptr<float>(y);
+            for (int x = 0; x < image.cols; ++x) {
+                float v = row[x];
+                X[x] += v;
+                Y[y] += v;
+                total += v;
+            }
+        }
+        float margin = total * (1.0 - th) / 2;
+        bound(X, &rect->x, &rect->width, margin);
+        bound(Y, &rect->y, &rect->height, margin);
+    }
+
+    template <typename T>
+    T percentile (cv::Mat const &mat, float p) {
+        vector<T> all;
+        CHECK(mat.total());
+        for (int i = 0; i < mat.rows; ++i) {
+            T const *p = mat.ptr<T const>(i);
+            for (int j = 0; j < mat.cols; ++j) {
+                all.push_back(p[j]);
+            }
+        }
+        sort(all.begin(), all.end());
+        return all[all.size() * p];
+    }
 }
