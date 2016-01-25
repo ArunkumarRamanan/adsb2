@@ -29,7 +29,7 @@ string backend("lmdb");
 
 void import (ImageAugment const &aug,
              vector<Sample *> const &samples,
-             fs::path const &dir, channels) {
+             fs::path const &dir, int channels) {
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
@@ -50,7 +50,7 @@ void import (ImageAugment const &aug,
         CHECK(sample->image.data);
 
         cv::Mat image, label;
-        CaffeAdaptor::apply(sample, &image, &label, channels);
+        CaffeAdaptor::apply(*sample, &image, &label, channels);
 
         caffe::CVMatToDatum(image, &datum);
         datum.set_label(0);

@@ -9,7 +9,7 @@ namespace adsb2 {
     public:
         CaffeDetector (Config const &config) //string const &model)
             : impl(config.get<string>("adsb2.caffe.model", "model")),
-            channels(config.get<string>("adsb2.caffe.channels", 1))
+            channels(config.get<int>("adsb2.caffe.channels", 1))
         {
         }
         virtual void apply (Sample &sample, cv::Mat *output) {

@@ -199,9 +199,9 @@ namespace adsb2 {
     };
 
 
-    Detector *make_caffe_detector (string const &);
-    Detector *make_cascade_detector (string const &);
-    Detector *make_scd_detector (string const &);
+    Detector *make_caffe_detector (Config const &);
+    Detector *make_cascade_detector (Config const &);
+    Detector *make_scd_detector (Config const &);
 
     class ImageAugment {
     public:
@@ -215,23 +215,25 @@ namespace adsb2 {
         static void apply (Sample &sample, cv::Mat *image, cv::Mat *label, int channels = 1) {
             CHECK(sample.image.type() == CV_32FC1);
             cv::Mat color;
-            sample->image.convertTo(color, CV_8UC1);
+            sample.image.convertTo(color, CV_8UC1);
             if (channels == 1) {
                 *image = color;
             }
             else if (channels == 2) {
-                CHECK(sample->vimage.data);
+                CHECK(sample.vimage.data);
                 cv::Mat v;
-                cv::normalize(sample->vimage, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-                vector<cv::Mat> channels{color, v};
+                cv::normalize(sample.vimage, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+                cv::Mat z(v.size(), CV_8UC1, cv::Scalar(0));
+                vector<cv::Mat> channels{color, v, z};
                 cv::merge(channels, *image);
+                BOOST_VERIFY(image->type() == CV_8UC3);
             }
             if (label) {
                 CHECK(sample.annotated);
-                label->create(v.size(), CV_8UC1);
+                label->create(color.size(), CV_8UC1);
                 // save label
                 label->setTo(cv::Scalar(0));
-                sample->fill_roi(label, cv::Scalar(1));
+                sample.fill_roi(label, cv::Scalar(1));
             }
         }
     };

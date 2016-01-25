@@ -15,7 +15,7 @@ using namespace cv;
 using namespace adsb2;
 
 
-
+#if 0
 void EM_binarify (Mat &mat, Mat *out) {
     Mat pixels;
     mat.convertTo(pixels, CV_64F);
@@ -29,6 +29,7 @@ void EM_binarify (Mat &mat, Mat *out) {
     labels.convertTo(*out, CV_8UC1, 255);
     *out = out->reshape(1, mat.rows);
 }
+#endif
 
 #if 0
 void scale_detect (Detector *det, Mat &image, Rect *bb, float scale, float bbth) {
@@ -97,7 +98,7 @@ int main(int argc, char **argv) {
     Stack stack(input_dir);
     cook.apply(&stack);
 
-    Detector *det = make_caffe_detector(config.get<string>("adsb2.caffe.model", "model"));
+    Detector *det = make_caffe_detector(config);
     CHECK(det) << " cannot create detector.";
 
     float bbth = config.get<float>("adsb2.bound_th", 0.95);
