@@ -59,23 +59,16 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
-    ImageLoader loader(config);
-    DcmStack images(input_dir, loader);
+    Cook cook(config);
+    Stack stack(input_dir);
+    cook.apply(&stack);
 
-    ColorRange cr;
-    images.getColorRange(&cr, th);
-
-    cerr << cr.min << ' ' << cr.umin << ' ' << cr.umax << ' ' << cr.max << endl;
-
-    for (auto &image: images) {
-        cv::Mat a = image.clone();
-        cv::Mat b = image.clone();
-        ImageAdaptor::apply(&a, cr);
-        ImageAdaptor::apply(&b);
-        cv::hconcat(a, b, image);
+    for (auto &s: stack) {
+        cv::Mat a = s.image.clone();
+        hconcat(a, s.vimage, s.image);
     }
     if (gif.size()) {
-        images.make_gif(gif);
+        stack.save_gif(gif);
     }
     return 0;
 }

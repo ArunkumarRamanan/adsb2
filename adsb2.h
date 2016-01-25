@@ -164,7 +164,6 @@ namespace adsb2 {
 
     class Cook {
         float spacing;
-        bool variance;
         float color_vth;
         float color_eth;
         float color_margin;
@@ -172,7 +171,6 @@ namespace adsb2 {
     public:
         Cook (Config const &config):
             spacing(config.get<float>("adsb2.cook.spacing", 1.0)),
-            variance(config.get<int>("adsb2.caffe.channels", 1) > 1),
             color_vth(config.get<float>("adsb2.color.vth", 0.99)),
             color_eth(config.get<float>("adsb2.color.eth", 0.1)),
             color_margin(config.get<float>("adsb2.color.margin", 0.04)),
