@@ -155,130 +155,6 @@ namespace adsb2 {
         CHECK(v->size() == 2);
     }
 
-    // get color range from RAW images of the stack
-    // sigma is precomputed standard deviation image
-    void getColorRange (Stack const &stack, cv::Mat sigma, ColorRange *range, float vth, float eth) {
-        vector<uint16_t> all;
-        all.reserve(stack.front().image.total() * stack.size());
-        vector<uint16_t> roi;
-        vector<vector<int>> picked;
-        if (stack.size() > 1) { // has sigma
-            roi.reserve(stack.front().image.total() * stack.size());
-            float sth = percentile<float>(sigma, vth);  // sigma th
-            picked.resize(sigma.rows);
-            for (int i = 0; i < sigma.rows; ++i) {
-                auto &v = picked[i];
-                float const *p = sigma.ptr<float const>(i);
-                for (int j = 0; j < sigma.cols; ++j) {
-                    if (p[j] >= vth) {
-                        v.push_back(j);
-                    }
-                }
-            }
-        }
-
-        for (auto const &s: stack) {
-            cv::Mat const &image = s.raw;
-            for (int i = 0; i < image.rows; ++i) {
-                auto const &v = picked[i];
-                uint16_t const *p = image.ptr<uint16_t const>(i);
-                for (int j = 0; j < image.cols; ++j) {
-                    all.push_back(p[j]);
-                }
-                for (int j: v) {
-                    roi.push_back(p[j]);
-                }
-            }
-        }
-        vector<uint16_t> allth;
-        vector<uint16_t> roith;
-        shrink_expand(all, &allth, eth);
-        shrink_expand(roi, &roith, eth);
-        range->min = allth[0];
-        range->max = allth[1];
-        range->umin = roith[0];
-        range->umax = roith[1];
-        if (range->umin < range->min) {
-            LOG(WARNING) << "exand min " << range->umin << " => " << range->min;
-            range->umin = range->min;
-        }
-        if (range->umax > range->max) {
-            LOG(WARNING) << "exand max " << range->umax << " => " << range->max;
-            range->umax = range->max;
-        }
-    }
-
-    void scaleColor (cv::Mat from, cv::Mat *to, ColorRange const &range,
-                     float tlow, float thigh, float tmax) {
-        CHECK(from.type() == CV_16UC1);
-        to->create(from.size(), CV_32FC1);
-        // [low, ulow) -> [0, tlow)
-        // [ulow, uhigh] -> [tlow, thigh]
-        // (uhigh, high] -> (thigh, 255]
-        int low = range.min;
-        int ulow = range.umin;
-        int high = range.max;
-        int uhigh = range.umax;
-
-
-        if (ulow - low < tlow) {
-            // e.g.   min = 100, low = 101
-            //                   tlow = 10
-            // we'll lower min = 101-10 = 91, so there's
-            // 1-1 correspondance between [91, 101) and [0, 10)
-            low = ulow - tlow;
-        }
-        if (high - uhigh < tmax - thigh) {
-            // e.g.   high = 100, max = 101
-            //        thigh = 245,
-            // we raise max = 100 + 255 - 245 = 110
-            //        [100, 110] <-> [245, 255]
-            high = uhigh + (tmax - thigh);
-
-        }
-        for (int i = 0; i < from.rows; ++i) {
-            uint16_t const *f = from.ptr<uint16_t const>(i);
-            float *t = to->ptr<float>(i);
-            for (int j = 0; j < from.cols; ++j) {
-                uint16_t x = f[j];
-                float y = 0;
-                if (x < low) {
-                    y = 0;
-                }
-                else if (x < ulow) {
-                    // [low, ulow) -> [0, tlow)
-                    y = (x - low) * tlow / (ulow - low);
-                }
-                else if (x <= uhigh) {
-                    // [ulow, uhigh] -> [tlow, thigh]
-                    y = (x - ulow) * (thigh - tlow) / (uhigh - ulow) + tlow;
-                    // x == ulow  ==> tlow
-                    // x == uhigh ==> thigh
-                }
-                else if (x <= high) {
-                    // (uhigh, high] -> (thigh, 255]
-                     y = (x - uhigh) * (tmax - thigh) / (high - uhigh) + thigh;
-                    // uhigh =>  thigh
-                    // high => 255
-                }
-                else {
-                    y = tmax;
-                }
-                if (!(y > 0)) {
-                    if (!(y > -1)) {
-                        LOG(WARNING) << "y < 0: " << y;
-                    }
-                    y = 0;
-                }
-                if (!(y <= tmax)) {
-                    LOG(WARNING) << "y > tmax: " << y << " " << tmax;
-                    y = tmax;
-                }
-                t[j] = y;
-            }
-        }
-    }
-
     // histogram equilization
     void getColorMap (Stack const &stack, vector<float> *cmap, int colors) {
         vector<uint16_t> all;
@@ -335,28 +211,17 @@ namespace adsb2 {
         stack->getAvgStdDev(&mu, &sigma);
         // compute var image
         cv::Mat vimage;
-        cv::normalize(sigma, vimage, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
+        cv::normalize(sigma, vimage, 0, color_bins-1, cv::NORM_MINMAX, CV_32FC1);
         float scale = -1;
         float raw_spacing = -1;
         cv::Size sz;
         if (spacing > 0) {
             //float scale = spacing / meta.spacing;
-            float raw_spacing = stack->front().meta.raw_spacing;
-            float scale = raw_spacing / spacing;
-            sz = round(stack->front().image.size() * scale);
+            raw_spacing = stack->front().meta.raw_spacing;
+            scale = raw_spacing / spacing;
+            sz = round(sigma.size() * scale);
             cv::resize(vimage, vimage, sz);
         }
-#if 0
-        ColorRange cr;
-        getColorRange(*stack, sigma, &cr, color_vth, color_eth);
-        float clow = color_max * color_margin;
-        float chigh = color_max - color_max * color_margin;
-        for (auto &s: *stack) {
-            if (s.do_not_cook) continue;
-            scaleColor(s.raw, &s.image, cr, clow, chigh, color_max);
-            //cv::normalize(s.raw, s.image, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
-        }
-#endif
         vector<float> cmap;
         getColorMap(*stack, &cmap, color_bins);
         for (auto &s: *stack) {
@@ -365,6 +230,7 @@ namespace adsb2 {
             if (scale > 0) {
                 s.meta.spacing = spacing;
                 CHECK(s.meta.raw_spacing == raw_spacing);
+                CHECK(s.image.size() == sigma.size());
                 //float scale = s.meta.raw_spacing / s.meta.spacing;
                 cv::resize(s.image, s.image, sz);
                 if (s.annotated) {
@@ -446,5 +312,34 @@ namespace adsb2 {
             ++progress;
         }
     }
+
+    void Var2Prob (cv::Mat oin, cv::Mat *out, float pth, int mk) {
+        cv::Mat in;
+        pth = percentile<float>(oin, pth);
+        cv::threshold(oin, in, pth, 1.0, cv::THRESH_BINARY);
+        cv::Mat kernel = cv::Mat::ones(mk, mk, CV_32F);
+        cv::morphologyEx(in, in, cv::MORPH_OPEN, kernel);
+        cv::Mat tmp = in.mul(oin);
+        in = tmp;
+
+
+        cv::Mat s(in.total(), 2, CV_32F);
+        {
+            int o = 0;
+            for (int i = 0; i < in.rows; ++i) {
+                for (int j = 0; j < in.cols; ++j) {
+                    float *ptr = s.ptr<float>(o++);
+                    ptr[0] = i;
+                    ptr[1] = j;
+                }
+            }
+            CHECK(o == s.rows);
+        }
+        Gaussian g(s, in.reshape(1, s.rows));
+        cv::Mat p = g.prob(s);
+        *out = p.reshape(1, in.rows);
+        CHECK(out->size() == in.size());
+    }
+
 }
 

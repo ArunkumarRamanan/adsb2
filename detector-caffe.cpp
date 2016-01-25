@@ -12,16 +12,15 @@ namespace adsb2 {
             channels(config.get<int>("adsb2.caffe.channels", 1))
         {
         }
-        virtual void apply (Sample &sample, cv::Mat *output) {
+        virtual void apply (Sample *sample) {
             cv::Mat u8;
-            CaffeAdaptor::apply(sample, &u8, nullptr, channels);
-            sample.image.convertTo(u8, CV_8U);
+            CaffeAdaptor::apply(*sample, &u8, nullptr, channels);
             std::vector<float> prob;
             impl.apply(u8, &prob);
             //std::cerr << prob.size() << ' ' << input.total() << std::endl;
             BOOST_VERIFY(prob.size() == u8.total() * 2);
             cv::Mat m(u8.size(), CV_32F, &prob[u8.total()]);
-            *output = m.clone();
+            sample->prob = m.clone();
         }
     };
 

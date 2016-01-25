@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
     string output_dir;
     string gif;
     float th;
+    int mk;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -33,6 +34,7 @@ int main(int argc, char **argv) {
     //("output,o", po::value(&output_dir), "")
     ("gif", po::value(&gif), "")
     ("th", po::value(&th)->default_value(0.90), "")
+    ("mk", po::value(&mk)->default_value(5), "")
     ;
 
 
@@ -63,15 +65,31 @@ int main(int argc, char **argv) {
     Stack stack(input_dir);
     cook.apply(&stack);
 
+    /*
+    cv::Mat pr;
+    cv::Mat vx = stack.front().vimage.clone();
+    th = percentile<float>(vx, th);
+    cv::threshold(vx, vx, th, 1.0, cv::THRESH_BINARY);
+    cv::Mat kernel = cv::Mat::ones(mk, mk, CV_32F);
+    cv::morphologyEx(vx, vx, cv::MORPH_OPEN, kernel);
+    pr = vx;
+    //Var2Prob(vx, &pr);
+    cv::normalize(pr, pr, 0, 255, cv::NORM_MINMAX, CV_32F);
+    */
+    stack.resize(1);
+        #if 0
     for (auto &s: stack) {
         cv::Mat v;
-        CaffeAdaptor::apply(s, &v, nullptr, 1);
+        //CaffeAdaptor::apply(s, &v, nullptr, 2);
+        v = s.vimage;
         /*
         cv::Mat a = s.image.clone();
         hconcat(a, s.vimage, s.image);
         */
-        s.image = v;
+        cv::normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_32F);
+        cv::hconcat(v, pr, s.image);
     }
+#endif
     if (gif.size()) {
         stack.save_gif(gif);
     }

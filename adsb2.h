@@ -79,6 +79,8 @@ namespace adsb2 {
         cv::Rect_<float> box;   // bouding box
         bool do_not_cook;
 
+        cv::Mat prob;
+
         Sample (): box(-1,-1,0,0), annotated(false), do_not_cook(false) {}
         Sample (string const &line);
 
@@ -164,18 +166,10 @@ namespace adsb2 {
 
     class Cook {
         float spacing;
-        float color_vth;
-        float color_eth;
-        float color_margin;
-        float color_max;
         int color_bins;
     public:
         Cook (Config const &config):
             spacing(config.get<float>("adsb2.cook.spacing", 1.0)),
-            color_vth(config.get<float>("adsb2.color.vth", 0.99)),
-            color_eth(config.get<float>("adsb2.color.eth", 0.1)),
-            color_margin(config.get<float>("adsb2.color.margin", 0.04)),
-            color_max(config.get<float>("adsb2.color.max", 255)),
             color_bins(config.get<float>("adsb2.cook.colors", 256))
         {
         }
@@ -195,7 +189,7 @@ namespace adsb2 {
     class Detector {
     public:
         virtual ~Detector () {}
-        virtual void apply (Sample &sample, cv::Mat *output) = 0;
+        virtual void apply (Sample *sample) = 0;
     };
 
 
@@ -314,4 +308,50 @@ namespace adsb2 {
         percentile(mat, vector<float>{p}, &v);
         return v[0];
     }
+
+    class Gaussian {
+        cv::Mat mean;
+        cv::Mat cov;
+        cv::Mat icov;
+    public:
+        Gaussian (cv::Mat samples, cv::Mat weights)
+            : mean(1, samples.cols, CV_32F, cv::Scalar(0)),
+            cov(samples.cols, samples.cols, CV_32F, cv::Scalar(0))
+        {
+            CHECK(samples.rows == weights.rows);
+            CHECK(weights.cols == 1);
+            float sum = 0;
+            for (int i = 0; i < samples.rows; ++i) {
+                float w = weights.ptr<float>(i)[0];
+                mean += w * samples.row(i);
+                sum += w;
+            }
+            mean /= sum;
+            for (int i = 0; i < samples.rows; ++i) {
+                cv::Mat row = samples.row(i) - mean;
+                cov += weights.ptr<float>(i)[0] * row.t() * row;
+            }
+            cov /= sum;
+            icov = cov.inv(cv::DECOMP_SVD);
+            LOG(INFO) << "mean: " << mean;
+            LOG(INFO) << "cov: " << cov;
+            LOG(INFO) << "icov: " << icov;
+        }
+        cv::Mat prob (cv::Mat in) const {
+            CHECK(in.cols == mean.cols);
+            cv::Mat r(in.rows, 1, CV_32F);
+            float *ptr = r.ptr<float>(0);
+            for (int i = 0; i < in.rows; ++i) {
+                cv::Mat r = in.row(i) - mean;
+                cv::Mat k = r * icov * r.t();
+                CHECK(k.rows == 1);
+                CHECK(k.cols == 1);
+                float v = std::exp(-0.5 * k.ptr<float>(0)[0]);
+                ptr[i] = v;
+            }
+            return r;
+        }
+    };
+
+    void Var2Prob (cv::Mat in, cv::Mat *out, float pth, int mk);
 }
