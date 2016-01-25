@@ -66,8 +66,7 @@ int conn_comp (cv::Mat *mat, cv::Mat const &weight, vector<float> *cnt) {
     return c;
 }
 
-void post_process (Stack &stack) {
-    static const int mk = 20;
+void post_process (Stack &stack, int mk) {
     cv::Mat p(stack.front().image.size(), CV_32F, cv::Scalar(0));
     for (auto &s: stack) {
         p = cv::max(p, s.prob);
@@ -111,7 +110,6 @@ int main(int argc, char **argv) {
     string output_dir;
     string gif;
     float th;
-    float pth;
     int mk;
     bool do_prob = false;
 
@@ -124,8 +122,7 @@ int main(int argc, char **argv) {
     //("output,o", po::value(&output_dir), "")
     ("gif", po::value(&gif), "")
     ("th", po::value(&th)->default_value(0.99), "")
-    ("pth", po::value(&pth)->default_value(0.8), "")
-    ("mk", po::value(&mk)->default_value(10),"")
+    ("mk", po::value(&mk)->default_value(20),"")
     ("prob", "")
     ;
 
@@ -167,7 +164,7 @@ int main(int argc, char **argv) {
         det->apply(&s);
     }
     delete det;
-    post_process(stack);
+    post_process(stack, mk);
 
     for (auto &s: stack) {
         cout << s.path.native() << '\t' << sqrt(cv::sum(s.prob)[0]) * s.meta.spacing << endl;
