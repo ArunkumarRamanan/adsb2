@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
     float th;
     float pth;
     int mk;
+    bool do_prob = false;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -125,6 +126,7 @@ int main(int argc, char **argv) {
     ("th", po::value(&th)->default_value(0.99), "")
     ("pth", po::value(&pth)->default_value(0.8), "")
     ("mk", po::value(&mk)->default_value(10),"")
+    ("prob", "")
     ;
 
 
@@ -142,6 +144,8 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
+
+    if (vm.count("prob")) do_prob = true;
 
     Config config;
     try {
@@ -166,12 +170,17 @@ int main(int argc, char **argv) {
     post_process(stack);
 
     for (auto &s: stack) {
-        Rect bb;
-        bound(s.prob, &bb, bbth);
-        cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
-        cv::rectangle(s.image, bb, cv::Scalar(0xFF));
-        cv::rectangle(s.prob, bb, cv::Scalar(0xFF));
-        cv::hconcat(s.image, s.prob, s.image);
+        cout << s.path.native() << '\t' << sqrt(cv::sum(s.prob)[0]) * s.meta.spacing << endl;
+        if (gif.size()) {
+            Rect bb;
+            bound(s.prob, &bb, bbth);
+            cv::rectangle(s.image, bb, cv::Scalar(0xFF));
+            if (do_prob) {
+                cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
+                cv::rectangle(s.prob, bb, cv::Scalar(0xFF));
+                cv::hconcat(s.image, s.prob, s.image);
+            }
+        }
     }
 
     if (gif.size()) {
