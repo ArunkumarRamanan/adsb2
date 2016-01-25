@@ -1,3 +1,4 @@
+#include <unordered_map>
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/accumulators/accumulators.hpp>
@@ -8,9 +9,13 @@
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/max.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
+#define timer timer_for_boost_progress_t
+#include <boost/progress.hpp>
+#undef timer
 #include "adsb2.h"
 
 namespace adsb2 {
+    using std::unordered_map;
     void LoadConfig (string const &path, Config *config) {
         try {
             boost::property_tree::read_xml(path, *config);
@@ -35,107 +40,88 @@ namespace adsb2 {
         }
     }
 
+    Sample::Sample (string const &txt): do_not_cook(false) {
+        istringstream ss(txt);
+        string p;
+        ss >> p >> box.x >> box.y >> box.width >> box.height;
+        if (!ss) {
+            box.x = box.y = -1;
+            box.width = box.height = 0;
+            return;
+        }
+        annotated = true;
+        path = fs::path(p);
+        line = txt;
+    }
+
     void Sample::eval (cv::Mat mat, float *s1, float *s2) const {
-        cv::Rect rect;
-        round(box, &rect);
-        cv::Mat roi = mat(rect);
+        CHECK(box.x >=0 && box.y >= 0);
+        cv::Mat roi = mat(round(box));
         float total = cv::sum(mat)[0];
         float covered = cv::sum(roi)[0];
-        /*
-        cv::Scalar avg, stv;
-        cv::meanStdDev(roi, avg, stv);
-        */
         *s1 = covered / total;
-        //*s2 = stv[0] / avg[0];
-
-        *s2 = std::sqrt(roi.total()) * meta.spacing;
+        *s2 = 0;//*s2 = std::sqrt(roi.area()) * meta.spacing;
     }
 
-    cv::Mat ImageLoader::load (string const &path, Meta *pmeta) const {
-        cv::Mat raw;
-        Meta meta;
-        raw = load_raw(path, &meta);
-        if (!raw.data) {
-            return raw;
+    Stack::Stack (fs::path const &input_dir, bool load) {
+        // enumerate DCM files
+        vector<fs::path> paths;
+        fs::directory_iterator end_itr;
+        for (fs::directory_iterator itr(input_dir);
+                itr != end_itr; ++itr) {
+            if (fs::is_regular_file(itr->status())) {
+                // found subdirectory,
+                // create tagger
+                auto path = itr->path();
+                auto ext = path.extension();
+                if (ext.string() != ".dcm") {
+                    LOG(WARNING) << "Unknown file type: " << path.string();
+                    continue;
+                }
+                paths.push_back(path);
+            }
         }
-
-        if (spacing > 0) {
-            //float scale = spacing / meta.spacing;
-            meta.spacing = spacing;
-            float scale = meta.raw_spacing / meta.spacing;
-            cv::Size sz(std::round(raw.cols * scale),
-                        std::round(raw.rows * scale));
-            cv::resize(raw, raw, sz);
+        std::sort(paths.begin(), paths.end());
+        resize(paths.size());
+        for (unsigned i = 0; i < paths.size(); ++i) {
+            Sample &s = at(i);
+            s.path = paths[i];
+            if (load) {
+                s.load_raw();
+                if (i) {
+                    CHECK(s.meta.spacing == at(0).meta.spacing);
+                    CHECK(s.image.size() == at(0).image.size());
+                }
+            }
+            /*
+            auto const &name = names[i];
+            auto dcm_path = input_dir;
+            dcm_path /= name;
+            dcm_path += ".dcm";
+            cv::Mat image = loader.load(dcm_path.native(), &metas[i]);
+            //ImageAdaptor::apply(&image);
+            BOOST_VERIFY(image.total());
+            BOOST_VERIFY(image.type() == CV_16U);
+            BOOST_VERIFY(image.isContinuous());
+            at(i) = image;
+            */
         }
-
-        if (raw.rows > raw.cols) {
-            cv::transpose(raw, raw);
-        }
-
-        if (pmeta) *pmeta = meta;
-
-        return raw;
     }
 
-    bool ImageLoader::load (Sample *sample) const {
-        Meta meta;
-        cv::Mat image = load(sample->path, &meta);;
-        if (!image.data) {
-            sample->image = cv::Mat();
-            return false;
-        }
-
-        if (meta.spacing != meta.raw_spacing) {
-            //float scale = spacing / meta.spacing;
-            sample->box *= meta.raw_spacing / meta.spacing;
-        }
-        sample->meta = meta;
-        sample->image = image;
-        return true;
-    }
-
-    void ImageLoader::load (string const &path, string const &root, vector<Sample> *samples) const {
-        ifstream is(path.c_str());
-        CHECK(is) << "Cannot open list file: " << path;
-        Sample s;
-        int id = 0;
-        string line;
-        while (getline(is, line)) {
-            s.id = id;
-            if (!s.parse(line)) {
-                LOG(ERROR) << "Bad line: " << line;
-                continue;
-            }
-            s.path = root + s.path;
-            if (!fs::is_regular_file(fs::path(s.path))) {
-                LOG(ERROR) << "Cannot find regular file: " << s.path;
-                continue;
-            }
-            if (!load(&s)) {
-                LOG(ERROR) << "Fail to load file: " << s.path;
-                continue;
-            }
-            samples->emplace_back();
-            std::swap(s, samples->back());
-            ++id;
-        }
-        LOG(INFO) << "Loaded " << samples->size() << " samples.";
-    };
-
-    void DcmStack::getAvgStdDev (cv::Mat *avg, cv::Mat *stddev) {
+    void Stack::getAvgStdDev (cv::Mat *avg, cv::Mat *stddev) {
         namespace ba = boost::accumulators;
         typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max, ba::tag::count, ba::tag::variance, ba::tag::moment<2>>> Acc;
         CHECK(size());
-        BOOST_VERIFY(at(0).type() == CV_16U);
+        CHECK(at(0).image.type() == CV_16U);
 
-        cv::Size shape = at(0).size();
-        unsigned pixels = at(0).total();
+        cv::Size shape = at(0).image.size();
+        unsigned pixels = shape.area();
 
         cv::Mat mu(shape, CV_32F);
         cv::Mat sigma(shape, CV_32F);
         vector<Acc> accs(pixels);
-        for (auto const &image: *this) {
-            uint16_t const *v = image.ptr<uint16_t const>(0);
+        for (auto const &s: *this) {
+            uint16_t const *v = s.image.ptr<uint16_t const>(0);
             for (auto &acc: accs) {
                 acc(*v);
                 ++v;
@@ -155,51 +141,77 @@ namespace adsb2 {
         *stddev = sigma;
     }
 
-    void DcmStack::getColorRange (ColorRange *range, float th) {
-        cv::Mat mu, sigma;
-        getAvgStdDev(&mu, &sigma);
-        th = percentile<float>(sigma, th);
-        vector<vector<int>> picked(sigma.rows);
-        for (int i = 0; i < sigma.rows; ++i) {
-            auto &v = picked[i];
-            float const *p = sigma.ptr<float const>(i);
-            for (int j = 0; j < sigma.cols; ++j) {
-                if (p[j] >= th) {
-                    v.push_back(j);
-                }
-            }
-        }
-        uint16_t low = std::numeric_limits<uint16_t>::max();
-        uint16_t high = 0;
-        uint16_t ulow = low;
-        uint16_t uhigh = high;
-
-        for (auto const &image: *this) {
-            for (int i = 0; i < sigma.rows; ++i) {
-                auto const &v = picked[i];
-                uint16_t const *p = image.ptr<uint16_t const>(i);
-                for (int j = 0; j < sigma.cols; ++j) {
-                    if (p[j] > high) high = p[j];
-                    if (p[j] < low) low = p[j];
-                }
-                for (int j: v) {
-                    if (p[j] > uhigh) uhigh = p[j];
-                    if (p[j] < ulow) ulow = p[j];
-                }
-            }
-        }
-        CHECK(low <= ulow);
-        CHECK(high >= uhigh);
-        range->min = low;
-        range->max = high;
-        range->umin = ulow;
-        range->umax = uhigh;
+    void shrink_expand (vector<uint16_t> &all, vector<uint16_t> *v, float eth) {
+        percentile(all, vector<float>{0, eth, 1 - eth, 1}, v);
+        CHECK(v->size() == 4);
+        int r = v->at(2) - v->at(1);
+        int low = v->at(1) - r * eth;
+        int high = v->at(2) + r * eth;
+        if (low < v->at(0)) low = v->at(0);
+        if (high > v->at(3)) high = v->at(3);
+        v->resize(2);
+        v->at(0) = low;
+        v->at(1) = high;
+        CHECK(v->size() == 2);
     }
 
-    void ImageAdaptor::apply (cv::Mat *to, ColorRange const &range, uint8_t tlow, uint8_t thigh) {
-        cv::Mat from = to->clone();
+    // get color range from RAW images of the stack
+    // sigma is precomputed standard deviation image
+    void getColorRange (Stack const &stack, cv::Mat sigma, ColorRange *range, float vth, float eth) {
+        vector<uint16_t> all;
+        all.reserve(stack.front().image.total() * stack.size());
+        vector<uint16_t> roi;
+        vector<vector<int>> picked;
+        if (stack.size() > 1) { // has sigma
+            roi.reserve(stack.front().image.total() * stack.size());
+            float sth = percentile<float>(sigma, vth);  // sigma th
+            picked.resize(sigma.rows);
+            for (int i = 0; i < sigma.rows; ++i) {
+                auto &v = picked[i];
+                float const *p = sigma.ptr<float const>(i);
+                for (int j = 0; j < sigma.cols; ++j) {
+                    if (p[j] >= vth) {
+                        v.push_back(j);
+                    }
+                }
+            }
+        }
+
+        for (auto const &s: stack) {
+            cv::Mat const &image = s.raw;
+            for (int i = 0; i < image.rows; ++i) {
+                auto const &v = picked[i];
+                uint16_t const *p = image.ptr<uint16_t const>(i);
+                for (int j = 0; j < image.cols; ++j) {
+                    all.push_back(p[j]);
+                }
+                for (int j: v) {
+                    roi.push_back(p[j]);
+                }
+            }
+        }
+        vector<uint16_t> allth;
+        vector<uint16_t> roith;
+        shrink_expand(all, &allth, eth);
+        shrink_expand(roi, &roith, eth);
+        range->min = allth[0];
+        range->max = allth[1];
+        range->umin = roith[0];
+        range->umax = roith[1];
+        if (range->umin < range->min) {
+            LOG(WARNING) << "exand min " << range->umin << " => " << range->min;
+            range->umin = range->min;
+        }
+        if (range->umax > range->max) {
+            LOG(WARNING) << "exand max " << range->umax << " => " << range->max;
+            range->umax = range->max;
+        }
+    }
+
+    void scaleColor (cv::Mat from, cv::Mat *to, ColorRange const &range,
+                     float tlow, float thigh, float tmax) {
         CHECK(from.type() == CV_16UC1);
-        to->create(from.size(), CV_8UC1);
+        to->create(from.size(), CV_32FC1);
         // [low, ulow) -> [0, tlow)
         // [ulow, uhigh] -> [tlow, thigh]
         // (uhigh, high] -> (thigh, 255]
@@ -216,20 +228,20 @@ namespace adsb2 {
             // 1-1 correspondance between [91, 101) and [0, 10)
             low = ulow - tlow;
         }
-        if (high - uhigh < 255 - thigh) {
+        if (high - uhigh < tmax - thigh) {
             // e.g.   high = 100, max = 101
             //        thigh = 245,
             // we raise max = 100 + 255 - 245 = 110
             //        [100, 110] <-> [245, 255]
-            high = uhigh + (255 - thigh);
+            high = uhigh + (tmax - thigh);
 
         }
         for (int i = 0; i < from.rows; ++i) {
             uint16_t const *f = from.ptr<uint16_t const>(i);
-            uint8_t *t = to->ptr<uint8_t>(i);
+            float *t = to->ptr<float>(i);
             for (int j = 0; j < from.cols; ++j) {
                 uint16_t x = f[j];
-                int y = 0;
+                float y = 0;
                 if (x < low) {
                     y = 0;
                 }
@@ -245,16 +257,138 @@ namespace adsb2 {
                 }
                 else if (x <= high) {
                     // (uhigh, high] -> (thigh, 255]
-                     y = (x - uhigh) * (255 - thigh) / (high - uhigh) + thigh;
+                     y = (x - uhigh) * (tmax - thigh) / (high - uhigh) + thigh;
                     // uhigh =>  thigh
                     // high => 255
                 }
                 else {
-                    y = 255;
+                    y = tmax;
                 }
-                CHECK(y >= 0 && y <= 255);
-                t[j] = uint8_t(y);
+                if (!(y > 0)) {
+                    if (!(y > -1)) {
+                        LOG(WARNING) << "y < 0: " << y;
+                    }
+                    y = 0;
+                }
+                if (!(y <= tmax)) {
+                    LOG(WARNING) << "y > tmax: " << y << " " << tmax;
+                    y = tmax;
+                }
+                t[j] = y;
             }
         }
     }
+
+    void Cook::apply (Stack *stack) const {
+        // normalize color
+        cv::Mat mu, sigma;
+        stack->getAvgStdDev(&mu, &sigma);
+        ColorRange cr;
+        getColorRange(*stack, sigma, &cr, color_vth, color_eth);
+        float clow = color_max * color_margin;
+        float chigh = color_max - color_max * color_margin;
+        for (auto &s: *stack) {
+            if (s.do_not_cook) continue;
+            scaleColor(s.raw, &s.image, cr, clow, chigh, color_max);
+        }
+        // compute var image
+        cv::Mat vimage;
+        cv::normalize(sigma, vimage, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
+        // normalize size
+        if (spacing > 0) {
+            //float scale = spacing / meta.spacing;
+            float raw_spacing = stack->front().meta.raw_spacing;
+            float scale = raw_spacing / spacing;
+            cv::Size sz = round(stack->front().image.size() * scale);
+            cv::resize(vimage, vimage, sz);
+            for (auto &s: *stack) {
+                if (s.do_not_cook) continue;
+                s.meta.spacing = spacing;
+                CHECK(s.meta.raw_spacing == raw_spacing);
+                //float scale = s.meta.raw_spacing / s.meta.spacing;
+                cv::resize(s.image, s.image, round(s.image.size() * scale));
+                if (s.annotated) {
+                    s.box = s.box * scale;
+                }
+            }
+        }
+        for (auto &s: *stack) {
+            if (s.do_not_cook) continue;
+            s.vimage = vimage;
+        }
+        // compute label image
+    }
+
+    Samples::Samples (fs::path const &list_path, fs::path const &root, Cook const &cook) {
+        fs::ifstream is(list_path);
+        CHECK(is) << "Cannot open list file: " << list_path;
+        string line;
+        while (getline(is, line)) {
+            Sample s(line);
+            if (s.line.empty()) {
+                LOG(ERROR) << "bad line: " << line;
+                continue;
+            }
+            if (s.path.extension().string() != ".dcm") {
+                LOG(ERROR) << "not DCM file: " << s.path;
+                continue;
+            }
+            fs::path f = root;
+            f /= s.path;
+            if (!fs::is_regular_file(f)) {
+                LOG(ERROR) << "not regular file: " << f;
+                continue;
+            }
+            push_back(s);
+        }
+        // distribute samples to stacks
+        std::unordered_map<string, vector<unsigned>> dirs;
+        for (unsigned i = 0; i < size(); ++i) {
+            dirs[at(i).path.parent_path().string()].push_back(i);
+        }
+        LOG(INFO) << "found files in " << dirs.size() << " dirs.";
+    
+        boost::progress_display progress(dirs.size(), std::cerr);
+        vector<std::pair<fs::path, vector<unsigned>>> todo;
+        for (auto &p: dirs) {
+            todo.emplace_back(fs::path(p.first), std::move(p.second));
+        }
+#pragma omp parallel for
+        for (unsigned ii = 0; ii < todo.size(); ++ii) {
+            fs::path dir = root / fs::path(todo[ii].first);
+            Stack stack(dir);
+            vector<std::pair<unsigned, unsigned>> offs;
+            {
+                unordered_map<string, unsigned> mm;
+                for (unsigned i = 0; i < stack.size(); ++i) {
+                    mm[stack[i].path.stem().string()] = i;
+                }
+                // offset mapping: from samples offset to stack offset
+                for (unsigned i: todo[ii].second) {
+                    auto it = mm.find(at(i).path.stem().string());
+                    CHECK(it != mm.end()) << "cannot find " << at(i).path << " in dir " << dir;
+                    offs.emplace_back(i, it->second);
+                }
+            }
+            for (auto &s: stack) {
+                s.do_not_cook = true;
+            }
+            for (auto const &p: offs) {
+                Sample &from = at(p.first);
+                Sample &to = stack[p.second];
+                to.do_not_cook = false;
+                to.line = from.line;
+                to.annotated = from.annotated;
+                to.box = from.box;
+            }
+            // move annotation data to stack
+            cook.apply(&stack);
+            // now extract the files we want
+            for (auto const &p: offs) {
+                std::swap(at(p.first), stack[p.second]);
+            }
+            ++progress;
+        }
+    }
 }
+

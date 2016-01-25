@@ -30,6 +30,23 @@ void EM_binarify (Mat &mat, Mat *out) {
     *out = out->reshape(1, mat.rows);
 }
 
+#if 0
+void scale_detect (Detector *det, Mat &image, Rect *bb, float scale, float bbth) {
+    Mat from;
+    if (scale != 1) {
+        resize(image, from, round(image.size() * scale));
+    }
+    else {
+        from = image;
+    }
+    Mat prob;
+    det->apply(from, &prob);
+    if (from.data != image.data) {
+        resize(prob, prob, image.size());
+    }
+    bound(prob, bb, bbth);
+}
+#endif
 
 int main(int argc, char **argv) {
     //Stack stack("sax", "tmp");
@@ -76,32 +93,26 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
-    ImageLoader loader(config);
-    DcmStack images(input_dir, loader);
+    Cook cook(config);
+    Stack stack(input_dir);
+    cook.apply(&stack);
 
     Detector *det = make_caffe_detector(config.get<string>("adsb2.caffe.model", "model"));
     CHECK(det) << " cannot create detector.";
 
     float bbth = config.get<float>("adsb2.bound_th", 0.95);
-
-    ColorRange cr;
-    images.getColorRange(&cr, th);
-
-    cerr << cr.min << ' ' << cr.umin << ' ' << cr.umax << ' ' << cr.max << endl;
-
-    for (auto &image: images) {
-        ImageAdaptor::apply(&image, cr);
-        Mat prob;
-        det->apply(image, &prob);
+    for (auto &s: stack) {
         Rect bb;
+        Mat prob;
+        det->apply(s, &prob);
         bound(prob, &bb, bbth);
-        cv::rectangle(image, bb, cv::Scalar(0xFF));
+        cv::rectangle(s.image, bb, cv::Scalar(0xFF));
     }
 
     delete det;
 
     if (gif.size()) {
-        images.make_gif(gif);
+        stack.save_gif(gif);
     }
     return 0;
 }

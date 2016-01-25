@@ -6,6 +6,7 @@
 #include <opencv2/opencv.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
 #include <boost/assert.hpp>
@@ -28,80 +29,179 @@ namespace adsb2 {
     // Overriding configuration options in the form of "KEY=VALUE"
     void OverrideConfig (std::vector<std::string> const &overrides, Config *);
 
-    class Detector {
-    public:
-        virtual ~Detector () {}
-        virtual void apply (cv::Mat input, cv::Mat *output) = 0;
-    };
+    // OpenCV size and rect routines
+    static inline cv::Rect round (cv::Rect_<float> const &f) {
+        int x = std::round(f.x);
+        int y = std::round(f.y);
+        int width = std::round(f.x + f.width) - x;
+        int height = std::round(f.y + f.height) - y;
+        return cv::Rect(x, y, width, height);
+    }
 
-    Detector *make_caffe_detector (string const &);
-    Detector *make_cascade_detector (string const &);
-    Detector *make_scd_detector (string const &);
+    template <typename T>
+    static inline cv::Rect_<float>  operator * (cv::Rect_<T> &f, float scale) {
+        return cv::Rect_<float>(f.x * scale,
+                                f.y * scale,
+                                f.width * scale,
+                                f.height * scale);
+    }
+
+    static inline cv::Size round (cv::Size_<float> const &sz) {
+        return cv::Size(std::round(sz.width), std::round(sz.height));
+    }
+
+    template <typename T>
+    static inline cv::Size_<float> operator * (cv::Size_<T> const &sz, float scale) {
+        return cv::Size_<float>(sz.width * scale, sz.height * scale);
+    }
 
     struct Meta {
         float spacing;      // 
         float raw_spacing;  // original spacing as in file
+        Meta (): spacing(-1), raw_spacing(-1) {
+        }
     };
 
-    static inline void round (cv::Rect_<float> const &from, cv::Rect *to) {
-        to->x = std::round(from.x);
-        to->y = std::round(from.y);
-        to->width = std::round(from.x + from.width) - to->x;
-        to->height = std::round(from.y + from.height) - to->y;
-    }
-
-    static inline void operator *= (cv::Rect_<float> &from, float scale) {
-        from.x *= scale;
-        from.y *= scale;
-        from.width *= scale;
-        from.height *= scale;
-    }
+    cv::Mat load_dicom (fs::path const &, Meta *);
 
     struct Sample {
         int id;
-        string line;
-        string path;
+        fs::path path;      // must always present
         Meta meta;
-        cv::Mat image;
-        cv::Rect_<float> box;
+        cv::Mat raw;        // raw image, U16C1
+        // size of the following 3 images must be the same
+        cv::Mat image;      // cooked image             CV_32FC1
+        cv::Mat vimage;   // cooked variance image    CV_32FC1
+        //cv::Mat label;      // cooked label image,      CV_8UC1
+        // the following lines might be missing
+        string line;            // line as read from list file
+        bool annotated;
+        cv::Rect_<float> box;   // bouding box
+        bool do_not_cook;
 
-        bool parse (string const &txt) {
-            istringstream ss(txt);
-            ss >> path >> box.x >> box.y >> box.width >> box.height;
-            if (!ss) return false;
-            line = txt;
-            return true;
+        Sample (): box(-1,-1,0,0), annotated(false), do_not_cook(false) {}
+        Sample (string const &line);
+
+        void load_raw () {
+            raw = load_dicom(path, &meta);
+#if 1   // Yuanfang's annotation assume images are all in landscape position
+            if (raw.rows > raw.cols) {
+                cv::transpose(raw, raw);
+            }
+#endif
+            image = raw;
         }
 
         cv::Mat roi () {
-            cv::Rect roi;
-            round(box, &roi);
+            CHECK(box.x >=0 && box.y >= 0);
+            cv::Rect roi = round(box);
             return image(roi);
         }
 
         void fill_roi (cv::Mat *mat, cv::Scalar const &v) const {
-            cv::Rect roi;
-            round(box, &roi);
+            CHECK(box.x >=0 && box.y >= 0);
+            cv::Rect roi = round(box);
             (*mat)(roi).setTo(v);
         }
 
         void eval (cv::Mat mat, float *s1, float *s2) const;
     };
 
-    class ImageLoader {
-        float spacing;
+    struct ColorRange {
+        int min, max;
+        int umin, umax;
+    };
+
+    class Stack: public vector<Sample> {
     public:
-        ImageLoader (Config const &config):
-            spacing(config.get<float>("adsb2.loader.spacing", 1.0))
+        Stack ();
+        // load from a directory of DCM files
+        Stack (fs::path const &input_dir, bool load = true);
+
+        cv::Size shape () const {
+            return at(0).image.size();
+        }
+
+        void convert (int rtype, double alpha = 1, double beta = 0) {
+            for (auto &s: *this) {
+                s.image.convertTo(s.image, rtype, alpha, beta);
+            }
+        }
+
+        void save_dir (fs::path const &dir, fs::path const &ext) {
+            fs::create_directories(dir);
+            for (auto const &s: *this) {
+                fs::path path(dir / s.path.stem());
+                path += ext;
+                // fs::path((boost::format("%d.pgm") % i).str()));
+                cv::imwrite(path.native(), s.image);
+            }
+        }
+
+        void save_gif (string const &path) {
+            fs::path tmp(fs::unique_path());
+            fs::create_directories(tmp);
+            ostringstream gif_cmd;
+            gif_cmd << "convert -delay 5 ";
+            fs::path ext(".pgm");
+            for (auto const &s: *this) {
+                fs::path pgm(tmp / s.path.stem());
+                pgm += ext;
+                cv::Mat u8;
+                s.image.convertTo(u8, CV_8UC1);
+                cv::imwrite(pgm.native(), u8);
+                gif_cmd << " " << pgm;
+            }
+            gif_cmd << " " << fs::path(path);
+            ::system(gif_cmd.str().c_str());
+            fs::remove_all(tmp);
+        }
+
+        void getAvgStdDev (cv::Mat *avg, cv::Mat *stddev);
+        void getColorRange (ColorRange *, float th = 0.9);
+    };
+
+
+    class Cook {
+        float spacing;
+        bool variance;
+        float color_vth;
+        float color_eth;
+        float color_margin;
+        float color_max;
+    public:
+        Cook (Config const &config):
+            spacing(config.get<float>("adsb2.cook.spacing", 1.0)),
+            variance(config.get<int>("adsb2.caffe.channels", 1) > 1),
+            color_vth(config.get<float>("adsb2.color.vth", 0.99)),
+            color_eth(config.get<float>("adsb2.color.eth", 0.1)),
+            color_margin(config.get<float>("adsb2.color.margin", 0.04)),
+            color_max(config.get<float>("adsb2.color.max", 255))
         {
         }
 
-        static cv::Mat load_raw (string const &path, Meta *meta = nullptr);
-
-        bool load (Sample *sample) const;
-        cv::Mat load (string const &path, Meta *meta = nullptr) const;
-        void load (string const &path, string const &root, vector<Sample> *samples) const;
+        // cook the whole stack
+        void apply (Stack *stack) const;
     };
+
+    // samples do not belong to a single directory
+    class Samples: public vector<Sample>
+    {
+    public:
+        Samples (fs::path const &list_path, fs::path const &root, Cook const &cook);
+    };
+
+
+    class Detector {
+    public:
+        virtual ~Detector () {}
+        virtual void apply (Sample &sample, cv::Mat *output) = 0;
+    };
+
+
+    Detector *make_caffe_detector (string const &);
+    Detector *make_cascade_detector (string const &);
+    Detector *make_scd_detector (string const &);
 
     class ImageAugment {
     public:
@@ -110,114 +210,30 @@ namespace adsb2 {
         }
     };
 
-    struct ColorRange {
-        int min, max;
-        int umin, umax;
-    };
-
-    class ImageAdaptor {
+    class CaffeAdaptor {
     public:
-        static void apply (cv::Mat *to) {
-            cv::Mat v = *to;
-            // TODO! support color image
-            if (v.channels() == 3) {
-                cv::cvtColor(v, v, CV_BGR2GRAY);
+        static void apply (Sample &sample, cv::Mat *image, cv::Mat *label, int channels = 1) {
+            CHECK(sample.image.type() == CV_32FC1);
+            cv::Mat color;
+            sample->image.convertTo(color, CV_8UC1);
+            if (channels == 1) {
+                *image = color;
             }
-            else CHECK(v.channels() == 1);
-            // always to gray
-            if (v.type() == CV_16UC1
-                    || v.type() == CV_32FC1) {
-                normalize(v, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+            else if (channels == 2) {
+                CHECK(sample->vimage.data);
+                cv::Mat v;
+                cv::normalize(sample->vimage, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+                vector<cv::Mat> channels{color, v};
+                cv::merge(channels, *image);
             }
-            else CHECK(v.type() == CV_8UC1);
-            *to = v;
-        }
-        static void apply (Sample *sample, cv::Mat *image, cv::Mat *label) {
-            cv::Mat v = sample->image.clone();
-            apply(&v);
-            *image = v;
-            label->create(v.size(), CV_8UC1);
-            // save label
-            label->setTo(cv::Scalar(0));
-            sample->fill_roi(label, cv::Scalar(1));
-        }
-        static void apply (cv::Mat *to,
-                        ColorRange const &, uint8_t tlow = 10, uint8_t thigh = 245);
-    };
-
-    class Stack: public vector<cv::Mat> {
-    public:
-        cv::Size shape () const {
-            return at(0).size();
-        }
-
-        void convert (int rtype, double alpha = 1, double beta = 0) {
-            for (auto &image: *this) {
-                image.convertTo(image, rtype, alpha, beta);
+            if (label) {
+                CHECK(sample.annotated);
+                label->create(v.size(), CV_8UC1);
+                // save label
+                label->setTo(cv::Scalar(0));
+                sample->fill_roi(label, cv::Scalar(1));
             }
         }
-
-        void make_gif (string const &path) {
-            fs::path tmp(fs::unique_path());
-            fs::create_directories(tmp);
-            ostringstream gif_cmd;
-            gif_cmd << "convert -delay 5 ";
-            for (unsigned i = 0; i < size(); ++i) {
-                fs::path pgm(tmp / fs::path((boost::format("%d.pgm") % i).str()));
-                cv::imwrite(pgm.native(), at(i));
-                gif_cmd << " " << pgm;
-            }
-            gif_cmd << " " << fs::path(path);
-            ::system(gif_cmd.str().c_str());
-            fs::remove_all(tmp);
-        }
-    };
-
-    class DcmStack: public Stack {
-        vector<fs::path> names;
-        vector<Meta> metas;
-    public:
-        DcmStack (std::string const &dir, ImageLoader const &loader) {
-            // enumerate DCM files
-            fs::path input_dir(dir);
-            fs::directory_iterator end_itr;
-            for (fs::directory_iterator itr(input_dir);
-                    itr != end_itr; ++itr) {
-                if (fs::is_regular_file(itr->status())) {
-                    // found subdirectory,
-                    // create tagger
-                    auto path = itr->path();
-                    auto stem = path.stem();
-                    auto ext = path.extension();
-                    if (ext.string() != ".dcm") {
-                        LOG(WARNING) << "Unknown file type: " << path.string();
-                        continue;
-                    }
-                    names.push_back(stem);
-                }
-            }
-            std::sort(names.begin(), names.end());
-            resize(names.size());
-            metas.resize(names.size());
-            for (unsigned i = 0; i < names.size(); ++i) {
-                auto const &name = names[i];
-                auto dcm_path = input_dir;
-                dcm_path /= name;
-                dcm_path += ".dcm";
-                cv::Mat image = loader.load(dcm_path.native(), &metas[i]);
-                //ImageAdaptor::apply(&image);
-                BOOST_VERIFY(image.total());
-                BOOST_VERIFY(image.type() == CV_16U);
-                BOOST_VERIFY(image.isContinuous());
-                if (i) {
-                    BOOST_VERIFY(image.size() == at(0).size());
-                }
-                at(i) = image;
-            }
-        }
-
-        void getAvgStdDev (cv::Mat *avg, cv::Mat *stddev);
-        void getColorRange (ColorRange *, float th = 0.9);
     };
 
     template <typename I>
@@ -262,7 +278,19 @@ namespace adsb2 {
     }
 
     template <typename T>
-    T percentile (cv::Mat const &mat, float p) {
+    void percentile (vector<T> &all, vector<float> const &p, vector<T> *v) {
+        sort(all.begin(), all.end());
+        v->resize(p.size());
+        for (unsigned i = 0; i < p.size(); ++i) {
+            int t = int(std::floor(all.size() * p[i]));
+            if (t < 0) t = 0;
+            if (t >= all.size()) t = all.size() - 1;
+            v->at(i) = all[t];
+        }
+    }
+
+    template <typename T>
+    void percentile (cv::Mat const &mat, vector<float> const &p, vector<T> *v) {
         vector<T> all;
         CHECK(mat.total());
         for (int i = 0; i < mat.rows; ++i) {
@@ -271,7 +299,13 @@ namespace adsb2 {
                 all.push_back(p[j]);
             }
         }
-        sort(all.begin(), all.end());
-        return all[all.size() * p];
+        percentile(all, p, v);
+    }
+
+    template <typename T>
+    T percentile (cv::Mat const &mat, float p) {
+        vector<T> v;
+        percentile(mat, vector<float>{p}, &v);
+        return v[0];
     }
 }

@@ -52,17 +52,15 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
-    vector<Sample> samples;
-    ImageLoader loader(config);
-    loader.load(list_path, root_dir, &samples);
+    Cook cook(config);
+    Samples samples(list_path, root_dir, cook);
     Detector *det = make_caffe_detector(config.get<string>("adsb2.caffe.model", "model"));
     CHECK(det) << " cannot create detector.";
 
     float th = config.get<float>("adsb2.bound_th", 0.95);
     for (auto &s: samples) {
         Mat prob;
-        ImageAdaptor::apply(&s.image);
-        det->apply(s.image, &prob);
+        det->apply(s, &prob);
         Rect bb;
         bound(prob, &bb, th);
         float s1, s2;

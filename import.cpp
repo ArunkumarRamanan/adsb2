@@ -29,7 +29,7 @@ string backend("lmdb");
 
 void import (ImageAugment const &aug,
              vector<Sample *> const &samples,
-             string const &prefix, fs::path const &dir) {
+             fs::path const &dir, channels) {
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
@@ -50,7 +50,7 @@ void import (ImageAugment const &aug,
         CHECK(sample->image.data);
 
         cv::Mat image, label;
-        ImageAdaptor::apply(sample, &image, &label);
+        CaffeAdaptor::apply(sample, &image, &label, channels);
 
         caffe::CVMatToDatum(image, &datum);
         datum.set_label(0);
@@ -128,6 +128,7 @@ int main(int argc, char **argv) {
     }
     CHECK(F >= 1);
     full = vm.count("full") > 0;
+    google::InitGoogleLogging(argv[0]);
 
     Config config;
     try {
@@ -137,18 +138,17 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
-    ImageLoader loader(config);
+    Cook cook(config);
+    int channels = config.get<int>("adsb2.caffe.channels", 1);
     ImageAugment aug(config);
-
-    vector<Sample> samples;
-    loader.load(list_path, root_dir, &samples);
+    Samples samples(list_path, root_dir, cook);
 
     if (F == 1) {
         vector<Sample *> ss(samples.size());
         for (unsigned i = 0; i < ss.size(); ++i) {
             ss[i] = &samples[i];
         }
-        import(aug, ss, root_dir, fs::path(output_dir));
+        import(aug, ss, fs::path(output_dir), channels);
         return 0;
     }
     // N-fold cross validation
@@ -173,8 +173,8 @@ int main(int argc, char **argv) {
         CHECK(fs::create_directories(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(aug, train, root_dir, fold_path / fs::path("train"));
-        import(aug, val, root_dir, fold_path / fs::path("val"));
+        import(aug, train, fold_path / fs::path("train"), channels);
+        import(aug, val, fold_path / fs::path("val"), channels);
         if (!full) break;
     }
 
