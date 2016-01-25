@@ -169,7 +169,7 @@ namespace adsb2 {
         int color_bins;
     public:
         Cook (Config const &config):
-            spacing(config.get<float>("adsb2.cook.spacing", 1.0)),
+            spacing(config.get<float>("adsb2.cook.spacing", 1.4)),
             color_bins(config.get<float>("adsb2.cook.colors", 256))
         {
         }
