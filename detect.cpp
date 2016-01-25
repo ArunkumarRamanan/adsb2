@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
-    dicom_setup(argv[0], config);
+    GlobalInit(argv[0], config);
 
     Cook cook(config);
     Stack stack(input_dir);

@@ -62,6 +62,7 @@ namespace adsb2 {
         }
     };
 
+    void GlobalInit (char const *path, Config const &config);
     void dicom_setup (char const *path, Config const &config);
     cv::Mat load_dicom (fs::path const &, Meta *);
 

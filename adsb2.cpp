@@ -14,6 +14,10 @@
 #undef timer
 #include "adsb2.h"
 
+extern "C" {
+void    openblas_set_num_threads (int);    
+}
+
 namespace adsb2 {
     using std::unordered_map;
     void LoadConfig (string const &path, Config *config) {
@@ -38,6 +42,13 @@ namespace adsb2 {
             }
             config->put<std::string>(D.substr(0, o), D.substr(o + 1));
         }
+    }
+
+    void GlobalInit (char const *path, Config const &config) {
+        google::InitGoogleLogging(path);
+        dicom_setup(path, config);
+        openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
+        cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
     }
 
     Sample::Sample (string const &txt): do_not_cook(false) {

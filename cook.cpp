@@ -61,6 +61,8 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
+    GlobalInit(argv[0], config);
+
     Cook cook(config);
     Stack stack(input_dir);
     cook.apply(&stack);

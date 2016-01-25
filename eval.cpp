@@ -52,6 +52,8 @@ int main(int argc, char **argv) {
     }
     OverrideConfig(overrides, &config);
 
+    GlobalInit(argv[0], config);
+
     Cook cook(config);
     Samples samples(list_path, root_dir, cook);
     Detector *det = make_caffe_detector(config);

@@ -133,7 +133,8 @@ int main(int argc, char **argv) {
     }
     CHECK(F >= 1);
     full = vm.count("full") > 0;
-    google::InitGoogleLogging(argv[0]);
+
+    GlobalInit(argv[0], config);
 
     Config config;
     try {
