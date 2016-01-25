@@ -52,6 +52,11 @@ void import (ImageAugment const &aug,
         cv::Mat image, label;
         CaffeAdaptor::apply(*sample, &image, &label, channels);
 
+        /*
+        cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
+        imwrite((boost::format("abc/%d.png") % count).str(), image);
+        */
+
         caffe::CVMatToDatum(image, &datum);
         datum.set_label(0);
         CHECK(datum.SerializeToString(&value));

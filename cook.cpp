@@ -64,8 +64,13 @@ int main(int argc, char **argv) {
     cook.apply(&stack);
 
     for (auto &s: stack) {
+        cv::Mat v;
+        CaffeAdaptor::apply(s, &v, nullptr, 2);
+        /*
         cv::Mat a = s.image.clone();
         hconcat(a, s.vimage, s.image);
+        */
+        s.image = v;
     }
     if (gif.size()) {
         stack.save_gif(gif);

@@ -290,6 +290,7 @@ namespace adsb2 {
         for (auto &s: *stack) {
             if (s.do_not_cook) continue;
             scaleColor(s.raw, &s.image, cr, clow, chigh, color_max);
+            //cv::normalize(s.raw, s.image, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
         }
         // compute var image
         cv::Mat vimage;

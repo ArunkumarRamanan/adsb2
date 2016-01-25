@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 
     Cook cook(config);
     Samples samples(list_path, root_dir, cook);
-    Detector *det = make_caffe_detector(config.get<string>("adsb2.caffe.model", "model"));
+    Detector *det = make_caffe_detector(config);
     CHECK(det) << " cannot create detector.";
 
     float th = config.get<float>("adsb2.bound_th", 0.95);

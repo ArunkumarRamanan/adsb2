@@ -218,13 +218,17 @@ namespace adsb2 {
                 *image = color;
             }
             else if (channels == 2) {
+#if 0
                 CHECK(sample.vimage.data);
                 cv::Mat v;
                 cv::normalize(sample.vimage, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
                 cv::Mat z(v.size(), CV_8UC1, cv::Scalar(0));
                 vector<cv::Mat> channels{color, v, z};
                 cv::merge(channels, *image);
-                BOOST_VERIFY(image->type() == CV_8UC3);
+                CHECK(image->type() == CV_8UC3);
+#else
+                cv::normalize(sample.vimage, *image, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+#endif
             }
             if (label) {
                 CHECK(sample.annotated);
