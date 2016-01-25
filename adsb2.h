@@ -168,13 +168,15 @@ namespace adsb2 {
         float color_eth;
         float color_margin;
         float color_max;
+        int color_bins;
     public:
         Cook (Config const &config):
             spacing(config.get<float>("adsb2.cook.spacing", 1.0)),
             color_vth(config.get<float>("adsb2.color.vth", 0.99)),
             color_eth(config.get<float>("adsb2.color.eth", 0.1)),
             color_margin(config.get<float>("adsb2.color.margin", 0.04)),
-            color_max(config.get<float>("adsb2.color.max", 255))
+            color_max(config.get<float>("adsb2.color.max", 255)),
+            color_bins(config.get<float>("adsb2.cook.colors", 256))
         {
         }
 

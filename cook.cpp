@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
     for (auto &s: stack) {
         cv::Mat v;
-        CaffeAdaptor::apply(s, &v, nullptr, 2);
+        CaffeAdaptor::apply(s, &v, nullptr, 1);
         /*
         cv::Mat a = s.image.clone();
         hconcat(a, s.vimage, s.image);

@@ -245,7 +245,7 @@ namespace adsb2 {
                 if (x < low) {
                     y = 0;
                 }
-                if (x < ulow) {
+                else if (x < ulow) {
                     // [low, ulow) -> [0, tlow)
                     y = (x - low) * tlow / (ulow - low);
                 }
@@ -279,10 +279,74 @@ namespace adsb2 {
         }
     }
 
+    // histogram equilization
+    void getColorMap (Stack const &stack, vector<float> *cmap, int colors) {
+        vector<uint16_t> all;
+        all.reserve(stack.front().image.total() * stack.size());
+        for (auto const &s: stack) {
+            cv::Mat const &image = s.raw;
+            CHECK(image.type() == CV_16UC1);
+            for (int i = 0; i < image.rows; ++i) {
+                uint16_t const *p = image.ptr<uint16_t const>(i);
+                for (int j = 0; j < image.cols; ++j) {
+                    all.push_back(p[j]);
+                }
+            }
+        }
+        sort(all.begin(), all.end());
+        cmap->resize(all.back()+1);
+        unsigned b = 0;
+        for (unsigned c = 0; c < colors; ++c) {
+            if (b >= all.size()) break;
+            unsigned e0 = all.size() * (c + 1) / colors;
+            unsigned e = e0;
+            // extend e0 to color all of the same color
+            while ((e < all.size()) && (all[e] == all[e0])) ++e;
+            unsigned cb = all[b];
+            unsigned ce = (e < all.size()) ? all[e] : (all.back() + 1);
+            // this is the last color bin
+            // check that we have covered all colors
+            if ((c+1 >= colors) && (ce != all.back() + 1)) {
+                LOG(WARNING) << "bad color mapping";
+                ce = all.back() + 1;
+            }
+            for (unsigned i = cb; i < ce; ++i) {
+                cmap->at(i) = c;
+            }
+            b = e;
+        }
+    }
+
+    void equalize (cv::Mat from, cv::Mat *to, vector<float> const &cmap) {
+        CHECK(from.type() == CV_16UC1);
+        to->create(from.size(), CV_32FC1);
+        for (int i = 0; i < from.rows; ++i) {
+            uint16_t const *f = from.ptr<uint16_t const>(i);
+            float *t = to->ptr<float>(i);
+            for (int j = 0; j < from.cols; ++j) {
+                t[j] = cmap[f[j]];
+            }
+        }
+    }
+
     void Cook::apply (Stack *stack) const {
         // normalize color
         cv::Mat mu, sigma;
         stack->getAvgStdDev(&mu, &sigma);
+        // compute var image
+        cv::Mat vimage;
+        cv::normalize(sigma, vimage, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
+        float scale = -1;
+        float raw_spacing = -1;
+        cv::Size sz;
+        if (spacing > 0) {
+            //float scale = spacing / meta.spacing;
+            float raw_spacing = stack->front().meta.raw_spacing;
+            float scale = raw_spacing / spacing;
+            sz = round(stack->front().image.size() * scale);
+            cv::resize(vimage, vimage, sz);
+        }
+#if 0
         ColorRange cr;
         getColorRange(*stack, sigma, &cr, color_vth, color_eth);
         float clow = color_max * color_margin;
@@ -292,32 +356,23 @@ namespace adsb2 {
             scaleColor(s.raw, &s.image, cr, clow, chigh, color_max);
             //cv::normalize(s.raw, s.image, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
         }
-        // compute var image
-        cv::Mat vimage;
-        cv::normalize(sigma, vimage, 0, color_max, cv::NORM_MINMAX, CV_32FC1);
-        // normalize size
-        if (spacing > 0) {
-            //float scale = spacing / meta.spacing;
-            float raw_spacing = stack->front().meta.raw_spacing;
-            float scale = raw_spacing / spacing;
-            cv::Size sz = round(stack->front().image.size() * scale);
-            cv::resize(vimage, vimage, sz);
-            for (auto &s: *stack) {
-                if (s.do_not_cook) continue;
+#endif
+        vector<float> cmap;
+        getColorMap(*stack, &cmap, color_bins);
+        for (auto &s: *stack) {
+            if (s.do_not_cook) continue;
+            equalize(s.raw, &s.image, cmap);
+            if (scale > 0) {
                 s.meta.spacing = spacing;
                 CHECK(s.meta.raw_spacing == raw_spacing);
                 //float scale = s.meta.raw_spacing / s.meta.spacing;
-                cv::resize(s.image, s.image, round(s.image.size() * scale));
+                cv::resize(s.image, s.image, sz);
                 if (s.annotated) {
                     s.box = s.box * scale;
                 }
             }
-        }
-        for (auto &s: *stack) {
-            if (s.do_not_cook) continue;
             s.vimage = vimage;
         }
-        // compute label image
     }
 
     Samples::Samples (fs::path const &list_path, fs::path const &root, Cook const &cook) {
