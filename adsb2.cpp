@@ -45,9 +45,10 @@ namespace adsb2 {
     }
 
     void GlobalInit (char const *path, Config const &config) {
+        FLAGS_minloglevel = 1;
         google::InitGoogleLogging(path);
         dicom_setup(path, config);
-        openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
+        //openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
     }
 
@@ -235,7 +236,9 @@ namespace adsb2 {
         }
         vector<float> cmap;
         getColorMap(*stack, &cmap, color_bins);
-        for (auto &s: *stack) {
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned i = 0; i < stack->size(); ++i) {
+            auto &s = stack->at(i);
             if (s.do_not_cook) continue;
             equalize(s.raw, &s.image, cmap);
             if (scale > 0) {
@@ -248,6 +251,7 @@ namespace adsb2 {
                     s.box = s.box * scale;
                 }
             }
+#pragma omp critical
             s.vimage = vimage;
         }
     }

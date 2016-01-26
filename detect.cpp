@@ -94,7 +94,9 @@ void post_process (Stack &stack, int mk) {
     cv::dilate(p, p, kernel);
     cv::Mat np;
     p.convertTo(np, CV_32F);
-    for (auto &s: stack) {
+#pragma omp parallel for
+    for (unsigned i = 0; i < stack.size(); ++i) {
+        auto &s = stack[i];
         cv::Mat prob = s.prob.mul(np);
         s.prob = prob;
     }
@@ -158,21 +160,24 @@ int main(int argc, char **argv) {
     Stack stack(input_dir);
     cook.apply(&stack);
 
-    Detector *det = make_caffe_detector(config);
-    CHECK(det) << " cannot create detector.";
-
     float bbth = config.get<float>("adsb2.bound_th", 0.95);
-    for (auto &s: stack) {
-        det->apply(&s);
+#pragma omp parallel
+    {
+        Detector *det = make_caffe_detector(config);
+        CHECK(det) << " cannot create detector.";
+#pragma omp for schedule(dynamic, 1)
+        for (unsigned i = 0; i < stack.size(); ++i) {
+            det->apply(&stack[i]);
+        }
+        delete det;
     }
-    delete det;
     post_process(stack, mk);
 
     for (auto &s: stack) {
-        cout << s.path.native() << '\t' << sqrt(cv::sum(s.prob)[0]) * s.meta.spacing << endl;
+        Rect bb;
+        bound(s.prob, &bb, bbth);
+        cout << s.path.native() << '\t' << sqrt(bb.area()) * s.meta.spacing << endl;
         if (gif.size()) {
-            Rect bb;
-            bound(s.prob, &bb, bbth);
             cv::rectangle(s.image, bb, cv::Scalar(0xFF));
             if (do_prob) {
                 cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
@@ -181,7 +186,6 @@ int main(int argc, char **argv) {
             }
         }
     }
-
     if (gif.size()) {
         stack.save_gif(gif);
     }
