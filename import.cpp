@@ -134,7 +134,6 @@ int main(int argc, char **argv) {
     CHECK(F >= 1);
     full = vm.count("full") > 0;
 
-    GlobalInit(argv[0], config);
 
     Config config;
     try {
@@ -143,6 +142,8 @@ int main(int argc, char **argv) {
         cerr << "Failed to load config file: " << config_path << ", using defaults." << endl;
     }
     OverrideConfig(overrides, &config);
+
+    GlobalInit(argv[0], config);
 
     Cook cook(config);
     int channels = config.get<int>("adsb2.caffe.channels", 1);

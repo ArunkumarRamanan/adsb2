@@ -28,5 +28,8 @@ $(PROGS):	%:      %.o caffex $(HEADERS) $(COMMON)
 %.o:	%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
+clean:
+	rm *.o $(PROGS)
+
 caffex:
 	make -C caffex-fcn caffex.o

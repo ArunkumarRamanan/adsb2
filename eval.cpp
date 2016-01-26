@@ -56,23 +56,24 @@ int main(int argc, char **argv) {
 
     Cook cook(config);
     Samples samples(list_path, root_dir, cook);
-    Detector *det = make_caffe_detector(config);
-    CHECK(det) << " cannot create detector.";
 
     float th = config.get<float>("adsb2.bound_th", 0.95);
-    for (auto &s: samples) {
-        Mat prob;
-        det->apply(s, &prob);
-        Rect bb;
-        bound(prob, &bb, th);
-        float s1, s2;
-        s.eval(prob, &s1, &s2);
-        cout << s1 << '\t' << bb.width * bb.height * s.meta.spacing << endl;
-        /*
-        cv::rectangle(image, bb, cv::Scalar(0xFF));
-        */
+#pragma omp parallel
+    {
+        Detector *det = make_caffe_detector(config);
+        CHECK(det) << " cannot create detector.";
+#pragma omp for schedule(dynamic, 1)
+        for (unsigned i = 0; i < samples.size(); ++i) {
+            det->apply(&samples[i]);
+        }
+        delete det;
     }
-
-    delete det;
+    for (auto &s: samples) {
+        Rect bb;
+        bound(s.prob, &bb, th);
+        float s1, s2;
+        s.eval(s.prob, &s1, &s2);
+        cout << s1 << '\t' << std::sqrt(bb.area()) * s.meta.spacing << endl;
+    }
 }
 
