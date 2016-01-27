@@ -53,9 +53,14 @@ namespace adsb2 {
         CHECK(sex == "F" || sex == "M");
         meta->study.sex = sex[0];
         string age = dicom_get<string>(ff, DCM_PatientAge, path);
-        CHECK(age.back() == 'Y');
+        CHECK(age.size() >= 2);
+        char U = age.back();
+        CHECK(U == 'Y' || U == 'M');
         age.pop_back();
         meta->study.age = boost::lexical_cast<float>(age);
+        if (U == 'M') {
+            meta->study.age /= 12.0;
+        }
         meta->series.slice_thickness = dicom_get<float>(ff, DCM_SliceThickness, path);
         //meta->series.slice_spacing = dicom_get<float>(ff, DCM_SpacingBetweenSlices, path);
         meta->series.nominal_interval = dicom_get<float>(ff, DCM_NominalInterval, path);
