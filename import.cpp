@@ -28,7 +28,7 @@ using namespace adsb2;
 string backend("lmdb");
 
 void import (ImageAugment const &aug,
-             vector<Sample *> const &samples,
+             vector<Slice *> const &samples,
              fs::path const &dir, int channels) {
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
@@ -44,7 +44,7 @@ void import (ImageAugment const &aug,
 
 
     int count = 0;
-    for (Sample *sample: samples) {
+    for (Slice *sample: samples) {
         Datum datum;
         string key = lexical_cast<string>(sample->id), value;
         CHECK(sample->image.data);
@@ -89,7 +89,7 @@ void import (ImageAugment const &aug,
     }
 }
 
-void save_list (vector<Sample *> const &samples, fs::path path) {
+void save_list (vector<Slice *> const &samples, fs::path path) {
     fs::ofstream os(path);
     for (auto const s: samples) {
         os << s->line << endl;
@@ -148,10 +148,10 @@ int main(int argc, char **argv) {
     Cook cook(config);
     int channels = config.get<int>("adsb2.caffe.channels", 1);
     ImageAugment aug(config);
-    Samples samples(list_path, root_dir, cook);
+    Slices samples(list_path, root_dir, cook);
 
     if (F == 1) {
-        vector<Sample *> ss(samples.size());
+        vector<Slice *> ss(samples.size());
         for (unsigned i = 0; i < ss.size(); ++i) {
             ss[i] = &samples[i];
         }
@@ -159,16 +159,16 @@ int main(int argc, char **argv) {
         return 0;
     }
     // N-fold cross validation
-    vector<vector<Sample *>> folds(F);
+    vector<vector<Slice *>> folds(F);
     random_shuffle(samples.begin(), samples.end());
     for (unsigned i = 0; i < samples.size(); ++i) {
         folds[i % F].push_back(&samples[i]);
     }
 
     for (unsigned f = 0; f < F; ++f) {
-        vector<Sample *> const &val = folds[f];
+        vector<Slice *> const &val = folds[f];
         // collect training examples
-        vector<Sample *> train;
+        vector<Slice *> train;
         for (unsigned i = 0; i < F; ++i) {
             if (i == f) continue;
             train.insert(train.end(), folds[i].begin(), folds[i].end());

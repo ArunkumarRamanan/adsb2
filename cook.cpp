@@ -15,7 +15,7 @@ using namespace cv;
 using namespace adsb2;
 
 int main(int argc, char **argv) {
-    //Stack stack("sax", "tmp");
+    //Series stack("sax", "tmp");
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
 
     Cook cook(config);
-    Stack stack(input_dir);
+    Series stack(input_dir);
     cook.apply(&stack);
 
     /*

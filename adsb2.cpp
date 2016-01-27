@@ -52,7 +52,7 @@ namespace adsb2 {
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
     }
 
-    Sample::Sample (string const &txt): do_not_cook(false) {
+    Slice::Slice (string const &txt): do_not_cook(false) {
         istringstream ss(txt);
         string p;
         ss >> p >> box.x >> box.y >> box.width >> box.height;
@@ -66,7 +66,7 @@ namespace adsb2 {
         line = txt;
     }
 
-    void Sample::eval (cv::Mat mat, float *s1, float *s2) const {
+    void Slice::eval (cv::Mat mat, float *s1, float *s2) const {
         CHECK(box.x >=0 && box.y >= 0);
         cv::Mat roi = mat(round(box));
         float total = cv::sum(mat)[0];
@@ -75,7 +75,7 @@ namespace adsb2 {
         *s2 = 0;//*s2 = std::sqrt(roi.area()) * meta.spacing;
     }
 
-    Stack::Stack (fs::path const &input_dir, bool load) {
+    Series::Series (fs::path const &input_dir, bool load): series_path(input_dir) {
         // enumerate DCM files
         vector<fs::path> paths;
         fs::directory_iterator end_itr;
@@ -96,7 +96,7 @@ namespace adsb2 {
         std::sort(paths.begin(), paths.end());
         resize(paths.size());
         for (unsigned i = 0; i < paths.size(); ++i) {
-            Sample &s = at(i);
+            Slice &s = at(i);
             s.path = paths[i];
             if (load) {
                 s.load_raw();
@@ -118,9 +118,10 @@ namespace adsb2 {
             at(i) = image;
             */
         }
+        sanity_check();
     }
 
-    void Stack::getAvgStdDev (cv::Mat *avg, cv::Mat *stddev) {
+    void Series::getAvgStdDev (cv::Mat *avg, cv::Mat *stddev) {
         namespace ba = boost::accumulators;
         typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max, ba::tag::count, ba::tag::variance, ba::tag::moment<2>>> Acc;
         CHECK(size());
@@ -168,7 +169,7 @@ namespace adsb2 {
     }
 
     // histogram equilization
-    void getColorMap (Stack const &stack, vector<float> *cmap, int colors) {
+    void getColorMap (Series const &stack, vector<float> *cmap, int colors) {
         vector<uint16_t> all;
         all.reserve(stack.front().image.total() * stack.size());
         for (auto const &s: stack) {
@@ -217,7 +218,7 @@ namespace adsb2 {
         }
     }
 
-    void Cook::apply (Stack *stack) const {
+    void Cook::apply (Series *stack) const {
         // normalize color
         cv::Mat mu, sigma;
         stack->getAvgStdDev(&mu, &sigma);
@@ -256,12 +257,12 @@ namespace adsb2 {
         }
     }
 
-    Samples::Samples (fs::path const &list_path, fs::path const &root, Cook const &cook) {
+    Slices::Slices (fs::path const &list_path, fs::path const &root, Cook const &cook) {
         fs::ifstream is(list_path);
         CHECK(is) << "Cannot open list file: " << list_path;
         string line;
         while (getline(is, line)) {
-            Sample s(line);
+            Slice s(line);
             if (s.line.empty()) {
                 LOG(ERROR) << "bad line: " << line;
                 continue;
@@ -293,7 +294,7 @@ namespace adsb2 {
 #pragma omp parallel for
         for (unsigned ii = 0; ii < todo.size(); ++ii) {
             fs::path dir = root / fs::path(todo[ii].first);
-            Stack stack(dir);
+            Series stack(dir);
             vector<std::pair<unsigned, unsigned>> offs;
             {
                 unordered_map<string, unsigned> mm;
@@ -311,8 +312,8 @@ namespace adsb2 {
                 s.do_not_cook = true;
             }
             for (auto const &p: offs) {
-                Sample &from = at(p.first);
-                Sample &to = stack[p.second];
+                Slice &from = at(p.first);
+                Slice &to = stack[p.second];
                 to.do_not_cook = false;
                 to.line = from.line;
                 to.annotated = from.annotated;
@@ -356,5 +357,29 @@ namespace adsb2 {
         CHECK(out->size() == in.size());
     }
 
+    Study::Study (fs::path const &input_dir, bool load): study_path(input_dir) {
+        // enumerate DCM files
+        vector<fs::path> paths;
+        fs::directory_iterator end_itr;
+        for (fs::directory_iterator itr(input_dir);
+                itr != end_itr; ++itr) {
+            if (fs::is_directory(itr->status())) {
+                // found subdirectory,
+                // create tagger
+                auto path = itr->path();
+                string name = path.filename().native();
+                if (name.find("sax_") != 0) {
+                    continue;
+                }
+                paths.push_back(path);
+            }
+        }
+        std::sort(paths.begin(), paths.end());
+        for (auto const &path: paths) {
+            emplace_back(path);
+        }
+        fix_order();
+        sanity_check();
+    }
 }
 

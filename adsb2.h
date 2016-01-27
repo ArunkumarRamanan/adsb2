@@ -56,7 +56,41 @@ namespace adsb2 {
     }
 
     struct Meta {
-        float spacing;      // 
+        struct Study {
+            string part;        // HEART
+            char sex;
+            float age;
+            bool operator == (Study const &s) const {
+                return (part == s.part)
+                    && (sex == s.sex)
+                    && (age == s.age);
+            }
+        };
+        struct Series {
+            float slice_thickness;  // mm
+            //float slice_spacing;    // mm
+            float nominal_interval;
+            float repetition_time;
+            float echo_time;
+            int number_of_images;
+            float slice_location;
+            int series_number;
+            bool operator == (Series const &s) const {
+                return (slice_thickness == s.slice_thickness)
+                    && (nominal_interval == s.nominal_interval)
+                    && (repetition_time == s.repetition_time)
+                    && (echo_time == s.echo_time)
+                    && (number_of_images == s.number_of_images)
+                    && (slice_location == s.slice_location)
+                    && (series_number == s.series_number);
+            }
+        };
+        Study study;
+        Series series;
+        float trigger_time;
+        //float repetition_time;
+        //float echo_time;
+        float spacing;      //  mm
         float raw_spacing;  // original spacing as in file
         Meta (): spacing(-1), raw_spacing(-1) {
         }
@@ -66,7 +100,7 @@ namespace adsb2 {
     void dicom_setup (char const *path, Config const &config);
     cv::Mat load_dicom (fs::path const &, Meta *);
 
-    struct Sample {
+    struct Slice {
         int id;
         fs::path path;      // must always present
         Meta meta;
@@ -83,8 +117,8 @@ namespace adsb2 {
 
         cv::Mat prob;
 
-        Sample (): box(-1,-1,0,0), annotated(false), do_not_cook(false) {}
-        Sample (string const &line);
+        Slice (): box(-1,-1,0,0), annotated(false), do_not_cook(false) {}
+        Slice (string const &line);
 
         void load_raw () {
             raw = load_dicom(path, &meta);
@@ -116,11 +150,26 @@ namespace adsb2 {
         int umin, umax;
     };
 
-    class Stack: public vector<Sample> {
+    class Series: public vector<Slice> {
+        fs::path series_path;
+        void sanity_check () {
+            CHECK(size());
+            CHECK(at(0).meta.series.number_of_images == size());
+            for (unsigned i = 1; i < size(); ++i) {
+                CHECK(at(i).meta.study == at(0).meta.study);
+                CHECK(at(i).meta.series == at(0).meta.series);
+                CHECK(at(i).meta.trigger_time
+                            > at(i-1).meta.trigger_time);
+            }
+        }
     public:
-        Stack ();
+        Series (){}
         // load from a directory of DCM files
-        Stack (fs::path const &input_dir, bool load = true);
+        Series (fs::path const &input_dir, bool load = true);
+
+        fs::path dir () const {
+            return series_path;
+        }
 
         cv::Size shape () const {
             return at(0).image.size();
@@ -165,6 +214,73 @@ namespace adsb2 {
         void getColorRange (ColorRange *, float th = 0.9);
     };
 
+    static constexpr float LOCATION_GAP_EPSILON = 0.01;
+    static inline bool operator < (Series const &s1, Series const &s2) {
+        Meta::Series const &m1 = s1.front().meta.series;
+        Meta::Series const &m2 = s2.front().meta.series;
+        if (m1.slice_location + LOCATION_GAP_EPSILON < m2.slice_location) {
+            return true;
+        }
+        if (m1.slice_location - LOCATION_GAP_EPSILON > m2.slice_location) {
+            return false;
+        }
+        return m1.series_number < m2.series_number;
+    }
+
+    class Study: public vector<Series> {
+        fs::path study_path;
+        void fix_order () {
+            sort(begin(), end());
+            unsigned off = 1;
+            for (unsigned i = 1; i < size(); ++i) {
+                Meta::Series const &prev = at(off-1).front().meta.series;
+                Meta::Series const &cur = at(i).front().meta.series;
+                if (std::abs(prev.slice_location - cur.slice_location) <= LOCATION_GAP_EPSILON) {
+                    LOG(WARNING) << "replacing " << at(off-1).dir()
+                                 << " (" << prev.slice_location << ") "
+                                 << " with " << at(i).dir()
+                                 << " (" << cur.slice_location << ") ";
+                    std::swap(at(off-1), at(i));
+                }
+                else {
+                    if (off != i) { // otherwise no need to swap
+                        std::swap(at(off), at(i));
+                    }
+                    ++off;
+                }
+            }
+            if (off != size()) {
+                LOG(WARNING) << "study " << study_path << " reduced from " << size() << " to " << off << " series.";
+            }
+            resize(off);
+        }
+        void sanity_check () {
+            CHECK(size());
+            for (unsigned i = 1; i < size(); ++i) {
+                CHECK(at(i).front().meta.study == at(0).front().meta.study);
+                CHECK(at(i).front().meta.series.slice_thickness 
+                        == at(i-1).front().meta.series.slice_thickness);
+                CHECK(at(i).front().meta.series.number_of_images
+                        == at(i-1).front().meta.series.number_of_images);
+                CHECK(at(i).front().meta.series.slice_location
+                        > at(i-1).front().meta.series.slice_location);
+            }
+            /*
+            CHECK(at(0).meta.series.number_of_images == size());
+            for (unsigned i = 1; i < size(); ++i) {
+                CHECK(at(i).meta.study == at(0).meta.study);
+                CHECK(at(i).meta.series == at(0).meta.series);
+                CHECK(at(i).meta.trigger_time
+                            > at(i-1).meta.trigger_time);
+            }
+            */
+        }
+    public:
+        Study ();
+        // load from a directory of DCM files
+        Study (fs::path const &input_dir, bool load = true);
+    };
+
 
     class Cook {
         float spacing;
@@ -177,21 +293,21 @@ namespace adsb2 {
         }
 
         // cook the whole stack
-        void apply (Stack *stack) const;
+        void apply (Series *stack) const;
     };
 
     // samples do not belong to a single directory
-    class Samples: public vector<Sample>
+    class Slices: public vector<Slice>
     {
     public:
-        Samples (fs::path const &list_path, fs::path const &root, Cook const &cook);
+        Slices (fs::path const &list_path, fs::path const &root, Cook const &cook);
     };
 
 
     class Detector {
     public:
         virtual ~Detector () {}
-        virtual void apply (Sample *sample) = 0;
+        virtual void apply (Slice *sample) = 0;
     };
 
 
@@ -208,7 +324,7 @@ namespace adsb2 {
 
     class CaffeAdaptor {
     public:
-        static void apply (Sample &sample, cv::Mat *image, cv::Mat *label, int channels = 1) {
+        static void apply (Slice &sample, cv::Mat *image, cv::Mat *label, int channels = 1) {
             CHECK(sample.image.type() == CV_32FC1);
             cv::Mat color;
             sample.image.convertTo(color, CV_8UC1);

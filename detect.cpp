@@ -66,7 +66,7 @@ int conn_comp (cv::Mat *mat, cv::Mat const &weight, vector<float> *cnt) {
     return c;
 }
 
-void post_process (Stack &stack, int mk) {
+void post_process (Series &stack, int mk) {
     cv::Mat p(stack.front().image.size(), CV_32F, cv::Scalar(0));
     for (auto &s: stack) {
         p = cv::max(p, s.prob);
@@ -104,7 +104,7 @@ void post_process (Stack &stack, int mk) {
 }
 
 int main(int argc, char **argv) {
-    //Stack stack("sax", "tmp");
+    //Series stack("sax", "tmp");
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
 
     Cook cook(config);
-    Stack stack(input_dir);
+    Series stack(input_dir);
     cook.apply(&stack);
 
     float bbth = config.get<float>("adsb2.bound_th", 0.95);

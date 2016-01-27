@@ -12,7 +12,7 @@ namespace adsb2 {
             channels(config.get<int>("adsb2.caffe.channels", 1))
         {
         }
-        virtual void apply (Sample *sample) {
+        virtual void apply (Slice *sample) {
             cv::Mat u8;
             CaffeAdaptor::apply(*sample, &u8, nullptr, channels);
             std::vector<float> prob;

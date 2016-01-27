@@ -14,7 +14,7 @@ using namespace cv;
 using namespace adsb2;
 
 int main(int argc, char **argv) {
-    //Stack stack("sax", "tmp");
+    //Series stack("sax", "tmp");
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
 
     Cook cook(config);
-    Samples samples(list_path, root_dir, cook);
+    Slices samples(list_path, root_dir, cook);
 
     float th = config.get<float>("adsb2.bound_th", 0.95);
 #pragma omp parallel
