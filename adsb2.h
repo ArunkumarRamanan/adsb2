@@ -5,6 +5,7 @@
 #include <sstream>
 #include <opencv2/opencv.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/fstream.hpp>
 #define BOOST_SPIRIT_THREADSAFE
@@ -19,6 +20,7 @@ namespace adsb2 {
     using std::ostringstream;
     using std::istringstream;
     using std::ifstream;
+    using boost::lexical_cast;
     namespace fs = boost::filesystem;
 
     // XML configuration
@@ -55,45 +57,28 @@ namespace adsb2 {
         return cv::Size_<float>(sz.width * scale, sz.height * scale);
     }
 
-    struct Meta {
-        struct Study {
-            string part;        // HEART
-            char sex;
-            float age;
-            bool operator == (Study const &s) const {
-                return (part == s.part)
-                    && (sex == s.sex)
-                    && (age == s.age);
-            }
+    struct MetaBase {
+        enum {
+            SEX = 0,    // male: 0, female: 1
+            AGE,
+            SLICE_THICKNESS,
+            NOMINAL_INTERVAL,
+            NUMBER_OF_IMAGES,
+            SLICE_LOCATION,
+            SERIES_NUMBER,
+
+            SERIES_FIELDS,
+            STUDY_FIELDS = 2,   // the first 2 fields are study fields
         };
-        struct Series {
-            float slice_thickness;  // mm
-            //float slice_spacing;    // mm
-            float nominal_interval;
-            float repetition_time;
-            float echo_time;
-            int number_of_images;
-            float slice_location;
-            int series_number;
-            bool operator == (Series const &s) const {
-                return (slice_thickness == s.slice_thickness)
-                    && (nominal_interval == s.nominal_interval)
-                    && (repetition_time == s.repetition_time)
-                    && (echo_time == s.echo_time)
-                    && (number_of_images == s.number_of_images)
-                    && (slice_location == s.slice_location)
-                    && (series_number == s.series_number);
-            }
-        };
-        Study study;
-        Series series;
         float trigger_time;
-        //float repetition_time;
-        //float echo_time;
         float spacing;      //  mm
         float raw_spacing;  // original spacing as in file
-        Meta (): spacing(-1), raw_spacing(-1) {
+        MetaBase (): spacing(-1), raw_spacing(-1) {
         }
+        static char const *FIELDS[];
+    };
+
+    struct Meta: public MetaBase, public std::array<float, MetaBase::SERIES_FIELDS> {
     };
 
     void GlobalInit (char const *path, Config const &config);
@@ -152,20 +137,12 @@ namespace adsb2 {
 
     class Series: public vector<Slice> {
         fs::path series_path;
-        void sanity_check () {
-            CHECK(size());
-            CHECK(at(0).meta.series.number_of_images == size());
-            for (unsigned i = 1; i < size(); ++i) {
-                CHECK(at(i).meta.study == at(0).meta.study);
-                CHECK(at(i).meta.series == at(0).meta.series);
-                CHECK(at(i).meta.trigger_time
-                            > at(i-1).meta.trigger_time);
-            }
-        }
+        bool sanity_check (bool fix = false);
+        friend class Study;
     public:
         Series (){}
         // load from a directory of DCM files
-        Series (fs::path const &input_dir, bool load = true);
+        Series (fs::path const &input_dir, bool load = true, bool check = true, bool fix = false);
 
         fs::path dir () const {
             return series_path;
@@ -214,71 +191,15 @@ namespace adsb2 {
         void getColorRange (ColorRange *, float th = 0.9);
     };
 
-    static constexpr float LOCATION_GAP_EPSILON = 0.01;
-    static inline bool operator < (Series const &s1, Series const &s2) {
-        Meta::Series const &m1 = s1.front().meta.series;
-        Meta::Series const &m2 = s2.front().meta.series;
-        if (m1.slice_location + LOCATION_GAP_EPSILON < m2.slice_location) {
-            return true;
-        }
-        if (m1.slice_location - LOCATION_GAP_EPSILON > m2.slice_location) {
-            return false;
-        }
-        return m1.series_number < m2.series_number;
-    }
-
     class Study: public vector<Series> {
         fs::path study_path;
-        void fix_order () {
-            sort(begin(), end());
-            unsigned off = 1;
-            for (unsigned i = 1; i < size(); ++i) {
-                Meta::Series const &prev = at(off-1).front().meta.series;
-                Meta::Series const &cur = at(i).front().meta.series;
-                if (std::abs(prev.slice_location - cur.slice_location) <= LOCATION_GAP_EPSILON) {
-                    LOG(WARNING) << "replacing " << at(off-1).dir()
-                                 << " (" << prev.slice_location << ") "
-                                 << " with " << at(i).dir()
-                                 << " (" << cur.slice_location << ") ";
-                    std::swap(at(off-1), at(i));
-                }
-                else {
-                    if (off != i) { // otherwise no need to swap
-                        std::swap(at(off), at(i));
-                    }
-                    ++off;
-                }
-            }
-            if (off != size()) {
-                LOG(WARNING) << "study " << study_path << " reduced from " << size() << " to " << off << " series.";
-            }
-            resize(off);
-        }
-        void sanity_check () {
-            CHECK(size());
-            for (unsigned i = 1; i < size(); ++i) {
-                CHECK(at(i).front().meta.study == at(0).front().meta.study);
-                CHECK(at(i).front().meta.series.slice_thickness 
-                        == at(i-1).front().meta.series.slice_thickness);
-                CHECK(at(i).front().meta.series.number_of_images
-                        == at(i-1).front().meta.series.number_of_images);
-                CHECK(at(i).front().meta.series.slice_location
-                        > at(i-1).front().meta.series.slice_location);
-            }
-            /*
-            CHECK(at(0).meta.series.number_of_images == size());
-            for (unsigned i = 1; i < size(); ++i) {
-                CHECK(at(i).meta.study == at(0).meta.study);
-                CHECK(at(i).meta.series == at(0).meta.series);
-                CHECK(at(i).meta.trigger_time
-                            > at(i-1).meta.trigger_time);
-            }
-            */
-        }
+        bool sanity_check (bool fix = false);
+        void check_regroup ();  // some times its necessary to regroup one series into
+                                // multiple series
     public:
         Study ();
         // load from a directory of DCM files
-        Study (fs::path const &input_dir, bool load = true);
+        Study (fs::path const &input_dir, bool load = true, bool check = true, bool fix = false);
     };
 
 
@@ -294,6 +215,7 @@ namespace adsb2 {
 
         // cook the whole stack
         void apply (Series *stack) const;
+        void apply (Study *stucy) const;
     };
 
     // samples do not belong to a single directory
@@ -427,49 +349,9 @@ namespace adsb2 {
         return v[0];
     }
 
-    class Gaussian {
-        cv::Mat mean;
-        cv::Mat cov;
-        cv::Mat icov;
-    public:
-        Gaussian (cv::Mat samples, cv::Mat weights)
-            : mean(1, samples.cols, CV_32F, cv::Scalar(0)),
-            cov(samples.cols, samples.cols, CV_32F, cv::Scalar(0))
-        {
-            CHECK(samples.rows == weights.rows);
-            CHECK(weights.cols == 1);
-            float sum = 0;
-            for (int i = 0; i < samples.rows; ++i) {
-                float w = weights.ptr<float>(i)[0];
-                mean += w * samples.row(i);
-                sum += w;
-            }
-            mean /= sum;
-            for (int i = 0; i < samples.rows; ++i) {
-                cv::Mat row = samples.row(i) - mean;
-                cov += weights.ptr<float>(i)[0] * row.t() * row;
-            }
-            cov /= sum;
-            icov = cov.inv(cv::DECOMP_SVD);
-            LOG(INFO) << "mean: " << mean;
-            LOG(INFO) << "cov: " << cov;
-            LOG(INFO) << "icov: " << icov;
-        }
-        cv::Mat prob (cv::Mat in) const {
-            CHECK(in.cols == mean.cols);
-            cv::Mat r(in.rows, 1, CV_32F);
-            float *ptr = r.ptr<float>(0);
-            for (int i = 0; i < in.rows; ++i) {
-                cv::Mat r = in.row(i) - mean;
-                cv::Mat k = r * icov * r.t();
-                CHECK(k.rows == 1);
-                CHECK(k.cols == 1);
-                float v = std::exp(-0.5 * k.ptr<float>(0)[0]);
-                ptr[i] = v;
-            }
-            return r;
-        }
-    };
+    // use variance image (big variance == big motion)
+    // to filter out static regions
+    // applies to the prob image of each slice
+    void MotionFilter (Series *stack, Config const &config); 
 
-    void Var2Prob (cv::Mat in, cv::Mat *out, float pth, int mk);
 }

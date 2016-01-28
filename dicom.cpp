@@ -47,32 +47,29 @@ namespace adsb2 {
         DcmFileFormat ff;
         OFCondition status = ff.loadFile(path.c_str());
         CHECK(status.good()) << "error loading dcm file: " << path;
-        meta->study.part = dicom_get<string>(ff, DCM_BodyPartExamined, path);
-        CHECK(meta->study.part == "HEART");
+        string part = dicom_get<string>(ff, DCM_BodyPartExamined, path);
+        LOG_IF(WARNING, part != "HEART") << "BodyPart " << part << " is not HEART: " << path;
         string sex = dicom_get<string>(ff, DCM_PatientSex, path);
         CHECK(sex == "F" || sex == "M");
-        meta->study.sex = sex[0];
+        meta->at(Meta::SEX) = (sex[0] == 'F' ? 1 : 0);
         string age = dicom_get<string>(ff, DCM_PatientAge, path);
         CHECK(age.size() >= 2);
         char U = age.back();
         CHECK(U == 'Y' || U == 'M');
         age.pop_back();
-        meta->study.age = boost::lexical_cast<float>(age);
+        meta->at(Meta::AGE) = boost::lexical_cast<float>(age);
         if (U == 'M') {
-            meta->study.age /= 12.0;
+            meta->at(Meta::AGE) /= 12.0;
         }
-        meta->series.slice_thickness = dicom_get<float>(ff, DCM_SliceThickness, path);
+        meta->at(Meta::SLICE_THICKNESS) = dicom_get<float>(ff, DCM_SliceThickness, path);
         //meta->series.slice_spacing = dicom_get<float>(ff, DCM_SpacingBetweenSlices, path);
-        meta->series.nominal_interval = dicom_get<float>(ff, DCM_NominalInterval, path);
-        meta->series.repetition_time = dicom_get<float>(ff, DCM_RepetitionTime, path);
-        meta->series.echo_time = dicom_get<float>(ff, DCM_EchoTime, path);
-        meta->series.slice_location = dicom_get<float>(ff, DCM_SliceLocation, path);
-        meta->series.number_of_images = dicom_get<int>(ff, DCM_CardiacNumberOfImages, path);
-        meta->series.series_number = dicom_get<int>(ff, DCM_SeriesNumber, path);
+        meta->at(Meta::NOMINAL_INTERVAL) = dicom_get<float>(ff, DCM_NominalInterval, path);
+        meta->at(Meta::SLICE_LOCATION) = dicom_get<float>(ff, DCM_SliceLocation, path);
+        meta->at(Meta::NUMBER_OF_IMAGES) = dicom_get<int>(ff, DCM_CardiacNumberOfImages, path);
+        meta->at(Meta::SERIES_NUMBER) = dicom_get<int>(ff, DCM_SeriesNumber, path);
         meta->trigger_time = dicom_get<float>(ff, DCM_TriggerTime, path);
         meta->spacing = dicom_get<float>(ff, DCM_PixelSpacing, path);
         meta->raw_spacing = meta->spacing;
-
 #if 0   // IMPORTANT: regular images do not have DiCOM meta data
         cv::Mat raw = cv::imread(path.native(), -1);
         if (!raw.data) {

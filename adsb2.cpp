@@ -19,6 +19,16 @@ void    openblas_set_num_threads (int);
 }
 
 namespace adsb2 {
+    char const *MetaBase::FIELDS[] = {
+        "Sex",
+        "Age",
+        "SliceThickness",
+        "NominalInterval",
+        "CardiacNumberOfImages",
+        "SliceLocation",
+        "SeriesNumber"
+    };
+
     using std::unordered_map;
     void LoadConfig (string const &path, Config *config) {
         try {
@@ -45,6 +55,7 @@ namespace adsb2 {
     }
 
     void GlobalInit (char const *path, Config const &config) {
+        FLAGS_logtostderr = 1;
         FLAGS_minloglevel = 1;
         google::InitGoogleLogging(path);
         dicom_setup(path, config);
@@ -75,7 +86,7 @@ namespace adsb2 {
         *s2 = 0;//*s2 = std::sqrt(roi.area()) * meta.spacing;
     }
 
-    Series::Series (fs::path const &input_dir, bool load): series_path(input_dir) {
+    Series::Series (fs::path const &input_dir, bool load, bool check, bool fix): series_path(input_dir) {
         // enumerate DCM files
         vector<fs::path> paths;
         fs::directory_iterator end_itr;
@@ -93,6 +104,7 @@ namespace adsb2 {
                 paths.push_back(path);
             }
         }
+        CHECK(paths.size());
         std::sort(paths.begin(), paths.end());
         resize(paths.size());
         for (unsigned i = 0; i < paths.size(); ++i) {
@@ -105,20 +117,83 @@ namespace adsb2 {
                     CHECK(s.image.size() == at(0).image.size());
                 }
             }
-            /*
-            auto const &name = names[i];
-            auto dcm_path = input_dir;
-            dcm_path /= name;
-            dcm_path += ".dcm";
-            cv::Mat image = loader.load(dcm_path.native(), &metas[i]);
-            //ImageAdaptor::apply(&image);
-            BOOST_VERIFY(image.total());
-            BOOST_VERIFY(image.type() == CV_16U);
-            BOOST_VERIFY(image.isContinuous());
-            at(i) = image;
-            */
         }
-        sanity_check();
+        if (load && check && !sanity_check(fix) && fix) {
+            CHECK(sanity_check(false));
+        }
+    }
+
+    template <typename T>
+    class FreqCount {
+        unordered_map<T, unsigned> cnt;
+    public:
+        void update (T const &v) {
+            cnt[v] += 1;
+        }
+        bool unique () const {
+            return cnt.size() <= 1;
+        }
+        T most_frequent () const {
+            auto it = std::max_element(cnt.begin(), cnt.end(),
+                    [](std::pair<T, unsigned> const &p1,
+                       std::pair<T, unsigned> const &p2) {
+                        return p1.second < p2.second;
+                    });
+            float mfv = it->first;
+        }
+    };
+
+    bool operator < (Slice const &s1, Slice const &s2)
+    {
+        return s1.meta.trigger_time < s2.meta.trigger_time;
+    }
+
+    bool Series::sanity_check (bool fix) {
+        bool ok = true;
+        for (Slice &s: *this) {
+            if (s.meta[Meta::NUMBER_OF_IMAGES] != size()) {
+                ok = false;
+                LOG(WARNING) << "Series field #images mismatch: " << s.path << " found " << s.meta[Meta::NUMBER_OF_IMAGES] << " instead of actually # images found " << size();
+                if (fix) {
+                    s.meta[Meta::NUMBER_OF_IMAGES] = size();
+                }
+            }
+        }
+        for (unsigned i = 0; i < Meta::SERIES_FIELDS; ++i) {
+            // check that all series fields are the same
+            FreqCount<float> fc;
+            for (Slice &s: *this) {
+                fc.update(s.meta[i]);
+            }
+            if (fc.unique()) break;
+            ok = false;
+            float mfv = fc.most_frequent();
+            for (Slice &s: *this) {
+                if (s.meta[i] != mfv) {
+                    LOG(WARNING) << "Series field " << Meta::FIELDS[i] << "  mismatch: " << s.path << " found " << s.meta[i]
+                                 << " instead of most freq value " << mfv;
+                    if (fix) {
+                        s.meta[i] = mfv;
+                    }
+                }
+            }
+        }
+        // check trigger time
+        bool ooo = false;
+        for (unsigned i = 1; i < size(); ++i) {
+            if (!(at(i).meta.trigger_time > at(i-1).meta.trigger_time)) {
+                ooo = true;
+                ok = false;
+                LOG(WARNING) << "Trigger time out of order: "
+                             << at(i-1).path << ':' << at(i-1).meta.trigger_time
+                             << " > "
+                             << at(i).path << ':' << at(i).meta.trigger_time;
+            }
+        }
+        if (fix) {
+            sort(begin(), end());
+        }
+        return ok;
     }
 
     void Series::getAvgStdDev (cv::Mat *avg, cv::Mat *stddev) {
@@ -257,6 +332,12 @@ namespace adsb2 {
         }
     }
 
+    void Cook::apply (Series *study) const {
+        for (auto &s: *study) {
+            apply(&s);
+        }
+    }
+
     Slices::Slices (fs::path const &list_path, fs::path const &root, Cook const &cook) {
         fs::ifstream is(list_path);
         CHECK(is) << "Cannot open list file: " << list_path;
@@ -329,35 +410,7 @@ namespace adsb2 {
         }
     }
 
-    void Var2Prob (cv::Mat oin, cv::Mat *out, float pth, int mk) {
-        cv::Mat in;
-        pth = percentile<float>(oin, pth);
-        cv::threshold(oin, in, pth, 1.0, cv::THRESH_BINARY);
-        cv::Mat kernel = cv::Mat::ones(mk, mk, CV_32F);
-        cv::morphologyEx(in, in, cv::MORPH_OPEN, kernel);
-        cv::Mat tmp = in.mul(oin);
-        in = tmp;
-
-
-        cv::Mat s(in.total(), 2, CV_32F);
-        {
-            int o = 0;
-            for (int i = 0; i < in.rows; ++i) {
-                for (int j = 0; j < in.cols; ++j) {
-                    float *ptr = s.ptr<float>(o++);
-                    ptr[0] = i;
-                    ptr[1] = j;
-                }
-            }
-            CHECK(o == s.rows);
-        }
-        Gaussian g(s, in.reshape(1, s.rows));
-        cv::Mat p = g.prob(s);
-        *out = p.reshape(1, in.rows);
-        CHECK(out->size() == in.size());
-    }
-
-    Study::Study (fs::path const &input_dir, bool load): study_path(input_dir) {
+    Study::Study (fs::path const &input_dir, bool load, bool check, bool fix): study_path(input_dir) {
         // enumerate DCM files
         vector<fs::path> paths;
         fs::directory_iterator end_itr;
@@ -375,11 +428,123 @@ namespace adsb2 {
             }
         }
         std::sort(paths.begin(), paths.end());
+        CHECK(paths.size());
         for (auto const &path: paths) {
-            emplace_back(path);
+            emplace_back(path, load, false, false);    // do not fix for now
         }
-        fix_order();
-        sanity_check();
+        if (load && !sanity_check(fix) && fix) {
+            CHECK(sanity_check(false));
+        }
+    }
+
+    static constexpr float LOCATION_GAP_EPSILON = 0.01;
+    static inline bool operator < (Series const &s1, Series const &s2) {
+        Meta const &m1 = s1.front().meta;
+        Meta const &m2 = s2.front().meta;
+        if (m1[Meta::SLICE_LOCATION] + LOCATION_GAP_EPSILON < m2[Meta::SLICE_LOCATION]) {
+            return true;
+        }
+        if (m1[Meta::SLICE_LOCATION] - LOCATION_GAP_EPSILON > m2[Meta::SLICE_LOCATION]) {
+            return false;
+        }
+        return m1[Meta::SERIES_NUMBER] < m2[Meta::SERIES_NUMBER];
+    }
+
+
+    bool Study::sanity_check (bool fix) {
+        bool ok = true;
+        if (fix) {
+            check_regroup();
+        }
+        for (auto &s: *this) {
+            if (!s.sanity_check(fix)) {
+                LOG(WARNING) << "Study " << study_path << " series " << s.series_path << " sanity check failed.";
+                if (fix) {
+                    CHECK(s.sanity_check(false));
+                }
+            }
+        }
+        for (unsigned i = 0; i < Meta::STUDY_FIELDS; ++i) {
+            // check that all series fields are the same
+            FreqCount<float> fc;
+            for (Series &s: *this) {
+                fc.update(s.front().meta[i]);
+            }
+            if (fc.unique()) break;
+            ok = false;
+            float mfv = fc.most_frequent();
+            for (Series &s: *this) {
+                if (s.front().meta[i] != mfv) {
+                    LOG(WARNING) << "Study field " << Meta::FIELDS[i] << "  mismatch: " << s.dir() << " found " << s.front().meta[i]
+                                 << " instead of most freq value " << mfv;
+                    if (fix) {
+                        for (auto &ss: s) {
+                            ss.meta[i] = mfv;
+                        }
+                    }
+                }
+            }
+        }
+        // check trigger time
+        //
+        sort(begin(), end());
+        unsigned off = 1;
+        for (unsigned i = 1; i < size(); ++i) {
+            Meta const &prev = at(off-1).front().meta;
+            Meta const &cur = at(i).front().meta;
+            if (std::abs(prev[Meta::SLICE_LOCATION] - cur[Meta::SLICE_LOCATION]) <= LOCATION_GAP_EPSILON) {
+                LOG(WARNING) << "replacing " << at(off-1).dir()
+                             << " (" << prev[Meta::SERIES_NUMBER] << ":" << prev[Meta::SLICE_LOCATION] << ") "
+                             << " with " << at(i).dir()
+                             << " (" << cur[Meta::SERIES_NUMBER] << ":" << cur[Meta::SLICE_LOCATION] << ") ";
+                std::swap(at(off-1), at(i));
+            }
+            else {
+                if (off != i) { // otherwise no need to swap
+                    std::swap(at(off), at(i));
+                }
+                ++off;
+            }
+        }
+        if (off != size()) {
+            LOG(WARNING) << "study " << study_path << " reduced from " << size() << " to " << off << " series.";
+            resize(off);
+        }
+        return ok;
+    }
+
+    void Study::check_regroup () {
+        vector<Series> v;
+        v.swap(*this);
+        for (Series &s: v) {
+            unsigned max_nn = 0;
+            unordered_map<float, vector<unsigned>> group;
+            for (unsigned i = 0; i < s.size(); ++i) {
+                auto const &ss = s[i];
+                unsigned nn = ss.meta[Meta::NUMBER_OF_IMAGES];
+                if (nn > max_nn) {
+                    max_nn = nn;
+                }
+                group[ss.meta[Meta::SLICE_LOCATION]].push_back(i);
+            }
+            if ((s.size() <= max_nn) && (group.size() <= 1)) {
+                emplace_back(std::move(s));
+            }
+            else { // regroup
+                LOG(WARNING) << "regrouping series " << s.dir() << " into " << group.size() << " groups.";
+                unsigned i;
+                for (auto const &p: group) {
+                    emplace_back();
+                    back().series_path = s.series_path;
+                    back().series_path += fs::path(':' + lexical_cast<string>(i));;
+                    for (unsigned j: p.second) {
+                        back().push_back(std::move(s[j]));
+                    }
+                    sort(back().begin(), back().end());
+                    ++i;
+                }
+            }
+        }
     }
 }
 

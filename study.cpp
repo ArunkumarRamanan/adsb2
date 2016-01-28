@@ -66,8 +66,45 @@ int main(int argc, char **argv) {
     OverrideConfig(overrides, &config);
 
     GlobalInit(argv[0], config);
+    Cook cook(config);
 
-    Study study(input_dir);
+    Study study(input_dir, true, true, true);
+    cook.apply(*study);
+    vector<Slice *> slices;
+    for (auto &s: study) {
+        for (auto &ss: s) {
+            slices.push_back(&ss);
+        }
+    }
+    LOG(INFO) << "Detecting all slices..." << endl;
+#pragma omp parallel
+    {
+        Detector *det = make_caffe_detector(config);
+        CHECK(det) << " cannot create detector.";
+#pragma omp for schedule(dynamic, 1)
+        for (unsigned i = 0; i < slices.size(); ++i) {
+            det->apply(slices[i]);
+        }
+        delete det;
+    }
+    LOG(INFO) << "Postprocessing..." << endl;
+    for (auto &s: study) {
+        MotionFilter(&s, config);
+    }
+    for (auto &s: stack) {
+        Rect bb;
+        bound(s.prob, &bb, bbth);
+        cout << s.path.native() << '\t' << sqrt(bb.area()) * s.meta.spacing << endl;
+        if (gif.size()) {
+            cv::rectangle(s.image, bb, cv::Scalar(0xFF));
+            if (do_prob) {
+                cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
+                cv::rectangle(s.prob, bb, cv::Scalar(0xFF));
+                cv::hconcat(s.image, s.prob, s.image);
+            }
+        }
+    }
+
     return 0;
 }
 
