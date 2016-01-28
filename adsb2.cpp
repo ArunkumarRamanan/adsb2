@@ -332,7 +332,7 @@ namespace adsb2 {
         }
     }
 
-    void Cook::apply (Series *study) const {
+    void Cook::apply (Study *study) const {
         for (auto &s: *study) {
             apply(&s);
         }

@@ -26,6 +26,7 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using namespace adsb2;
 
 string backend("lmdb");
+bool do_circle = false;
 
 void import (ImageAugment const &aug,
              vector<Slice *> const &samples,
@@ -50,7 +51,7 @@ void import (ImageAugment const &aug,
         CHECK(sample->image.data);
 
         cv::Mat image, label;
-        CaffeAdaptor::apply(*sample, &image, &label, channels);
+        CaffeAdaptor::apply(*sample, &image, &label, channels, do_circle);
 
         /*
         cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
@@ -96,6 +97,7 @@ void save_list (vector<Slice *> const &samples, fs::path path) {
     }
 }
 
+
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
@@ -115,6 +117,7 @@ int main(int argc, char **argv) {
     ("root", po::value(&root_dir), "")
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
+    ("circle", "")
     ("output,o", po::value(&output_dir), "")
     ;
 
@@ -133,6 +136,9 @@ int main(int argc, char **argv) {
     }
     CHECK(F >= 1);
     full = vm.count("full") > 0;
+    if (vm.count("circle")) {
+        do_circle = true;
+    }
 
 
     Config config;

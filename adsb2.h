@@ -52,6 +52,10 @@ namespace adsb2 {
         return cv::Size(std::round(sz.width), std::round(sz.height));
     }
 
+    static inline cv::Point round (cv::Point_<float> const &pt) {
+        return cv::Point(std::round(pt.x), std::round(pt.y));
+    }
+
     template <typename T>
     static inline cv::Size_<float> operator * (cv::Size_<T> const &sz, float scale) {
         return cv::Size_<float>(sz.width * scale, sz.height * scale);
@@ -125,6 +129,11 @@ namespace adsb2 {
             CHECK(box.x >=0 && box.y >= 0);
             cv::Rect roi = round(box);
             (*mat)(roi).setTo(v);
+        }
+
+        void fill_circle (cv::Mat *mat, cv::Scalar const &v) const {
+            cv::circle(*mat, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
+                    std::sqrt(box.width * box.height)/2, v, -1);
         }
 
         void eval (cv::Mat mat, float *s1, float *s2) const;
@@ -246,7 +255,7 @@ namespace adsb2 {
 
     class CaffeAdaptor {
     public:
-        static void apply (Slice &sample, cv::Mat *image, cv::Mat *label, int channels = 1) {
+        static void apply (Slice &sample, cv::Mat *image, cv::Mat *label, int channels = 1, bool circle = false) {
             CHECK(sample.image.type() == CV_32FC1);
             cv::Mat color;
             sample.image.convertTo(color, CV_8UC1);
@@ -271,7 +280,12 @@ namespace adsb2 {
                 label->create(color.size(), CV_8UC1);
                 // save label
                 label->setTo(cv::Scalar(0));
-                sample.fill_roi(label, cv::Scalar(1));
+                if (circle) {
+                    sample.fill_circle(label, cv::Scalar(1));
+                }
+                else {
+                    sample.fill_roi(label, cv::Scalar(1));
+                }
             }
         }
     };
