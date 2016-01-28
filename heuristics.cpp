@@ -57,9 +57,9 @@ namespace adsb2 {
 
     void MotionFilter (Series *pstack, Config const &config) {
         Series &stack = *pstack;
-        float bin_th = config.get<float>("adsb2.mf.bin_th", 0.5);
-        float supp_th = config.get<float>("adsb2.mf.supp_th", 0.5);
-        int dilate = config.get<int>("adsb2.mf.dilate", 20);
+        float bin_th = config.get<float>("adsb2.mf.bin_th", 0.8);
+        float supp_th = config.get<float>("adsb2.mf.supp_th", 0.6);
+        int dilate = config.get<int>("adsb2.mf.dilate", 10);
 
         cv::Mat p(stack.front().image.size(), CV_32F, cv::Scalar(0));
         for (auto &s: stack) {
