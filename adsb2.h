@@ -373,7 +373,15 @@ namespace adsb2 {
     // applies to the prob image of each slice
     void MotionFilter (Series *stack, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
-    void FindMinMaxVol (Study const &study, Config const &config);
+
+    struct Volume {
+        float mean;
+        float var;
+        Volume (): mean(0), var(0) {
+        }
+    };
+
+    void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config);
 
     static inline void report (std::ostream &os, Slice const &s) {
         float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;

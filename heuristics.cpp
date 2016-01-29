@@ -1,4 +1,8 @@
 #include <queue>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
 #include "adsb2.h"
 
 namespace adsb2 {
@@ -200,5 +204,74 @@ namespace adsb2 {
         CHECK(best > 0);
         *rect = seed;
     }
+
+    // if X and Y are independent normal variables
+    // X + Y is also normal variable
+    // mean(X + Y) = mean(X) + mean(Y)
+    // var(X + Y) = var(X) + var(Y)
+
+    struct SeriesVolume {
+        Volume min, max;
+        float location;
+    };
+
+    void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config) {
+        // steps
+        int W = config.get<int>("adsb2.smooth.W", 3);
+        CHECK(W >= 3);
+        vector<SeriesVolume> seriesV;
+        for (auto const &series: study) {
+            vector<float> r;
+            for (auto const &s: series) {
+                r.push_back(s.pred.area() * s.meta.spacing * s.meta.spacing);
+            }
+            for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing
+                r.push_back(r[j]);
+            }
+            // smooth r
+            SeriesVolume v;
+            v.location = series.front().meta[Meta::SLICE_LOCATION];
+            for (unsigned j = 0; j + W <= r.size(); ++j) {
+                namespace ba = boost::accumulators;
+                typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::variance>> Acc;
+                Acc acc;
+                for (unsigned w = 0; w < W; ++w) {
+                    acc(r[j+w]);
+                }
+                Volume sv;
+                sv.mean = ba::mean(acc);
+                sv.var = ba::variance(acc);
+                if (j == 0) {
+                    v.min = sv;
+                    v.max = sv;
+                }
+                else {
+                    if (sv.mean < v.min.mean) {
+                        v.min = sv;
+                    }
+                    if (sv.mean > v.max.mean) {
+                        v.max = sv;
+                    }
+                }
+            }
+            seriesV.push_back(v);
+        }
+        // accumulate
+        Volume min;
+        Volume max;
+        for (unsigned i = 1; i < seriesV.size(); ++i) {
+            auto const &a = seriesV[i-1];
+            auto const &b = seriesV[i];
+            float gap = b.location - a.location;
+            CHECK(gap > 0);
+            min.mean += (a.min.mean + b.min.mean) * gap/2;
+            min.var += (a.min.var + b.min.var) * gap/2;
+            max.mean += (a.max.mean + b.max.mean) * gap/2;
+            max.var += (a.max.var + b.max.var) * gap/2;
+        }
+        *minv = min;
+        *maxv = max;
+    }
+
 }
 

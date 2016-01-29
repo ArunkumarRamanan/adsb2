@@ -108,10 +108,17 @@ int main(int argc, char **argv) {
                       &slices[i]->pred, config);
         }
     }
+    Volume min, max;
+    FindMinMaxVol(study, &min, &max, config);
     if (output_dir.size()) {
         cerr << "Saving output..." << endl;
         fs::path dir(output_dir);
         fs::create_directories(dir);
+        {
+            fs::ofstream vol(dir/fs::path("volume.txt"));
+            vol << min.mean << '\t' << std::sqrt(min.var)
+                << '\t' << max.mean << '\t' << std::sqrt(max.var) << endl;
+        }
         fs::ofstream html(dir/fs::path("index.html"));
         html << "<html><body>" << endl;
         html << "<table border=\"1\"><tr><th>Study</th><th>Sex</th><th>Age</th></tr>"
