@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>

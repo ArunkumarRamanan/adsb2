@@ -1,7 +1,6 @@
 #include <sstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <glog/logging.h>

@@ -4,7 +4,6 @@
 #include <fstream>
 #include <sstream>
 #include <opencv2/opencv.hpp>
-#include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -15,6 +14,7 @@
 #undef timer
 #include <boost/timer/timer.hpp>
 #include <boost/assert.hpp>
+#include <cppformat/format.h>
 #include <glog/logging.h>
 
 namespace adsb2 {
@@ -182,7 +182,7 @@ namespace adsb2 {
             }
         }
 
-        void save_gif (string const &path) {
+        void save_gif (fs::path const &path) {//string const &path) {
             fs::path tmp(fs::unique_path());
             fs::create_directories(tmp);
             ostringstream gif_cmd;
@@ -196,13 +196,18 @@ namespace adsb2 {
                 cv::imwrite(pgm.native(), u8);
                 gif_cmd << " " << pgm;
             }
-            gif_cmd << " " << fs::path(path);
+            gif_cmd << " " << path;
             ::system(gif_cmd.str().c_str());
             fs::remove_all(tmp);
         }
 
+        void save_gif (string const &path) {
+            save_gif(fs::path(path));
+        }
+
         void getAvgStdDev (cv::Mat *avg, cv::Mat *stddev);
         void getColorRange (ColorRange *, float th = 0.9);
+        void visualize (bool show_prob = true);
     };
 
     class Study: public vector<Series> {
@@ -214,6 +219,9 @@ namespace adsb2 {
         Study ();
         // load from a directory of DCM files
         Study (fs::path const &input_dir, bool load = true, bool check = true, bool fix = false);
+        fs::path dir () const {
+            return study_path;
+        }
     };
 
 

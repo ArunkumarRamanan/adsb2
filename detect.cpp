@@ -1,7 +1,6 @@
 #include <sstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <boost/assert.hpp>
@@ -80,20 +79,12 @@ int main(int argc, char **argv) {
     for (unsigned i = 0; i < stack.size(); ++i) {
         auto &s = stack[i];
         FindSquare(s.prob, &s.pred, config);
-        if (gif.size()) {
-            Rect bb = s.pred;
-            cv::rectangle(s.image, bb, cv::Scalar(0xFF));
-            if (do_prob) {
-                cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
-                cv::rectangle(s.prob, bb, cv::Scalar(0xFF));
-                cv::hconcat(s.image, s.prob, s.image);
-            }
-        }
     }
     for (auto const &s: stack) {
         report(cout, s);
     }
     if (gif.size()) {
+        stack.visualize(do_prob);
         stack.save_gif(gif);
     }
     return 0;

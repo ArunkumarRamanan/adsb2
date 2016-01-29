@@ -120,6 +120,19 @@ namespace adsb2 {
         }
     }
 
+    void Series::visualize (bool show_prob) {
+        for (Slice &s: *this) {
+            cv::rectangle(s.image, s.pred, cv::Scalar(0xFF));
+            if (show_prob) {
+                cv::Mat pp;
+                cv::normalize(s.prob, pp, 0, 255, cv::NORM_MINMAX, CV_32FC1);
+                cv::rectangle(pp, s.pred, cv::Scalar(0xFF));
+                cv::hconcat(s.image, pp, s.image);
+            }
+        }
+    }
+
+
     template <typename T>
     class FreqCount {
         unordered_map<T, unsigned> cnt;

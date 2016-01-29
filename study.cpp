@@ -1,14 +1,11 @@
 #include <sstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <boost/assert.hpp>
 #include <glog/logging.h>
 #include "adsb2.h"
-
-namespace fs = boost::filesystem;
 
 using namespace std;
 using namespace boost;
@@ -21,6 +18,7 @@ int main(int argc, char **argv) {
     string config_path;
     vector<string> overrides;
     string input_dir;
+    string output_dir;
     /*
     string output_dir;
     string gif;
@@ -34,6 +32,7 @@ int main(int argc, char **argv) {
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&input_dir), "")
+    ("output,o", po::value(&output_dir), "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -45,6 +44,7 @@ int main(int argc, char **argv) {
 
     po::positional_options_description p;
     p.add("input", 1);
+    p.add("output", 1);
     //p.add("output", 1);
     //p.add("output", 1);
 
@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
     Cook cook(config);
 
+    timer::auto_cpu_timer timer(cerr);
     Study study(input_dir, true, true, true);
     cook.apply(&study);
     vector<Slice *> slices;
@@ -79,7 +80,6 @@ int main(int argc, char **argv) {
     }
     {
         cerr << "Detecting " << slices.size() << "  slices..." << endl;
-        timer::auto_cpu_timer timer(cerr);
         progress_display progress(slices.size(), cerr);
 #pragma omp parallel
         {
@@ -96,26 +96,81 @@ int main(int argc, char **argv) {
     }
     {
         cerr << "Filtering..." << endl;
-        timer::auto_cpu_timer timer(cerr);
         for (auto &s: study) {
             MotionFilter(&s, config);
         }
     }
     {
         cerr << "Finding squares..." << endl;
-        timer::auto_cpu_timer timer(cerr);
-        progress_display progress(slices.size(), cerr);
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < slices.size(); ++i) {
             FindSquare(slices[i]->prob,
                       &slices[i]->pred, config);
-#pragma omp critical
-            ++progress;
         }
     }
-    for (auto const &series: study) {
-        for (auto const &s: series) {
-            report(cout, s);
+    if (output_dir.size()) {
+        cerr << "Saving output..." << endl;
+        fs::path dir(output_dir);
+        fs::create_directories(dir);
+        fs::ofstream html(dir/fs::path("index.html"));
+        html << "<html><body>" << endl;
+        html << "<table border=\"1\"><tr><th>Study</th><th>Sex</th><th>Age</th></tr>"
+             << "<tr><td>" << study.dir().native() << "</td><td>" << (study.front().front().meta[Meta::SEX] ? "Female": "Male")
+             << "</td><td>" << study.front().front().meta[Meta::AGE]
+             << "</td></tr></table>" << endl;
+        html << "<br/><img src=\"radius.png\"></img>" << endl;
+        html << "<br/><table border=\"1\">"<< endl;
+        html << "<tr><th>Slice</th><th>Location</th><th>Thickness</th><th>Interval</th><th>image</th></tr>";
+        fs::path gp1(dir/fs::path("plot.gp"));
+        fs::ofstream gp(gp1);
+        gp << "set xlabel \"time\";" << endl;
+        gp << "set ylabel \"location\";" << endl;
+        gp << "set zlabel \"radius\";" << endl;
+        gp << "set hidden3d;" << endl;
+        gp << "set style data pm3d;" << endl;
+        gp << "set dgrid3d 50,50 qnorm 2;" << endl;
+        gp << "splot '-' using 1:2:3 notitle" << endl;
+        for (unsigned i = 0; i < study.size(); ++i) {
+            study[i].visualize();
+            study[i].save_gif(dir/fs::path(fmt::format("{}.gif", i)));
+            html << "<tr>"
+                 << "<td>" << study[i].dir().filename().native() << "</td>"
+                 << "<td>" << study[i].front().meta[Meta::SLICE_LOCATION] << "</td>"
+                 << "<td>" << study[i].front().meta[Meta::SLICE_THICKNESS] << "</td>"
+                 << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
+                 << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
+            for (auto const &s: study[i]) {
+                float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
+                gp << s.meta.trigger_time
+                   << '\t' << s.meta[Meta::SLICE_LOCATION]
+                   << '\t' << r << endl;
+            }
+        }
+        gp << 'e' << endl;
+        html << "</table></body></html>" << endl;
+        fs::ofstream os(dir/fs::path("report.txt"));
+        for (auto const &series: study) {
+            for (auto const &s: series) {
+                report(os, s);
+            }
+        }
+        {
+            fs::path gp2(dir/fs::path("plot2.gp"));
+            fs::ofstream gp(gp2);
+            gp << "set terminal png;" << endl;
+            gp << "set output \"" << (dir/fs::path("radius.png")).native() << "\";" << endl;
+            gp << "load \"" << gp1.native() << "\";" << endl;
+            gp.close();
+            string cmd = fmt::format("gnuplot {}", gp2.string());
+            ::system(cmd.c_str());
+            fs::remove(gp2);
+        }
+    }
+    else {
+        for (auto const &series: study) {
+            for (auto const &s: series) {
+                report(cout, s);
+            }
         }
     }
     return 0;
