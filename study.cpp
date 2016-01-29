@@ -91,20 +91,27 @@ int main(int argc, char **argv) {
     for (auto &s: study) {
         MotionFilter(&s, config);
     }
-    for (auto &s: stack) {
-        Rect bb;
-        bound(s.prob, &bb, bbth);
-        cout << s.path.native() << '\t' << sqrt(bb.area()) * s.meta.spacing << endl;
-        if (gif.size()) {
-            cv::rectangle(s.image, bb, cv::Scalar(0xFF));
-            if (do_prob) {
-                cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
-                cv::rectangle(s.prob, bb, cv::Scalar(0xFF));
-                cv::hconcat(s.image, s.prob, s.image);
+#pragma omp parallel schedule(synamic, 1)
+    for (unsigned i = 0; i < slices.size(); ++i) {
+        FindSquare(slices[i]->prob,
+                  &slices[i]->pred, config);
+
+    }
+    for (auto const &series: study) {
+        for (auto const &s: series) {
+            float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
+            Point_<float> raw_pt((s.pred.x + s.pred.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
+                             (s.pred.y + s.pred.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
+            float raw_r = r / s.meta.raw_spacing;
+            cout << s.path.native() << '\t' << r
+                 << '\t' << raw_pt.x << '\t' << raw_pt.y << '\t' << raw_r;
+                 << '\t' << s.meta.trigger_time;
+            for (unsigned i = 0; i < Meta::SERIES_FIELDS; ++i) {
+                cout << '\t' << s.meta[i];
             }
+            cout << endl;
         }
     }
-
     return 0;
 }
 

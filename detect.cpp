@@ -76,11 +76,12 @@ int main(int argc, char **argv) {
         delete det;
     }
     MotionFilter(&stack, config);
-    for (auto &s: stack) {
-        Rect bb;
-        bound(s.prob, &bb, bbth);
-        cout << s.path.native() << '\t' << sqrt(bb.area()) * s.meta.spacing << endl;
+#pragma omp parallel for
+    for (unsigned i = 0; i < stack.size(); ++i) {
+        auto &s = stack[i];
+        FindSquare(s.prob, &s.pred, config);
         if (gif.size()) {
+            Rect bb = s.pred;
             cv::rectangle(s.image, bb, cv::Scalar(0xFF));
             if (do_prob) {
                 cv::normalize(s.prob, s.prob, 0, 255, cv::NORM_MINMAX, CV_32FC1);
@@ -88,6 +89,10 @@ int main(int argc, char **argv) {
                 cv::hconcat(s.image, s.prob, s.image);
             }
         }
+    }
+    for (auto const &s: stack) {
+        Rect bb = s.pred;
+        cout << s.path.native() << '\t' << sqrt(bb.area()) * s.meta.spacing << endl;
     }
     if (gif.size()) {
         stack.save_gif(gif);

@@ -546,5 +546,24 @@ namespace adsb2 {
             }
         }
     }
+
+    float accumulate (cv::Mat const &image, vector<float> *pX, vector<float> *pY) {
+        vector<float> X(image.cols, 0);
+        vector<float> Y(image.rows, 0);
+        float total = 0;
+        CHECK(image.type() == CV_32F);
+        for (int y = 0; y < image.rows; ++y) {
+            float const *row = image.ptr<float const>(y);
+            for (int x = 0; x < image.cols; ++x) {
+                float v = row[x];
+                X[x] += v;
+                Y[y] += v;
+                total += v;
+            }
+        }
+        pX->swap(X);
+        pY->swap(Y);
+        return total;
+    }
 }
 

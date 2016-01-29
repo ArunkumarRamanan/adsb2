@@ -96,5 +96,109 @@ namespace adsb2 {
         }
         // find connected components of p
     }
+
+    void gen_candidate (cv::Mat const &mat, cv::Rect const &r,
+                        cv::Rect *c) {   // at most four candidate
+        c[0].width = c[1].width = c[2].width = c[3].width = r.width + 1;
+        c[0].height = c[1].height = c[2].height = c[3].height = r.height + 1;
+
+        c[0].x = r.x;   c[0].y = r.y;
+        c[1].x = r.x;   c[1].y = r.y-1;
+        c[2].x = r.x-1; c[2].y = r.y;
+        c[3].x = r.x-1; c[3].y = r.y-1;
+        for (int i = 0; i < 4; ++i) {
+            auto &cc = c[i];
+            if ((cc.x < 0) || (cc.y < 0) 
+                || (cc.x + cc.width > mat.cols)
+                || (cc.y + cc.height > mat.rows)) {
+                cc.width = cc.height = -1;
+            }
+        }
+    }
+
+    class IntegrateImage {
+        cv::Mat s;
+    public:
+        IntegrateImage (cv::Mat const &image) 
+            : s(image.rows + 1, image.cols + 1, CV_32F, cv::Scalar(0))
+        {
+            vector<float> acc(image.cols, 0);
+            for (int y = 0; y < image.rows; ++y) {
+                float const *from = image.ptr<float const>(y);
+                float *to = s.ptr<float>(y+1);
+                for (int x = 0; x < image.cols; ++x) {
+                    acc[x] += from[x];
+                    to[x+1] = to[x] + acc[x];
+                }
+            }
+        }
+        float sum (cv::Rect const &rect) const {
+            float const *row1 = s.ptr<float const>(rect.y);
+            float const *row2 = s.ptr<float const>(rect.y + rect.height);
+            return row2[rect.x + rect.width] + row1[rect.x]
+                 - row2[rect.x] - row1[rect.x + rect.width];
+                 
+        }
+    };
+
+    void FindSquare (cv::Mat &mat, cv::Rect *rect, Config const &config) {
+        float c_th = config.get<float>("adsb2.square.cth", 0.85); // probability cap
+        float r_th = config.get<float>("adsb2.square.rth", 0.95) * M_PI/4;
+        float b_th = config.get<float>("adsb2.square.bth", 0.75);
+        CHECK(mat.type() == CV_32F);
+        cv::Mat probs;
+        cv::normalize(mat, probs, 0, 1, cv::NORM_MINMAX, CV_32F);
+        probs /= c_th;
+        cv::threshold(probs, probs, 1, 1, cv::THRESH_TRUNC);
+        IntegrateImage I(probs);
+        cv::Rect seed;
+        bound(mat, &seed, b_th);
+        // find the best square within rect
+        vector<cv::Rect> cc;
+        if (seed.width <= seed.height) {
+            cc.resize(seed.height + 1 - seed.width);
+            cc[0] = seed;
+            cc[0].height = cc[0].width;
+            for (unsigned i = 1; i < cc.size(); ++i) {
+                cc[i] = cc[0];
+                cc[i].y += i;
+            }
+        }
+        else {
+            cc.resize(seed.width + 1 - seed.height);
+            cc[0] = seed;
+            cc[0].width = cc[0].height;
+            for (unsigned i = 1; i < cc.size(); ++i) {
+                cc[i] = cc[0];
+                cc[i].x += i;
+            }
+        }
+        float best = -1;
+        for (auto const &c: cc) {
+            float s = I.sum(c);
+            if (s > best) {
+                seed = c;
+                best = s;
+            }
+        }
+        for (;;) {
+            cc.resize(4);
+            gen_candidate(probs, seed, &cc[0]);
+            bool updated = false;
+            for (auto const &c: cc) {
+                if (c.width < 0 || c.height < 0) continue;  // out-of-bound rects
+                float s = I.sum(c);
+                float r = s / c.area();
+                if ((s > best) && (r >= r_th)) {
+                    seed = c;
+                    best = s;
+                    updated = true;
+                }
+            }
+            if (!updated) break;
+        }
+        CHECK(best > 0);
+        *rect = seed;
+    }
 }
 

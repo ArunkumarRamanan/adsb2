@@ -102,6 +102,7 @@ namespace adsb2 {
         string line;            // line as read from list file
         bool annotated;
         cv::Rect_<float> box;   // bouding box
+        cv::Rect pred;  // prediction
         bool do_not_cook;
 
         cv::Mat prob;
@@ -312,20 +313,12 @@ namespace adsb2 {
         *w = e - b;
     }
 
+    float accumulate (cv::Mat const &image, vector<float> *X, vector<float> *Y);
+
     static inline void bound (cv::Mat const &image, cv::Rect *rect, float th) {
-        vector<float> X(image.cols, 0);
-        vector<float> Y(image.rows, 0);
-        float total = 0;
-        CHECK(image.type() == CV_32F);
-        for (int y = 0; y < image.rows; ++y) {
-            float const *row = image.ptr<float>(y);
-            for (int x = 0; x < image.cols; ++x) {
-                float v = row[x];
-                X[x] += v;
-                Y[y] += v;
-                total += v;
-            }
-        }
+        vector<float> X;
+        vector<float> Y;
+        float total = accumulate(image, &X, &Y);
         float margin = total * (1.0 - th) / 2;
         bound(X, &rect->x, &rect->width, margin);
         bound(Y, &rect->y, &rect->height, margin);
@@ -367,5 +360,6 @@ namespace adsb2 {
     // to filter out static regions
     // applies to the prob image of each slice
     void MotionFilter (Series *stack, Config const &config); 
+    void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
 
 }
