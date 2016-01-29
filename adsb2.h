@@ -10,6 +10,10 @@
 #include <boost/filesystem/fstream.hpp>
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
+#define timer timer_for_boost_progress_t
+#include <boost/progress.hpp>
+#undef timer
+#include <boost/timer/timer.hpp>
 #include <boost/assert.hpp>
 #include <glog/logging.h>
 
@@ -361,6 +365,7 @@ namespace adsb2 {
     // applies to the prob image of each slice
     void MotionFilter (Series *stack, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
+    void FindMinMaxVol (Study const &study, Config const &config);
 
     static inline void report (std::ostream &os, Slice const &s) {
         float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
@@ -377,3 +382,4 @@ namespace adsb2 {
         os << std::endl;
     }
 }
+

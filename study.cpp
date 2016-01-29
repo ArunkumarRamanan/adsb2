@@ -11,6 +11,7 @@
 namespace fs = boost::filesystem;
 
 using namespace std;
+using namespace boost;
 using namespace cv;
 using namespace adsb2;
 
@@ -69,33 +70,48 @@ int main(int argc, char **argv) {
     Cook cook(config);
 
     Study study(input_dir, true, true, true);
-    cook.apply(*study);
+    cook.apply(&study);
     vector<Slice *> slices;
     for (auto &s: study) {
         for (auto &ss: s) {
             slices.push_back(&ss);
         }
     }
-    LOG(INFO) << "Detecting all slices..." << endl;
-#pragma omp parallel
     {
-        Detector *det = make_caffe_detector(config);
-        CHECK(det) << " cannot create detector.";
+        cerr << "Detecting " << slices.size() << "  slices..." << endl;
+        timer::auto_cpu_timer timer(cerr);
+        progress_display progress(slices.size(), cerr);
+#pragma omp parallel
+        {
+            Detector *det = make_caffe_detector(config);
+            CHECK(det) << " cannot create detector.";
 #pragma omp for schedule(dynamic, 1)
-        for (unsigned i = 0; i < slices.size(); ++i) {
-            det->apply(slices[i]);
+            for (unsigned i = 0; i < slices.size(); ++i) {
+                det->apply(slices[i]);
+#pragma omp critical
+                ++progress;
+            }
+            delete det;
         }
-        delete det;
     }
-    LOG(INFO) << "Postprocessing..." << endl;
-    for (auto &s: study) {
-        MotionFilter(&s, config);
+    {
+        cerr << "Filtering..." << endl;
+        timer::auto_cpu_timer timer(cerr);
+        for (auto &s: study) {
+            MotionFilter(&s, config);
+        }
     }
-#pragma omp parallel schedule(synamic, 1)
-    for (unsigned i = 0; i < slices.size(); ++i) {
-        FindSquare(slices[i]->prob,
-                  &slices[i]->pred, config);
-
+    {
+        cerr << "Finding squares..." << endl;
+        timer::auto_cpu_timer timer(cerr);
+        progress_display progress(slices.size(), cerr);
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned i = 0; i < slices.size(); ++i) {
+            FindSquare(slices[i]->prob,
+                      &slices[i]->pred, config);
+#pragma omp critical
+            ++progress;
+        }
     }
     for (auto const &series: study) {
         for (auto const &s: series) {

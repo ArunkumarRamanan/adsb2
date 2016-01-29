@@ -9,7 +9,7 @@ do
     DIR=`dirname $ROOT/$a`
     N=`echo $a |cut -f 1 -d /`
     echo $N $DIR
-    ./detect $DIR --gif gif/$N.gif  --prob
+    ./detect $DIR --gif gif/$N.gif  --prob > gif/$N.txt
 done
 
 echo "<html><body><table>" > gif/index.html

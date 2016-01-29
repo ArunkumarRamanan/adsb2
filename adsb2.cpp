@@ -9,9 +9,6 @@
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/max.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
-#define timer timer_for_boost_progress_t
-#include <boost/progress.hpp>
-#undef timer
 #include "adsb2.h"
 
 extern "C" {
