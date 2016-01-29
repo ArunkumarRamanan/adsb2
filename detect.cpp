@@ -91,8 +91,7 @@ int main(int argc, char **argv) {
         }
     }
     for (auto const &s: stack) {
-        Rect bb = s.pred;
-        cout << s.path.native() << '\t' << sqrt(bb.area()) * s.meta.spacing << endl;
+        report(cout, s);
     }
     if (gif.size()) {
         stack.save_gif(gif);

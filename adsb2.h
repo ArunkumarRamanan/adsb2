@@ -362,4 +362,18 @@ namespace adsb2 {
     void MotionFilter (Series *stack, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
 
+    static inline void report (std::ostream &os, Slice const &s) {
+        float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
+        cv::Point_<float> raw_pt((s.pred.x + s.pred.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
+                         (s.pred.y + s.pred.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
+        float raw_r = r / s.meta.raw_spacing;
+        os << s.path.native() << '\t' << r
+             << '\t' << raw_pt.x << '\t' << raw_pt.y << '\t' << raw_r
+             << '\t' << s.meta.raw_spacing
+             << '\t' << s.meta.trigger_time;
+        for (unsigned i = 0; i < Meta::SERIES_FIELDS; ++i) {
+            os << '\t' << s.meta[i];
+        }
+        os << std::endl;
+    }
 }

@@ -99,17 +99,7 @@ int main(int argc, char **argv) {
     }
     for (auto const &series: study) {
         for (auto const &s: series) {
-            float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
-            Point_<float> raw_pt((s.pred.x + s.pred.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
-                             (s.pred.y + s.pred.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
-            float raw_r = r / s.meta.raw_spacing;
-            cout << s.path.native() << '\t' << r
-                 << '\t' << raw_pt.x << '\t' << raw_pt.y << '\t' << raw_r;
-                 << '\t' << s.meta.trigger_time;
-            for (unsigned i = 0; i < Meta::SERIES_FIELDS; ++i) {
-                cout << '\t' << s.meta[i];
-            }
-            cout << endl;
+            report(cout, s);
         }
     }
     return 0;
