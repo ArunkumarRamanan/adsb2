@@ -397,5 +397,15 @@ namespace adsb2 {
         }
         os << std::endl;
     }
+
+    class Eval {
+        static constexpr unsigned CASES = 500;
+        static constexpr unsigned VALUES = 600;
+        float volumes[CASES][2];
+        static float crps (float v, vector<float> const &x);
+    public:
+        Eval ();
+        float score (fs::path const &, vector<float> *);
+    };
 }
 

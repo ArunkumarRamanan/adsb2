@@ -9,6 +9,9 @@
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/max.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include "adsb2.h"
 
 extern "C" {
@@ -574,6 +577,75 @@ namespace adsb2 {
         pX->swap(X);
         pY->swap(Y);
         return total;
+    }
+
+    Eval::Eval () {
+        ifstream is("train.csv");
+        CHECK(is);
+        string dummy;
+        getline(is, dummy);
+        int a;
+        char d1, d2;
+        for (unsigned i = 0; i < 500; ++i) {
+            is >> a >> d1 >> volumes[i][0] >> d2 >> volumes[i][1];
+            CHECK(a == i+1);
+            CHECK(d1 == ',');
+            CHECK(d2 == ',');
+        }
+    }
+
+    float Eval::crps (float v, vector<float> const &x) {
+        CHECK(x.size() == VALUES);
+        float sum = 0;
+        unsigned i = 0;
+        for (; i < v; ++i) {
+            float s = x[i];
+            sum += s * s;
+        }
+        for (; i < VALUES; ++i) {
+            float s = 1.0 - x[i];
+            sum += s * s;
+        }
+        for (unsigned i = 0; i < VALUES; ++i) {
+            CHECK(x[i] >= 0);
+            CHECK(x[i] <= 1);
+            if (i > 0) CHECK(x[i] >= x[i-1]);
+        }
+        return sum/VALUES;
+    }
+
+    float Eval::score (fs::path const &path, vector<float> *s) {
+        fs::ifstream is(path);
+        string line;
+        getline(is, line);
+        float sum = 0;
+        s->clear();
+        while (getline(is, line)) {
+            using namespace boost::algorithm;
+            vector<string> ss;
+            split(ss, line, is_any_of(",_"), token_compress_on);
+            CHECK(ss.size() == VALUES + 2);
+            int n = lexical_cast<int>(ss[0]) - 1;
+            CHECK(n >= 0 && n < CASES);
+            int m;
+            if (ss[1] == "Systole") {
+                m = 0;
+            }
+            else if (ss[1] == "Diastole") {
+                m = 1;
+            }
+            else CHECK(0);
+            float v = volumes[n][m];
+            vector<float> x;
+            for (unsigned i = 0; i < VALUES; ++i) {
+                x.push_back(lexical_cast<float>(ss[2 + i]));
+            }
+            float score = crps(v, x);
+            s->push_back(score);
+            sum += score;
+        }
+        CHECK(s->size());
+        return sum / s->size();
     }
 }
 
