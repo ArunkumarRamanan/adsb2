@@ -614,7 +614,7 @@ namespace adsb2 {
         return sum/VALUES;
     }
 
-    float Eval::score (fs::path const &path, vector<float> *s) {
+    float Eval::score (fs::path const &path, vector<std::pair<string, float>> *s) {
         fs::ifstream is(path);
         string line;
         getline(is, line);
@@ -625,6 +625,7 @@ namespace adsb2 {
             vector<string> ss;
             split(ss, line, is_any_of(",_"), token_compress_on);
             CHECK(ss.size() == VALUES + 2);
+            string name = ss[0] + "_" + ss[1];
             int n = lexical_cast<int>(ss[0]) - 1;
             CHECK(n >= 0 && n < CASES);
             int m;
@@ -641,11 +642,17 @@ namespace adsb2 {
                 x.push_back(lexical_cast<float>(ss[2 + i]));
             }
             float score = crps(v, x);
-            s->push_back(score);
+            s->push_back(std::make_pair(name, score));
             sum += score;
         }
         CHECK(s->size());
         return sum / s->size();
+    }
+    float Eval::score (unsigned n1, unsigned n2, vector<float> const &x) {
+        --n1;
+        CHECK(n1 >= 0 && n1 < CASES);
+        float v = volumes[n1][n2];
+        return crps(v, x);
     }
 }
 

@@ -405,7 +405,11 @@ namespace adsb2 {
     public:
         static constexpr unsigned VALUES = 600;
         Eval ();
-        float score (fs::path const &, vector<float> *);
+        float get (unsigned n1, unsigned n2) const {
+            return volumes[n1-1][n2];
+        }
+        float score (fs::path const &, vector<std::pair<string, float>> *);
+        float score (unsigned n1, unsigned n2, vector<float> const &x);
     };
 }
 

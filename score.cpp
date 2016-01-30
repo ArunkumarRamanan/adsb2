@@ -39,10 +39,10 @@ int main(int argc, char **argv) {
         return 1;
     }
     Eval eval;
-    vector<float> s;
+    vector<pair<string, float>> s;
     float avg = eval.score(path, &s);
     for (auto const &v: s) {
-        cout << v << endl;
+        cout << v.first << '\t' << v.second << endl;
     }
     cout << avg << endl;
 
