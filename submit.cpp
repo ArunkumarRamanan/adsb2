@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
         if (do_eval) {
             float s = eval.score(c.id, 1, v);
             sum += s;
-            cout << '\t' << s << '\t' << eval.get(c.id, 1) << '\t' << c.max.mean << '\t' << sqrt(c.max.var);
+            cout << '\t' << s << '\t' << eval.get(c.id, 1) << '\t' << c.max.mean/1000 << '\t' << sqrt(c.max.var)/1000;
         }
         else {
             for (auto const &f: v) {
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
         if (do_eval) {
             float s = eval.score(c.id, 0, v);
             sum += s;
-            cout << '\t' << s << '\t' << eval.get(c.id, 0) << '\t' << c.min.mean << '\t' << sqrt(c.min.var);
+            cout << '\t' << s << '\t' << eval.get(c.id, 0) << '\t' << c.min.mean/1000 << '\t' << sqrt(c.min.var)/1000;
         }
         else {
             for (auto const &f: v) {
