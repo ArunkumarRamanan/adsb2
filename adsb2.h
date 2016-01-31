@@ -417,10 +417,10 @@ namespace adsb2 {
 
     void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config);
 
-    static inline void report (std::ostream &os, Slice const &s) {
+    static inline void report (std::ostream &os, Slice const &s, cv::Rect const &bound) {
         float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
-        cv::Point_<float> raw_pt((s.pred.x + s.pred.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
-                         (s.pred.y + s.pred.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
+        cv::Point_<float> raw_pt((bound.x + s.pred.x + s.pred.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
+                         (bound.y + s.pred.y + s.pred.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
         float raw_r = r / s.meta.raw_spacing;
         os << s.path.native() << '\t' << r
              << '\t' << raw_pt.x << '\t' << raw_pt.y << '\t' << raw_r
