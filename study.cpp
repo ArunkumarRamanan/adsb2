@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&input_dir), "")
     ("output,o", po::value(&output_dir), "")
+    ("bound", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -74,7 +75,9 @@ int main(int argc, char **argv) {
     cook.apply(&study);
     Detector *bb_det = make_caffe_detector(config);
     cv::Rect bound;
-    Bound(bb_det, &study, &bound, config);
+    if (vm.count("bound")) {
+        Bound(bb_det, &study, &bound, config);
+    }
 
     vector<Slice *> slices;
     for (auto &s: study) {
@@ -169,7 +172,7 @@ int main(int argc, char **argv) {
         fs::ofstream os(dir/fs::path("report.txt"));
         for (auto const &series: study) {
             for (auto const &s: series) {
-                report(os, s);
+                report(os, s, bound);
             }
         }
         {
@@ -187,7 +190,7 @@ int main(int argc, char **argv) {
     else {
         for (auto const &series: study) {
             for (auto const &s: series) {
-                report(cout, s);
+                report(cout, s, bound);
             }
         }
     }

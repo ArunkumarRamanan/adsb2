@@ -11,7 +11,17 @@ namespace adsb2 {
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config) {
         float ext = config.get<float>("adsb2.bound.ext", 4);
         if (study->size() < 3) return;
-        Series &mid = study->at((study->size() + 1) / 2);
+        float best_v = -1;
+        unsigned best = 0;
+
+        for (unsigned i = 0; i < study->size(); ++i) {
+            float v = cv::sum(study->at(i).front().vimage)[0];
+            if (v > best_v) {
+                best_v = v;
+                best = i;
+            }
+        }
+        Series &mid = study->at(best);
         Series ss;
         ss.resize(1);
         mid[0].clone(&ss[0]);
