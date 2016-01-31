@@ -73,10 +73,11 @@ int main(int argc, char **argv) {
     timer::auto_cpu_timer timer(cerr);
     Study study(input_dir, true, true, true);
     cook.apply(&study);
-    Detector *bb_det = make_caffe_detector(config);
     cv::Rect bound;
     if (vm.count("bound")) {
+        Detector *bb_det = make_caffe_detector(config);
         Bound(bb_det, &study, &bound, config);
+        delete bb_det;
     }
 
     vector<Slice *> slices;
@@ -85,19 +86,13 @@ int main(int argc, char **argv) {
             slices.push_back(&ss);
         }
     }
+    //config.put("adsb2.caffe.model", "model2");
     {
         cerr << "Detecting " << slices.size() << "  slices..." << endl;
         progress_display progress(slices.size(), cerr);
 #pragma omp parallel
         {
-            Detector *det;
-#pragma omp critical
-            {
-                det = bb_det; bb_det = nullptr;
-                if (!det) {
-                    det = make_caffe_detector(config);
-                }
-            }
+            Detector *det = make_caffe_detector(config);
             CHECK(det) << " cannot create detector.";
 #pragma omp for schedule(dynamic, 1)
             for (unsigned i = 0; i < slices.size(); ++i) {
