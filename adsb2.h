@@ -114,6 +114,21 @@ namespace adsb2 {
         Slice (): box(-1,-1,0,0), annotated(false), do_not_cook(false) {}
         Slice (string const &line);
 
+        void clone (Slice *s) {
+            s->id = id;
+            s->path = path;
+            s->meta = meta;
+            s->raw = raw.clone();
+            s->image = image.clone();
+            s->vimage = vimage.clone();
+            s->line = line;
+            s->annotated = annotated;
+            s->box = box;
+            s->pred = pred;
+            s->do_not_cook = do_not_cook;
+            s->prob = prob.clone();
+        }
+
         void load_raw () {
             raw = load_dicom(path, &meta);
 #if 1   // Yuanfang's annotation assume images are all in landscape position
@@ -157,6 +172,19 @@ namespace adsb2 {
         Series (){}
         // load from a directory of DCM files
         Series (fs::path const &input_dir, bool load = true, bool check = true, bool fix = false);
+
+        void bound (cv::Rect bb) {
+            bb = bb & cv::Rect(cv::Point(0,0), front().image.size());
+            cv::Mat vimage = front().vimage(bb).clone();
+            for (Slice &s: *this) {
+                s.image = s.image(bb).clone();
+                s.vimage = vimage;
+                CHECK(!s.prob.data);
+                if (s.annotated) {
+                    s.box -= cv::Point_<float>(bb.x, bb.y);
+                }
+            }
+        }
 
         fs::path dir () const {
             return series_path;
@@ -221,6 +249,11 @@ namespace adsb2 {
         Study (fs::path const &input_dir, bool load = true, bool check = true, bool fix = false);
         fs::path dir () const {
             return study_path;
+        }
+        void bound (cv::Rect const &bb) {
+            for (auto &s: *this) {
+                s.bound(bb);
+            }
         }
     };
 
@@ -368,6 +401,7 @@ namespace adsb2 {
         return v[0];
     }
 
+    void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config);
     // use variance image (big variance == big motion)
     // to filter out static regions
     // applies to the prob image of each slice

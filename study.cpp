@@ -72,6 +72,10 @@ int main(int argc, char **argv) {
     timer::auto_cpu_timer timer(cerr);
     Study study(input_dir, true, true, true);
     cook.apply(&study);
+    Detector *bb_det = make_caffe_detector(config);
+    cv::Rect bound;
+    Bound(bb_det, &study, &bound, config);
+
     vector<Slice *> slices;
     for (auto &s: study) {
         for (auto &ss: s) {
@@ -83,7 +87,14 @@ int main(int argc, char **argv) {
         progress_display progress(slices.size(), cerr);
 #pragma omp parallel
         {
-            Detector *det = make_caffe_detector(config);
+            Detector *det;
+#pragma omp critical
+            {
+                det = bb_det; bb_det = nullptr;
+                if (!det) {
+                    det = make_caffe_detector(config);
+                }
+            }
             CHECK(det) << " cannot create detector.";
 #pragma omp for schedule(dynamic, 1)
             for (unsigned i = 0; i < slices.size(); ++i) {

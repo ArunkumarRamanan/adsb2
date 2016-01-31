@@ -8,6 +8,34 @@
 namespace adsb2 {
     using std::queue;
 
+    void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config) {
+        float ext = config.get<float>("adsb2.bound.ext", 4);
+        if (study->size() < 3) return;
+        Series &mid = study->at((study->size() + 1) / 2);
+        Series ss;
+        ss.resize(1);
+        mid[0].clone(&ss[0]);
+        det->apply(&ss[0]);
+        MotionFilter(&ss, config);
+        FindSquare(ss[0].prob, &ss[0].pred, config);
+        cv::Rect bb = ss[0].pred;
+        int r = bb.width * ext - bb.width;
+        bb.width += r;
+        r /= 2;
+        bb.x -= r;
+        if (bb.x < 0) bb.x = 0;
+        r = bb.height * ext - bb.height;
+        bb.height += r;
+        r /= 2;
+        bb.y -= r;
+        if (bb.y < 0) bb.y = 0;
+#pragma omp parallel for
+        for (unsigned i = 0; i < study->size(); ++i) {
+            study->at(i).bound(bb);
+        }
+        *box = bb;
+    }
+
     static int conn_comp (cv::Mat *mat, cv::Mat const &weight, vector<float> *cnt) {
         // return # components
         CHECK(mat->type() == CV_8UC1);
