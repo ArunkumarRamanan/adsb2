@@ -26,7 +26,6 @@ using namespace adsb2;
 
 string backend("lmdb");
 bool do_circle = false;
-bool do_bound = false;
 
 void import (ImageAugment const &aug,
              vector<Slice *> const &samples,
@@ -118,7 +117,6 @@ int main(int argc, char **argv) {
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
     ("circle", "")
-    ("bound", "")
     ("output,o", po::value(&output_dir), "")
     ;
 
@@ -138,7 +136,6 @@ int main(int argc, char **argv) {
     CHECK(F >= 1);
     full = vm.count("full") > 0;
     if (vm.count("circle")) do_circle = true;
-    if (vm.count("bound")) do_bound = true;
 
 
     Config config;
