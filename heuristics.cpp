@@ -13,7 +13,6 @@ namespace adsb2 {
         if (study->size() < 3) return;
         float best_v = -1;
         unsigned best = 0;
-
         for (unsigned i = 0; i < study->size(); ++i) {
             float v = cv::sum(study->at(i).front().vimage)[0];
             if (v > best_v) {
@@ -21,6 +20,7 @@ namespace adsb2 {
                 best = i;
             }
         }
+        best = (study->size() + 1) / 2;
         Series &mid = study->at(best);
         Series ss;
         ss.resize(1);
@@ -28,16 +28,8 @@ namespace adsb2 {
         det->apply(&ss[0]);
         MotionFilter(&ss, config);
         FindSquare(ss[0].prob, &ss[0].pred, config);
-        cv::Rect bb = ss[0].pred;
-        int r = bb.width * ext - bb.width;
-        bb.width += r;
-        r /= 2;
-        bb.x -= r;
+        cv::Rect bb = round(cscale(unround(ss[0].pred), ext));
         if (bb.x < 0) bb.x = 0;
-        r = bb.height * ext - bb.height;
-        bb.height += r;
-        r /= 2;
-        bb.y -= r;
         if (bb.y < 0) bb.y = 0;
 #pragma omp parallel for
         for (unsigned i = 0; i < study->size(); ++i) {

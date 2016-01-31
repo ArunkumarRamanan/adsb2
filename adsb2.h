@@ -44,14 +44,16 @@ namespace adsb2 {
         return cv::Rect(x, y, width, height);
     }
 
-    static inline cv::Rect_<float> &operator *= (cv::Rect_<float> &r, float scale) {
+    static inline cv::Rect_<float> unround (cv::Rect const &r) {
+        return cv::Rect_<float>(r.x, r.y, r.width, r.height);
+    }
+
+    static inline cv::Rect_<float> cscale (cv::Rect_<float> const &r, float scale) {
         float cx = r.x + r.width/2;
         float cy = r.y + r.height/2;
-        r.width *= scale;
-        r.height *= scale;
-        r.x = cx - r.width/2;
-        r.y = cy - r.height/2;
-        return r;
+        float w = r.width * scale;
+        float h = r.height * scale;
+        return cv::Rect_<float>(cx - w/2, cy - h/2, w, h);
     }
 
     template <typename T>
