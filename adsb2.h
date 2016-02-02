@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <random>
 #include <opencv2/opencv.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -305,9 +306,50 @@ namespace adsb2 {
     Detector *make_scd_detector (Config const &);
 
     class ImageAugment {
+        float max_color;
+        float max_angle;
+        float max_scale;
+        std::default_random_engine e;
+        float sample (float limit) {
+            std::uniform_real_distribution<float> dis(-limit, limit);
+            return dis(e);
+        }
     public:
         ImageAugment (Config const &config)
+            : max_color(config.get<float>("adsb2.aug.color", 20)),
+            max_angle(config.get<float>("adsb2.aug.angle", 10.0 * M_PI / 180)),
+            max_scale(config.get<float>("adsb2.aug.scale", 1.2))
         {
+        }
+
+        void apply (Slice &from, Slice *to) {
+            CHECK(from.annotated);
+            float color(sample(max_color));
+            float angle(sample(max_angle));
+            float scale(std::exp(sample(std::log(max_scale))));
+            bool flip((e() % 2) == 1);
+            vector<float> cc{from.box.x + 1.0f*from.box.width/2,
+                             from.box.y + 1.0f*from.box.height/2};
+            cv::Mat image;
+            if (flip) {
+                cv::flip(from.image, image, 1);
+                cc[0] = image.cols - cc[0];
+            }
+            else {
+                image = from.image;
+            }
+            cv::Mat rot = cv::getRotationMatrix2D(cv::Point(image.cols/2, image.rows/2), angle, scale);
+            cv::warpAffine(image, to->image, rot, image.size());
+            to->image += color;
+            {
+                cv::Mat cm(1, 1, CV_32FC2, &cc[0]);
+                cv::transform(cm, cm, rot);
+            }
+            float r = from.box.width * scale;
+            to->annotated = true;
+            to->box.x = std::round(cc[0] - r/2);
+            to->box.y = std::round(cc[1] - r/2);
+            to->box.width = to->box.height = std::round(r);
         }
     };
 

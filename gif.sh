@@ -9,7 +9,8 @@ do
     DIR=`dirname $ROOT/$a`
     N=`echo $a |cut -f 1 -d /`
     echo $N $DIR
-    ./detect $DIR --gif gif/$N.gif  --prob > gif/$N.txt
+    echo ./scc $DIR --gif gif/$N.gif -D adsb2.dp.smooth=150  #> gif/$N.txt
+    ./scc $DIR --gif gif/$N.gif -D adsb2.dp.smooth=200 -D adsb2.dp.wall=300 -D adsb2.dp.th=0.3  > gif/$N.txt
 done
 
 echo "<html><body><table>" > gif/index.html

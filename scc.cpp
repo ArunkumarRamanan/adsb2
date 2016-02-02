@@ -28,14 +28,16 @@ class DpSeg {
     int margin;
     float thr;
     float smooth;
+    float wall;
     float penalty (int dx) const {
         return smooth *abs(dx);
     };
 public:
     DpSeg (Config const &conf)
         : margin(conf.get<int>("adsb2.dp.margin", 5)),
-        thr(conf.get<float>("adsb2.dp.th", 0.5)),
-        smooth(conf.get<float>("adsb2.dp.smooth", 1))
+        thr(conf.get<float>("adsb2.dp.th", 0.3)),
+        smooth(conf.get<float>("adsb2.dp.smooth", 200)),
+        wall(conf.get<float>("adsb2.dp.wall", 300))
     {
     }
     void apply (cv::Mat image, vector<int> *seg) const {
@@ -50,25 +52,30 @@ public:
         WorkSpace ws(image.rows, image.cols);
         int best_cc = 0;
         for (int y = 0; y < image.rows; ++y) {
-            E *e = &ws[y][0];
+            CHECK(y < image.rows);
+            E *e = &(ws[y][0]);
             float const *I = image.ptr<float const>(y);
             if (y == 0) {
                 float acc = 0;
                 for (int x = 0; x < image.cols; ++x) {
-                    acc += I[x] - th;
+                    float delta = I[x] - th;
+                    if (delta < 0) delta *= wall;
+                    acc += delta;
                     e[x].opt = acc;
                     e[x].prev = -1;
                 }
                 continue;
             }
-            E *prev = &ws[y-1][0];
+            E *prev = &(ws[y-1][0]);
             float acc = 0;
             best_cc = 0;
             float best_cc_score = -1;
             for (int x = 0; x < image.cols; ++x) {
-                acc += I[x] - th;
+                float delta = I[x] - th;
+                if (delta < 0) delta *= wall;
+                acc += delta;
                 int lb = std::max(x - 7, 0);
-                int ub = std::min(x + 7, image.cols);
+                int ub = std::min(x + 7, image.cols-1);
                 float best_score = -1;
                 int best_prev = 0;
                 for (int p = lb; p <= ub; ++p) {
@@ -116,7 +123,7 @@ void SCC_Analysis (Series *s, Config const &conf) {
         vector<int> curve;
         seg.apply(polar, &curve);
         for (int i = 1; i < curve.size(); ++i) {
-            cv::line(polar, cv::Point(curve[i-1], i-1), cv::Point(curve[i], i), cv::Scalar(255));
+            cv::line(polar, cv::Point(curve[i-1], i-1), cv::Point(curve[i], i), cv::Scalar(0));
         }
         linearPolar(polar, &ss.image, c, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
         //ss.image = polar;
