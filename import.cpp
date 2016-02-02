@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
+#include <unordered_set>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
@@ -27,9 +28,9 @@ using namespace adsb2;
 string backend("lmdb");
 bool do_circle = false;
 
-void import (ImageAugment const &aug,
+void import (ImageAugment &aug,
              vector<Slice *> const &samples,
-             fs::path const &dir, int channels) {
+             fs::path const &dir, int channels, int round = 1) {
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
@@ -44,43 +45,54 @@ void import (ImageAugment const &aug,
 
 
     int count = 0;
-    for (Slice *sample: samples) {
-        Datum datum;
-        string key = lexical_cast<string>(sample->id), value;
-        CHECK(sample->image.data);
+    Slice tmp;
+    for (unsigned rr = 0; rr < round; ++rr) {
+        for (Slice *sample: samples) {
+            Datum datum;
+            string key = lexical_cast<string>(count), value;
+            CHECK(sample->image.data);
 
-        cv::Mat image, label;
-        CaffeAdaptor::apply(*sample, &image, &label, channels, do_circle);
+            cv::Mat image, label;
+            if (rr) {
+                CHECK(channels == 1);
+                aug.apply(*sample, &tmp);
+                CaffeAdaptor::apply(tmp, &image, &label, channels, do_circle);
+            }
+            else {
+                CaffeAdaptor::apply(*sample, &image, &label, channels, do_circle);
+            }
 
-        /*
-        cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
-        imwrite((boost::format("abc/%d.png") % count).str(), image);
-        */
 
-        caffe::CVMatToDatum(image, &datum);
-        datum.set_label(0);
-        CHECK(datum.SerializeToString(&value));
-        image_txn->Put(key, value);
+            /*
+            cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
+            imwrite((boost::format("abc/%d.png") % count).str(), image);
+            */
 
-        caffe::CVMatToDatum(label, &datum);
-        datum.set_label(0);
-        CHECK(datum.SerializeToString(&value));
-        label_txn->Put(key, value);
+            caffe::CVMatToDatum(image, &datum);
+            datum.set_label(0);
+            CHECK(datum.SerializeToString(&value));
+            image_txn->Put(key, value);
+
+            caffe::CVMatToDatum(label, &datum);
+            datum.set_label(0);
+            CHECK(datum.SerializeToString(&value));
+            label_txn->Put(key, value);
 #if 0
-        static int debug_count = 0;
-        Mat out;
-        rectangle(image, roi, Scalar(255));
-        hconcat(image, label, out);
-        imwrite((boost::format("%d.png") % debug_count).str(), out);
-        ++debug_count;
+            static int debug_count = 0;
+            Mat out;
+            rectangle(image, roi, Scalar(255));
+            hconcat(image, label, out);
+            imwrite((boost::format("%d.png") % debug_count).str(), out);
+            ++debug_count;
 #endif
 
-        if (++count % 1000 == 0) {
-            // Commit db
-            image_txn->Commit();
-            image_txn.reset(image_db->NewTransaction());
-            label_txn->Commit();
-            label_txn.reset(label_db->NewTransaction());
+            if (++count % 1000 == 0) {
+                // Commit db
+                image_txn->Commit();
+                image_txn.reset(image_db->NewTransaction());
+                label_txn->Commit();
+                label_txn.reset(label_db->NewTransaction());
+            }
         }
     }
     if (count % 1000 != 0) {
@@ -104,8 +116,10 @@ int main(int argc, char **argv) {
     string list_path;
     string root_dir;
     string output_dir;
+    string pid_path;
     bool full = false;
     int F;
+    int auground;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -117,7 +131,9 @@ int main(int argc, char **argv) {
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
     ("circle", "")
+    ("pids", po::value(&pid_path), "")
     ("output,o", po::value(&output_dir), "")
+    ("aug", po::value(&auground)->default_value(1), "")
     ;
 
     po::positional_options_description p;
@@ -153,12 +169,48 @@ int main(int argc, char **argv) {
     ImageAugment aug(config);
     Slices samples(list_path, root_dir, cook);
 
+    if (pid_path.size()) {
+        unordered_set<int> pids;
+        ifstream is(pid_path.c_str());
+        int i; 
+        while (is >> i) {
+            pids.insert(i);
+        }
+        vector<Slice *> train;
+        vector<Slice *> val;
+        for (auto &s: samples) {
+            fs::path path = s.path;
+            fs::path last;
+            for (auto p: path) {
+                if (p.native() == "study") break;
+                last = p;
+            }
+            int n = lexical_cast<int>(last.native());
+            if (pids.count(n)) {
+                LOG(INFO) << "picked sample " << n << ": " << path;
+                train.push_back(&s);
+            }
+            else {
+                val.push_back(&s);
+            }
+            //ss[i] = &samples[i];
+        }
+        fs::path fold_path(output_dir);
+        CHECK(fs::create_directories(fold_path));
+        save_list(train, fold_path / fs::path("train.list"));
+        save_list(val, fold_path / fs::path("val.list"));
+        import(aug, train, fold_path / fs::path("train"), channels, auground);
+        import(aug, val, fold_path / fs::path("val"), channels, 1);
+        return 0;
+
+    }
+
     if (F == 1) {
         vector<Slice *> ss(samples.size());
         for (unsigned i = 0; i < ss.size(); ++i) {
             ss[i] = &samples[i];
         }
-        import(aug, ss, fs::path(output_dir), channels);
+        import(aug, ss, fs::path(output_dir), channels, auground);
         return 0;
     }
     // N-fold cross validation
@@ -183,8 +235,8 @@ int main(int argc, char **argv) {
         CHECK(fs::create_directories(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(aug, train, fold_path / fs::path("train"), channels);
-        import(aug, val, fold_path / fs::path("val"), channels);
+        import(aug, train, fold_path / fs::path("train"), channels, auground);
+        import(aug, val, fold_path / fs::path("val"), channels, 1);
         if (!full) break;
     }
 
