@@ -97,31 +97,6 @@ public:
     }
 };
 
-void linearPolar (cv::Mat image,
-                  cv::Mat *out,
-                  cv::Point_<float> O, float R, int flags) {
-    IplImage tmp_in = image;
-    IplImage *tmp_out = cvCreateImage(cvSize(image.cols, image.rows), IPL_DEPTH_32F, 1);
-    CvPoint2D32f center;
-    center.x = O.x;
-    center.y = O.y;
-    cvLinearPolar(&tmp_in, tmp_out, center, R, flags);
-    *out = cv::Mat(tmp_out, true);
-    /*
-    cv::Mat out;
-    cv::normalize(polar, out, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-    cv::imwrite("xxx.png", out);
-    */
-    cvReleaseImage(&tmp_out);
-}
-
-double max_R (cv::Point2f const &p, cv::Rect_<float> const &r) {
-    return std::max({cv::norm(p - r.tl()),
-                    cv::norm(p - r.br()),
-                    cv::norm(p - cv::Point2f(r.x + r.width, r.y)),
-                    cv::norm(p - cv::Point2f(r.x, r.y + r.height))});
-}
-
 void SCC_Analysis (Series *s, Config const &conf) {
     cv::Rect_<float> lb = unround(s->front().pred);
     cv::Rect_<float> ub = lb;
