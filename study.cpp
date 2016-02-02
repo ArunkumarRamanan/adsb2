@@ -105,9 +105,12 @@ int main(int argc, char **argv) {
     }
     {
         cerr << "Filtering..." << endl;
+        ProbFilter(&study, config);
+        /*
         for (auto &s: study) {
             MotionFilter(&s, config);
         }
+        */
     }
     {
         cerr << "Finding squares..." << endl;
