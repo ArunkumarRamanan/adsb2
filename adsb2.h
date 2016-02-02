@@ -418,6 +418,7 @@ namespace adsb2 {
     // to filter out static regions
     // applies to the prob image of each slice
     void MotionFilter (Series *stack, Config const &config); 
+    void ProbFilter (Study *study, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
 
     struct Volume {

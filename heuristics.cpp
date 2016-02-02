@@ -131,6 +131,52 @@ namespace adsb2 {
         // find connected components of p
     }
 
+    void ProbFilter (Study *study, Config const &config) {
+        float bin_th = config.get<float>("adsb2.pf.bin_th", 0.8);
+        float supp_th = config.get<float>("adsb2.pf.supp_th", 0.6);
+        int dilate = config.get<int>("adsb2.pf.dilate", 10);
+
+        cv::Mat p(study->front().front().image.size(), CV_32F, cv::Scalar(0));
+        cv::Mat pv(study->front().front().image.size(), CV_32F, cv::Scalar(0));
+        vector<Slice *> slices;
+        for (auto &s: *study) {
+            for (auto &ss: s) {
+                slices.push_back(&ss);
+                p = cv::max(p, ss.prob);
+            }
+            pv = cv::max(pv, s.front().vimage);
+        }
+        cv::normalize(p, p, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+        cv::threshold(p, p, 255 * bin_th, 255, cv::THRESH_BINARY);
+        vector<float> cc;
+        conn_comp(&p, pv, &cc);
+        CHECK(cc.size());
+        float max_c = *std::max_element(cc.begin(), cc.end());
+        for (unsigned i = 0; i < cc.size(); ++i) {
+            if (cc[i] < max_c * supp_th) cc[i] = 0;
+        }
+        for (int y = 0; y < p.rows; ++y) {
+            uint8_t *ptr = p.ptr<uint8_t>(y);
+            for (int x = 0; x < p.cols; ++x) {
+                uint8_t c = ptr[x];
+                if (c == 0) continue;
+                --c;
+                CHECK(c < cc.size());
+                ptr[x] = cc[c] ? 1: 0;
+            }
+        }
+        cv::Mat kernel = cv::Mat::ones(dilate, dilate, CV_8U);
+        cv::dilate(p, p, kernel);
+        cv::Mat np;
+        p.convertTo(np, CV_32F);
+#pragma omp parallel for
+        for (unsigned i = 0; i < slices.size(); ++i) {
+            cv::Mat prob = slices[i]->prob.mul(np);
+            slices[i]->prob = prob;
+        }
+        // find connected components of p
+    }
+
     void gen_candidate (cv::Mat const &mat, cv::Rect const &r,
                         cv::Rect *c) {   // at most four candidate
         c[0].width = c[1].width = c[2].width = c[3].width = r.width + 1;
