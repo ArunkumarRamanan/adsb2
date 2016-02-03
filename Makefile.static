@@ -18,7 +18,7 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lunwind -lrt -lm -lpthread -ldl
 	 
 HEADERS = adsb2.h
-COMMON = adsb2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o
+COMMON = adsb2.o adsb2-ca1.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o
 
 
 PROGS = detect import eval study score submit scc export-polar-tasks import-polar

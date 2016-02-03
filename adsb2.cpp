@@ -178,21 +178,32 @@ namespace adsb2 {
 
     void Slice::visualize (bool show_prob) {
         CHECK(image.type() == CV_32FC1);
+#if 0
         cv::Mat rgb;
         cv::cvtColor(image, rgb, CV_GRAY2BGR, 0);
         rgb.convertTo(image, CV_8UC3);
         cv::Scalar color = pred_box_reliable ? cv::Scalar(0, 0xFF, 0) : cv::Scalar(0, 0, 0xFF);
+#else
+        cv::Scalar color(0xFF);
+#endif
         if (pred_box.x >= 0) {
             cv::rectangle(image, pred_box, color);
         }
         if (show_prob && prob.data) {
             cv::Mat pp;
             cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_8U);
+#if 0
             cv::cvtColor(pp, rgb, CV_GRAY2BGR);
             if (pred_box.x >= 0) {
                 cv::rectangle(rgb, pred_box, color);
             }
             cv::hconcat(image, rgb, image);
+#else
+            if (pred_box.x >= 0) {
+                cv::rectangle(pp, pred_box, color);
+            }
+            cv::hconcat(image, pp, image);
+#endif
         }
     }
 

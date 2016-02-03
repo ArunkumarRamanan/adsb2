@@ -154,9 +154,12 @@ int main(int argc, char **argv) {
         gp << "set style data pm3d;" << endl;
         gp << "set dgrid3d 50,50 qnorm 2;" << endl;
         gp << "splot '-' using 1:2:3 notitle" << endl;
+#pragma omp parallel for
         for (unsigned i = 0; i < study.size(); ++i) {
             study[i].visualize();
             study[i].save_gif(dir/fs::path(fmt::format("{}.gif", i)));
+        }
+        for (unsigned i = 0; i < study.size(); ++i) {
             html << "<tr>"
                  << "<td>" << study[i].dir().filename().native() << "</td>"
                  << "<td>" << study[i].front().meta[Meta::SLICE_LOCATION] << "</td>"
