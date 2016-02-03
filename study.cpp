@@ -94,7 +94,9 @@ int main(int argc, char **argv) {
         progress_display progress(slices.size(), cerr);
 #pragma omp parallel
         {
-            Detector *det = make_caffe_detector(bound_model);
+            Detector *det;
+#pragma omp critical
+            det = make_caffe_detector(bound_model);
             CHECK(det) << " cannot create detector.";
 #pragma omp for schedule(dynamic, 1)
             for (unsigned i = 0; i < slices.size(); ++i) {
@@ -102,6 +104,7 @@ int main(int argc, char **argv) {
 #pragma omp critical
                 ++progress;
             }
+#pragma omp critical
             delete det;
         }
     }
@@ -122,6 +125,7 @@ int main(int argc, char **argv) {
                       &slices[i]->pred_box, config);
         }
     }
+    study_CA1(&study, config);
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (output_dir.size()) {

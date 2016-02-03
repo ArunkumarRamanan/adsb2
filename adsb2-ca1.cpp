@@ -22,15 +22,16 @@ namespace adsb2 {
         };
 
         void helper (Slice *slice) const {
+            slice->polar_contour.clear();
             cv::Mat image = slice->polar_prob;
             CHECK(image.type() == CV_32F);
-            CHECK(image.cols >= margin *2);
+            if (image.cols < margin * 2) return;
             float th = 0;
             {
                 float left_mean = cv::mean(image.colRange(0, margin))[0];
                 float right_mean = cv::mean(image.colRange(image.cols - margin, image.cols))[0];
                 //cerr << left_mean << ' ' << right_mean << endl;
-                CHECK(right_mean < left_mean);
+                if (!(right_mean < left_mean)) return;
                 th = left_mean + (right_mean - left_mean) * thr;
             }
 
@@ -97,6 +98,9 @@ namespace adsb2 {
             wall(conf.get<float>("adsb2.ca1.wall", 300))
         {
         }
+        void apply_slice (Slice *s) {
+            helper(s);
+        }
         void apply (Series *ss) const {
 #pragma omp parallel for
             for (unsigned i = 0; i < ss->size(); ++i) {
@@ -109,6 +113,69 @@ namespace adsb2 {
         return new CA1(config);
     }
 
+    struct Task {
+        cv::Point_<float> C;
+        float R;
+        Slice *slice;
+    };
 
+    void study_CA1 (Study *study, Config const &config) {
+        // compute bouding box
+        vector<Task> tasks;
+        for (Series &ss: *study) {
+            cv::Rect_<float> lb = ss.front().pred_box;
+            cv::Rect_<float> ub = lb;
+            for (auto &s: ss) {
+                cv::Rect_<float> r = unround(s.pred_box);
+                lb &= r;
+                ub |= r;
+            }
+            Task task;
+            task.C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
+            task.R = max_R(task.C, ub) * 3;
+            if (lb.width == 0) task.R = 0;
+            for (auto &s: ss) {
+                task.slice = &s;
+                tasks.push_back(task);
+            }
+        }
+        string contour_model = config.get("adsb2.caffe.contour_model", "contour_model");
+        CA1 ca1(config);
+#pragma omp parallel
+        {
+            Detector *det;
+#pragma omp critical
+            det = make_caffe_detector(contour_model);
+            CHECK(det) << " cannot create detector.";
+#pragma omp for schedule(dynamic, 1)
+            for (unsigned i = 0; i < tasks.size(); ++i) {
+                auto &task = tasks[i];
+                Slice &slice = *task.slice;
+                if (task.R == 0) {
+                    slice.pred_area = 0;
+                    continue;
+                }
+                slice.update_polar(task.C, task.R, det);
+                ca1.apply_slice(&slice);
+                if (slice.polar_contour.empty()) {
+                    slice.pred_area = 0;
+                    continue;
+                }
+                CHECK(slice.polar_contour.size() == slice.image.rows);
+                cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
+                for (int y = 0; y < polar.rows; ++y) {
+                    float *row = polar.ptr<float>(y);
+                    for (int x = 0; x < slice.polar_contour[y]; ++x) {
+                        row[x] = 1;
+                    }
+                }
+                cv::Mat cart;
+                linearPolar(polar, &cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+                slice.pred_area = cv::sum(cart)[0];
+            }
+#pragma omp critical
+            delete det;
+        }
+    }
 
 }

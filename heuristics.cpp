@@ -299,7 +299,7 @@ namespace adsb2 {
         for (auto const &series: study) {
             vector<float> r;
             for (auto const &s: series) {
-                r.push_back(s.pred_box.area() * s.meta.spacing * s.meta.spacing);
+                r.push_back(s.pred_area * s.meta.spacing * s.meta.spacing);
             }
             for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing
                 r.push_back(r[j]);
@@ -348,6 +348,5 @@ namespace adsb2 {
         *minv = min;
         *maxv = max;
     }
-
 }
 

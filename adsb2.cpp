@@ -194,7 +194,7 @@ namespace adsb2 {
         }
     }
 
-    void Slice::update_polar (cv::Point_<float> const &C, float R, Detector *) {
+    void Slice::update_polar (cv::Point_<float> const &C, float R, Detector *det) {
         polar_C = C;
         polar_R = R;
 

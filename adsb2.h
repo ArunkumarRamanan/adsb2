@@ -430,7 +430,7 @@ namespace adsb2 {
         virtual int level () const {
             return 0;
         }
-        virtual void apply (Series *, Detector *det) const = 0;
+        virtual void apply (Series *) const = 0;
         virtual void apply (Study *ss) const {
             for (Series &s: *ss) {
                 apply(&s);
@@ -451,6 +451,7 @@ namespace adsb2 {
     void MotionFilter (Series *stack, Config const &config); 
     void ProbFilter (Study *study, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
+    void study_CA1 (Study *, Config const &config);
 
     struct Volume {
         float mean;

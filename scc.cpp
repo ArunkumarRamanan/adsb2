@@ -43,7 +43,7 @@ public:
     {
         int prob = conf.get<int>("adsb2.dp.prob", 0);
         if (prob) {
-            caffe = make_caffe_detector(conf.get<string>("adsb2.dp.model", "contour-model"));
+            caffe = make_caffe_detector(conf.get<string>("adsb2.dp.model", "contour_model"));
         }
     }
     ~DpSeg () {
@@ -136,15 +136,15 @@ public:
 };
 
 void SCC_Analysis (Series *s, Config const &conf) {
-    cv::Rect_<float> lb = unround(s->front().pred);
+    cv::Rect_<float> lb = unround(s->front().pred_box);
     cv::Rect_<float> ub = lb;
     for (auto &ss: *s) {
-        cv::Rect_<float> r = unround(ss.pred);
+        cv::Rect_<float> r = unround(ss.pred_box);
         lb &= r;
         ub |= r;
     }
     cv::Point2f c(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
-    float R = max_R(c, ub) * 2;
+    float R = max_R(c, ub) * 3;
 #pragma parallel
     {
         DpSeg seg(conf);
@@ -163,7 +163,8 @@ void SCC_Analysis (Series *s, Config const &conf) {
             linearPolar(polar, &cart, c, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
             cv::Mat tmp;
             cv::hconcat(vis, polar, tmp);
-            cv::hconcat(tmp, cart, ss.image);
+            cv::hconcat(tmp, cart, tmp);
+            tmp.convertTo(ss.image, CV_8U);
             //ss.image = polar;
         }
     }
@@ -220,13 +221,15 @@ int main(int argc, char **argv) {
     cook.apply(&stack);
 
     float bbth = config.get<float>("adsb2.bound_th", 0.95);
+    string bound_model = config.get("adsb2.caffe.bound_model", "bound_model");
+    string contour_model = config.get("adsb2.caffe.contour_model", "contour_model");
 #pragma omp parallel
     {
-        Detector *det = make_caffe_detector(config);
+        Detector *det = make_caffe_detector(bound_model);
         CHECK(det) << " cannot create detector.";
 #pragma omp for schedule(dynamic, 1)
         for (unsigned i = 0; i < stack.size(); ++i) {
-            det->apply(&stack[i]);
+            det->apply(stack[i].image, &stack[i].prob);
         }
         delete det;
     }
@@ -234,7 +237,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel for
     for (unsigned i = 0; i < stack.size(); ++i) {
         auto &s = stack[i];
-        FindSquare(s.prob, &s.pred, config);
+        FindSquare(s.prob, &s.pred_box, config);
     }
     SCC_Analysis(&stack, config);
     if (gif.size()) {
