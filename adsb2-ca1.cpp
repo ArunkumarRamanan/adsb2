@@ -139,7 +139,7 @@ namespace adsb2 {
                 tasks.push_back(task);
             }
         }
-        string contour_model = config.get("adsb2.caffe.contour_model", "contour_model");
+        string contour_model = config.get("adsb2.caffe.contour_model", (home_dir/fs::path("contour_model")).native());
         CA1 ca1(config);
 #pragma omp parallel
         {

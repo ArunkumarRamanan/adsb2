@@ -74,8 +74,7 @@ int main(int argc, char **argv) {
     Study study(input_dir, true, true, true);
     cook.apply(&study);
     cv::Rect bound;
-    string bound_model = config.get("adsb2.caffe.bound_model", "bound_model");
-    string contour_model = config.get("adsb2.caffe.contour_model", "contour_model");
+    string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
     if (vm.count("bound")) {
         Detector *bb_det = make_caffe_detector(bound_model);
         Bound(bb_det, &study, &bound, config);

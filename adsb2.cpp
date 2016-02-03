@@ -54,9 +54,11 @@ namespace adsb2 {
         }
     }
 
+    fs::path home_dir;
     void GlobalInit (char const *path, Config const &config) {
         FLAGS_logtostderr = 1;
         FLAGS_minloglevel = 1;
+        home_dir = fs::path(path).parent_path();
         google::InitGoogleLogging(path);
         dicom_setup(path, config);
         //openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
