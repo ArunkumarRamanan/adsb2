@@ -298,10 +298,12 @@ namespace adsb2 {
     public:
         virtual ~Detector () {}
         virtual void apply (Slice *sample) = 0;
+        virtual void apply (cv::Mat image, cv::Mat *prob) = 0;
     };
 
 
     Detector *make_caffe_detector (Config const &);
+    Detector *make_caffe_detector (string const &path);
     Detector *make_cascade_detector (Config const &);
     Detector *make_scd_detector (Config const &);
 

@@ -60,33 +60,34 @@ struct Sample {
             float by = 1 - cc.back().y;
             float fx = cc.front().x;
             float fy = cc.front().y;
-            xx = std::round((by * fx + fy * bx) / (fy + by) * label.cols);
+            xx = std::round((by * fx + fy * bx) / (fy + by) * slice.image.cols);
         }
         vector<cv::Point> ps(cc.size());
         for (unsigned i = 0; i < cc.size(); ++i) {
             auto const &from = cc[i];
             auto &to = ps[i];
-            to.x = std::round(label.cols * from.x);
-            to.y = std::round(label.rows * from.y);
+            to.x = std::round(slice.image.cols * from.x);
+            to.y = std::round(slice.image.rows * from.y);
         }
-        ps.emplace_back(xx, label.rows - 1);
-        ps.emplace_back(0, label.rows - 1);
+        ps.emplace_back(xx, slice.image.rows - 1);
+        ps.emplace_back(0, slice.image.rows - 1);
         ps.emplace_back(0, 0);
         ps.emplace_back(xx, 0);
         Point const *pps = &ps[0];
         int const nps = ps.size();
-        //cv::fillPoly(polar, &pps, &nps, 1, cv::Scalar(1));
         cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
-        cv::polylines(polar, &pps, &nps, 1, true, cv::Scalar(1), 5);
+        cv::fillPoly(polar, &pps, &nps, 1, cv::Scalar(1));
+        //cv::polylines(polar, &pps, &nps, 1, true, cv::Scalar(255), 2);
+        //imwrite("/home/wdong/public_html/xxx.png", polar);
         linearPolar(polar, &label, c, R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
         /*
         cv::Mat out;
         slice.image.convertTo(out, CV_8U);
         out += label;
-        */
         cv::Mat oo = slice.image + label;
         cv::hconcat(oo, label, slice.image);
-        imwrite("xxx.png", slice.image);
+        imwrite("/home/wdong/public_html/yyy.png", slice.image);
+        */
     }
 };
 
@@ -97,7 +98,12 @@ int main(int argc, char **argv) {
     string list_path;
     string root_dir;
     string output_dir;
-    int auground;
+    int round;
+    bool do_polar = false;
+    float min_R;
+    float max_R;
+    float max_C;
+    int mk;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -107,7 +113,12 @@ int main(int argc, char **argv) {
     ("list", po::value(&list_path), "")
     ("root", po::value(&root_dir), "")
     ("output,o", po::value(&output_dir), "")
-    ("aug", po::value(&auground)->default_value(1), "")
+    ("aug", po::value(&round)->default_value(1), "")
+    ("polar", "")
+    ("min_R", po::value(&min_R)->default_value(0.75), "")
+    ("max_R", po::value(&max_R)->default_value(1.5), "")
+    ("max_C", po::value(&max_C)->default_value(0.4), "")
+    ("mk", po::value(&mk)->default_value(3), "")
     ;
 
     po::positional_options_description p;
@@ -123,6 +134,8 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
+
+    if (vm.count("polar")) do_polar = true;
 
 
     Config config;
@@ -168,10 +181,11 @@ int main(int argc, char **argv) {
                 float phi = pp["y"].number_value();
                 if (rho < 0.5) continue;
                 rho -= 0.5;
+                rho *= 2;
                 s.cc.emplace_back(rho, phi);
             }
             sort(s.cc.begin(), s.cc.end(), [](cv::Point_<float> const &p1,
-                                          cv::Point_<float> const &p2) {
+                                              cv::Point_<float> const &p2) {
                         return p1.y < p2.y;
                     });
             samples.push_back(s);
@@ -180,13 +194,12 @@ int main(int argc, char **argv) {
     float spacing(config.get<float>("adsb2.cook.spacing", 1.4));
     for (auto &s: samples) {
         s.load(spacing);
-        break;
     }
-
-#if 0
-    Slices samples(list_path, root_dir, cook);
-    random_shuffle(samples.begin(), samples.end());
-
+    vector<Sample *> ss;
+    for (auto &s: samples) {
+        ss.push_back(&s);
+    }
+    fs::path dir(output_dir);
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
@@ -201,27 +214,53 @@ int main(int argc, char **argv) {
 
     int count = 0;
     Slice tmp;
+    uniform_real_distribution<float> R_R(min_R, max_R);
+    uniform_real_distribution<float> C_R(0, max_C);
+    uniform_real_distribution<float> C_RHO(0, M_PI * 2);
+    default_random_engine rng;
+    cv::Mat kernel = cv::Mat::ones(mk, mk, CV_8U);
     for (unsigned rr = 0; rr < round; ++rr) {
-        for (Slice *sample: samples) {
+        random_shuffle(ss.begin(), ss.end());
+        for (Sample *sample: ss) {
+
             Datum datum;
             string key = lexical_cast<string>(count), value;
-            CHECK(sample->image.data);
+            CHECK(sample->slice.image.data);
 
             cv::Mat image, label;
-            if (rr) {
-                CHECK(channels == 1);
-                aug.apply(*sample, &tmp);
-                CaffeAdaptor::apply(tmp, &image, &label, channels, do_circle);
+            if (do_polar) {
+                float rr = R_R(rng) * sample->R;
+                float cr = C_R(rng) * sample->R;
+                float rho = C_RHO(rng);
+                cv::Point_<float> cc = sample->c + cv::Point_<float>(cr * cos(rho), cr * sin(rho));
+                cv::Mat imageF, labelF;
+                linearPolar(sample->slice.image, &imageF, cc, rr, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
+                linearPolar(sample->label, &labelF, cc, rr, CV_INTER_NN+CV_WARP_FILL_OUTLIERS);
+                imageF.convertTo(image, CV_8UC1);
+                cv::equalizeHist(image, image);
+                labelF.convertTo(label, CV_8UC1);
+                cv::morphologyEx(label, label, cv::MORPH_CLOSE, kernel);
+                /*
+                cv::Mat tmp;
+                cv::hconcat(image, label * 255, tmp);
+                fs::path p(dir);
+                p /= fs::path(fmt::format("{}.png", count));
+                cv::imwrite(p.native(), tmp);
+                */
             }
             else {
-                CaffeAdaptor::apply(*sample, &image, &label, channels, do_circle);
+                CHECK(0);
+#if 0
+                if (rr) {
+                    CHECK(channels == 1);
+                    aug.apply(*sample, &tmp);
+                    CaffeAdaptor::apply(tmp, &image, &label, channels, do_circle);
+                }
+                else {
+                    CaffeAdaptor::apply(*sample, &image, &label, channels, do_circle);
+                }
+#endif
             }
-
-
-            /*
-            cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
-            imwrite((boost::format("abc/%d.png") % count).str(), image);
-            */
 
             caffe::CVMatToDatum(image, &datum);
             datum.set_label(0);
@@ -232,14 +271,6 @@ int main(int argc, char **argv) {
             datum.set_label(0);
             CHECK(datum.SerializeToString(&value));
             label_txn->Put(key, value);
-#if 0
-            static int debug_count = 0;
-            Mat out;
-            rectangle(image, roi, Scalar(255));
-            hconcat(image, label, out);
-            imwrite((boost::format("%d.png") % debug_count).str(), out);
-            ++debug_count;
-#endif
 
             if (++count % 1000 == 0) {
                 // Commit db
@@ -254,7 +285,6 @@ int main(int argc, char **argv) {
       image_txn->Commit();
       label_txn->Commit();
     }
-#endif
 
     return 0;
 }

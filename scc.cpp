@@ -32,22 +32,53 @@ class DpSeg {
     float penalty (int dx) const {
         return smooth *abs(dx);
     };
+    Detector *caffe;
 public:
     DpSeg (Config const &conf)
         : margin(conf.get<int>("adsb2.dp.margin", 5)),
         thr(conf.get<float>("adsb2.dp.th", 0.3)),
         smooth(conf.get<float>("adsb2.dp.smooth", 200)),
-        wall(conf.get<float>("adsb2.dp.wall", 300))
+        wall(conf.get<float>("adsb2.dp.wall", 300)),
+        caffe(nullptr)
     {
+        int prob = conf.get<int>("adsb2.dp.prob", 0);
+        if (prob) {
+            caffe = make_caffe_detector(conf.get<string>("adsb2.dp.model", "contour-model"));
+        }
     }
-    void apply (cv::Mat image, vector<int> *seg) const {
-        CHECK(image.type() == CV_32F);
-        CHECK(image.cols >= margin *2);
-        float left_mean = cv::mean(image(cv::Rect(0, 0, margin, image.rows)))[0];
-        float right_mean = cv::mean(image(cv::Rect(image.cols - margin, 0, margin, image.rows)))[0];
-        //cerr << left_mean << ' ' << right_mean << endl;
-        CHECK(right_mean < left_mean);
-        float th = left_mean + (right_mean - left_mean) * thr;
+    ~DpSeg () {
+        if (caffe) delete caffe;
+    }
+    void apply (cv::Mat input, vector<int> *seg, cv::Mat *vis) const {
+        CHECK(input.type() == CV_32F);
+        CHECK(input.cols >= margin *2);
+        float th;
+        cv::Mat image;
+        if (caffe) {
+            th = 255 * (1 - thr);
+            cv::Mat u8;
+            input.convertTo(u8, CV_8U);
+            equalizeHist(u8, u8);
+            int m = u8.rows / 4;
+            cv::Mat top = u8(cv::Rect(0, 0, u8.cols, m));
+            cv::Mat bot = u8(cv::Rect(0, u8.rows - m, u8.cols, m));
+            cv::vconcat(bot, u8, u8);
+            cv::vconcat(u8, top, u8);
+            cv::Mat extended;
+            caffe->apply(u8, &extended);
+            image = extended(cv::Rect(0, m, input.cols, input.rows)).clone();
+            image *= 255;
+            *vis = image;
+        }
+        else {
+            float left_mean = cv::mean(input(cv::Rect(0, 0, margin, input.rows)))[0];
+            float right_mean = cv::mean(input(cv::Rect(input.cols - margin, 0, margin, input.rows)))[0];
+            //cerr << left_mean << ' ' << right_mean << endl;
+            CHECK(right_mean < left_mean);
+            th = left_mean + (right_mean - left_mean) * thr;
+            image = input;
+            *vis = input;
+        }
 
         WorkSpace ws(image.rows, image.cols);
         int best_cc = 0;
@@ -114,19 +145,27 @@ void SCC_Analysis (Series *s, Config const &conf) {
     }
     cv::Point2f c(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
     float R = max_R(c, ub) * 2;
-    DpSeg seg(conf);
-#pragma omp parallel for
-    for (unsigned i = 0; i < s->size(); ++i) {
-        Slice &ss = s->at(i);
-        cv::Mat polar;
-        linearPolar(ss.image, &polar, c, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
-        vector<int> curve;
-        seg.apply(polar, &curve);
-        for (int i = 1; i < curve.size(); ++i) {
-            cv::line(polar, cv::Point(curve[i-1], i-1), cv::Point(curve[i], i), cv::Scalar(0));
+#pragma parallel
+    {
+        DpSeg seg(conf);
+#pragma omp for schedule(dynamic, 1)
+        for (unsigned i = 0; i < s->size(); ++i) {
+            Slice &ss = s->at(i);
+            cv::Mat polar, cart;
+            linearPolar(ss.image, &polar, c, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
+            vector<int> curve;
+            cv::Mat vis;
+            seg.apply(polar, &curve, &vis);
+            for (int i = 1; i < curve.size(); ++i) {
+                cv::line(vis, cv::Point(curve[i-1], i-1), cv::Point(curve[i], i), cv::Scalar(0xFF));
+                cv::line(polar, cv::Point(curve[i-1], i-1), cv::Point(curve[i], i), cv::Scalar(0));
+            }
+            linearPolar(polar, &cart, c, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+            cv::Mat tmp;
+            cv::hconcat(vis, polar, tmp);
+            cv::hconcat(tmp, cart, ss.image);
+            //ss.image = polar;
         }
-        linearPolar(polar, &ss.image, c, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
-        //ss.image = polar;
     }
 }
 
