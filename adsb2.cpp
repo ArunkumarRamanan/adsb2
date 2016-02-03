@@ -191,8 +191,9 @@ namespace adsb2 {
         }
         if (show_prob && prob.data) {
             cv::Mat pp;
-            cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_8U);
+            cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_32F);
 #if 0
+            cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_8U);
             cv::cvtColor(pp, rgb, CV_GRAY2BGR);
             if (pred_box.x >= 0) {
                 cv::rectangle(rgb, pred_box, color);
