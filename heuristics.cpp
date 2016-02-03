@@ -25,15 +25,15 @@ namespace adsb2 {
         Series ss;
         ss.resize(1);
         mid[0].clone(&ss[0]);
-        det->apply(&ss[0]);
+        det->apply(ss[0].image, &ss[0].prob);
         MotionFilter(&ss, config);
-        FindSquare(ss[0].prob, &ss[0].pred, config);
-        cv::Rect bb = round(cscale(unround(ss[0].pred), ext));
+        FindSquare(ss[0].prob, &ss[0].pred_box, config);
+        cv::Rect bb = round(cscale(unround(ss[0].pred_box), ext));
         if (bb.x < 0) bb.x = 0;
         if (bb.y < 0) bb.y = 0;
 #pragma omp parallel for
         for (unsigned i = 0; i < study->size(); ++i) {
-            study->at(i).bound(bb);
+            study->at(i).shrink(bb);
         }
         *box = bb;
     }
@@ -299,7 +299,7 @@ namespace adsb2 {
         for (auto const &series: study) {
             vector<float> r;
             for (auto const &s: series) {
-                r.push_back(s.pred.area() * s.meta.spacing * s.meta.spacing);
+                r.push_back(s.pred_box.area() * s.meta.spacing * s.meta.spacing);
             }
             for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing
                 r.push_back(r[j]);

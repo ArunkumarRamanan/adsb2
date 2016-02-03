@@ -63,20 +63,138 @@ namespace adsb2 {
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
     }
 
-    Slice::Slice (string const &txt): do_not_cook(false) {
-        istringstream ss(txt);
-        string p;
-        ss >> p >> box.x >> box.y >> box.width >> box.height;
-        if (!ss) {
-            box.x = box.y = -1;
-            box.width = box.height = 0;
-            return;
-        }
-        annotated = true;
-        path = fs::path(p);
-        line = txt;
+    BoxAnnoOps box_anno_ops;
+    PolyAnnoOps poly_anno_ops;
+    
+    void BoxAnnoOps::load (Slice *slice, string const *txt) const
+    {
+        slice->anno = this;
+        Data &box = slice->anno_data.box;
+        box.x = lexical_cast<float>(txt[0]);
+        box.y = lexical_cast<float>(txt[1]);
+        box.width = lexical_cast<float>(txt[2]);
+        box.height = lexical_cast<float>(txt[3]);
     }
 
+    void BoxAnnoOps::shift (Slice *slice, cv::Point_<float> const &pt) const {
+        Data &box = slice->anno_data.box;
+        box.x -= pt.x;
+        box.y -= pt.y;
+    }
+
+    void BoxAnnoOps::scale (Slice *slice, float rate) const {
+        Data &box = slice->anno_data.box;
+        box.x *= rate;
+        box.y *= rate;
+        box.width *= rate;
+        box.height *= rate;
+    }
+
+    void BoxAnnoOps::fill (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
+    {
+        Data const &box = slice.anno_data.box;
+#define BOX_AS_CIRCLE 1
+#ifdef BOX_AS_CIRCLE
+        cv::circle(*out, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
+                         std::sqrt(box.width * box.height)/2, v, CV_FILLED);
+        // TODO, use rotated rect to draw ellipse 
+#else
+        cv::rectangle(*out, round(box), v, CV_FILLED);
+        
+#endif
+    }
+
+    void PolyAnnoOps::load (Slice *slice, string const *txt) const
+    {
+        CHECK(0);
+    }
+
+    void PolyAnnoOps::shift (Slice *slice, cv::Point_<float> const &pt) const {
+        CHECK(0);
+    }
+
+    void PolyAnnoOps::scale (Slice *slice, float rate) const {
+        CHECK(0);
+    }
+
+    void PolyAnnoOps::fill (Slice const &, cv::Mat *, cv::Scalar const &) const
+    {
+        CHECK(0);
+    }
+
+
+    Slice::Slice (string const &txt)
+        : do_not_cook(false),
+        pred_box(-1,-1,0,0),
+        pred_box_reliable(false),
+        pred_area(-1)
+    {
+        using namespace boost::algorithm;
+        line = txt;
+        vector<string> ss;
+        split(ss, line, is_any_of("\t"), token_compress_off);
+        path = fs::path(ss[0]);
+
+        string const *rest = &ss[1];
+        int nf = ss.size() - 1;
+
+        if (nf == 3) {
+            LOG(ERROR) << "annotation format not supported.";
+            CHECK(0);
+        }
+        else if (nf == 4) {
+            box_anno_ops.load(this, rest);
+        }
+        else if (nf == 5) {
+            LOG(ERROR) << "annotation format not supported.";
+            CHECK(0);
+        }
+        else if (nf >= 7) {
+            poly_anno_ops.load(this, rest);
+        }
+        else {
+            LOG(ERROR) << "annotation format not supported.";
+            CHECK(0);
+        }
+    }
+
+    void Slice::clone (Slice *s) const {
+        s->id = id;
+        s->path = path;
+        s->meta = meta;
+        s->raw = raw.clone();
+        s->image = image.clone();
+        s->vimage = vimage.clone();
+        s->do_not_cook = do_not_cook;
+        s->line = line;
+        s->anno = anno;
+        s->anno_data = anno_data;
+        s->prob = prob.clone();
+        s->pred_box = pred_box;
+        s->pred_area = pred_area;
+    }
+
+    void Slice::visualize (bool show_prob) {
+        CHECK(image.type() == CV_32FC1);
+        cv::Mat rgb;
+        cv::cvtColor(image, rgb, CV_GRAY2BGR, 0);
+        rgb.convertTo(image, CV_8UC3);
+        cv::Scalar color = pred_box_reliable ? cv::Scalar(0, 0xFF, 0) : cv::Scalar(0, 0, 0xFF);
+        if (pred_box.x >= 0) {
+            cv::rectangle(image, pred_box, color);
+        }
+        if (show_prob && prob.data) {
+            cv::Mat pp;
+            cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_8U);
+            cv::cvtColor(pp, rgb, CV_GRAY2BGR);
+            if (pred_box.x >= 0) {
+                cv::rectangle(rgb, pred_box, color);
+            }
+            cv::hconcat(image, rgb, image);
+        }
+    }
+
+#if 0
     void Slice::eval (cv::Mat mat, float *s1, float *s2) const {
         CHECK(box.x >=0 && box.y >= 0);
         cv::Mat roi = mat(round(box));
@@ -85,12 +203,13 @@ namespace adsb2 {
         *s1 = covered / total;
         *s2 = 0;//*s2 = std::sqrt(roi.area()) * meta.spacing;
     }
+#endif
 
-    Series::Series (fs::path const &input_dir, bool load, bool check, bool fix): series_path(input_dir) {
+    Series::Series (fs::path const &path_, bool load, bool check, bool fix): path(path_) {
         // enumerate DCM files
         vector<fs::path> paths;
         fs::directory_iterator end_itr;
-        for (fs::directory_iterator itr(input_dir);
+        for (fs::directory_iterator itr(path);
                 itr != end_itr; ++itr) {
             if (fs::is_regular_file(itr->status())) {
                 // found subdirectory,
@@ -123,18 +242,103 @@ namespace adsb2 {
         }
     }
 
-    void Series::visualize (bool show_prob) {
+    void Series::shrink (cv::Rect const &bb) {
+        CHECK(size());
+        CHECK(bb.x >= 0);
+        CHECK(bb.y >= 0);
+        CHECK(bb.width < front().image.cols);
+        CHECK(bb.height < front().image.rows);
+        cv::Mat vimage = front().vimage(bb).clone();
         for (Slice &s: *this) {
-            cv::rectangle(s.image, s.pred, cv::Scalar(0xFF));
-            if (show_prob) {
-                cv::Mat pp;
-                cv::normalize(s.prob, pp, 0, 255, cv::NORM_MINMAX, CV_32FC1);
-                cv::rectangle(pp, s.pred, cv::Scalar(0xFF));
-                cv::hconcat(s.image, pp, s.image);
+            s.image = s.image(bb).clone();
+            s.vimage = vimage;
+            if (s.anno) {
+                s.anno->shift(&s, unround(bb.tl()));
             }
+            CHECK(s.pred_box.x < 0);
+            CHECK(s.pred_box.y < 0);
+            CHECK(!s.prob.data);
         }
     }
 
+    void Series::save_dir (fs::path const &dir, fs::path const &ext) {
+        fs::create_directories(dir);
+        for (auto const &s: *this) {
+            CHECK(s.image.depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
+            fs::path path(dir / s.path.stem());
+            path += ext;
+            cv::imwrite(path.native(), s.image);
+        }
+    }
+
+    void Series::save_gif (fs::path const &path) {
+        fs::path tmp(fs::unique_path());
+        fs::create_directories(tmp);
+        ostringstream gif_cmd;
+        gif_cmd << "convert -delay 5 ";
+        fs::path pgm(".pgm");
+        fs::path pbm(".pbm");
+        for (auto const &s: *this) {
+            CHECK(s.image.depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
+            fs::path pnm(tmp / s.path.stem());
+            if (s.image.channels() == 1) {
+                pnm += pgm;
+            }
+            else if (s.image.channels() == 3) {
+                pnm += pbm;
+            }
+            else {
+                CHECK(0) << "image depth not supported.";
+            }
+            cv::imwrite(pnm.native(), s.image);
+            gif_cmd << " " << pnm;
+        }
+        gif_cmd << " " << path;
+        ::system(gif_cmd.str().c_str());
+        fs::remove_all(tmp);
+    }
+
+    void Series::visualize (bool show_prob) {
+        for (Slice &s: *this) {
+            s.visualize(show_prob);
+        }
+    }
+
+    void Series::getVImage (cv::Mat *vimage) {
+        if (size() <= 1) {
+            *vimage = cv::Mat(front().image.size(), CV_32F, cv::Scalar(0));
+            return;
+        }
+        namespace ba = boost::accumulators;
+        typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max, ba::tag::count, ba::tag::variance, ba::tag::moment<2>>> Acc;
+        CHECK(size());
+        CHECK(at(0).image.type() == CV_16U);
+
+        cv::Size shape = at(0).image.size();
+        unsigned pixels = shape.area();
+
+        cv::Mat mu(shape, CV_32F);
+        cv::Mat sigma(shape, CV_32F);
+        vector<Acc> accs(pixels);
+        for (auto const &s: *this) {
+            uint16_t const *v = s.image.ptr<uint16_t const>(0);
+            for (auto &acc: accs) {
+                acc(*v);
+                ++v;
+            }
+        }
+        float *m = mu.ptr<float>(0);
+        float *s = sigma.ptr<float>(0);
+        //float *sp = spread.ptr<float>(0);
+        for (auto const &acc: accs) {
+            *m = ba::mean(acc);
+            *s = std::sqrt(ba::variance(acc));
+            //cout << *s << endl;
+            //*sp = ba::max(acc) - ba::min(acc);
+            ++m; ++s; //++sp;
+        }
+        *vimage = sigma;
+    }
 
     template <typename T>
     class FreqCount {
@@ -209,58 +413,148 @@ namespace adsb2 {
         return ok;
     }
 
-    void Series::getAvgStdDev (cv::Mat *avg, cv::Mat *stddev) {
-        namespace ba = boost::accumulators;
-        typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max, ba::tag::count, ba::tag::variance, ba::tag::moment<2>>> Acc;
-        CHECK(size());
-        CHECK(at(0).image.type() == CV_16U);
-
-        cv::Size shape = at(0).image.size();
-        unsigned pixels = shape.area();
-
-        cv::Mat mu(shape, CV_32F);
-        cv::Mat sigma(shape, CV_32F);
-        vector<Acc> accs(pixels);
-        for (auto const &s: *this) {
-            uint16_t const *v = s.image.ptr<uint16_t const>(0);
-            for (auto &acc: accs) {
-                acc(*v);
-                ++v;
+    Study::Study (fs::path const &path_, bool load, bool check, bool fix): path(path_) {
+        // enumerate DCM files
+        vector<fs::path> paths;
+        fs::directory_iterator end_itr;
+        for (fs::directory_iterator itr(path);
+                itr != end_itr; ++itr) {
+            if (fs::is_directory(itr->status())) {
+                // found subdirectory,
+                // create tagger
+                auto sax = itr->path();
+                string name = sax.filename().native();
+                if (name.find("sax_") != 0) {
+                    continue;
+                }
+                paths.push_back(sax);
             }
         }
-        float *m = mu.ptr<float>(0);
-        float *s = sigma.ptr<float>(0);
-        //float *sp = spread.ptr<float>(0);
-        for (auto const &acc: accs) {
-            *m = ba::mean(acc);
-            *s = std::sqrt(ba::variance(acc));
-            //cout << *s << endl;
-            //*sp = ba::max(acc) - ba::min(acc);
-            ++m; ++s; //++sp;
+        std::sort(paths.begin(), paths.end());
+        CHECK(paths.size());
+        for (auto const &sax: paths) {
+            emplace_back(sax, load, false, false);    // do not fix for now
         }
-        *avg = mu;
-        *stddev = sigma;
+        if (load && !sanity_check(fix) && fix) {
+            CHECK(sanity_check(false));
+        }
     }
 
-    void shrink_expand (vector<uint16_t> &all, vector<uint16_t> *v, float eth) {
-        percentile(all, vector<float>{0, eth, 1 - eth, 1}, v);
-        CHECK(v->size() == 4);
-        int r = v->at(2) - v->at(1);
-        int low = v->at(1) - r * eth;
-        int high = v->at(2) + r * eth;
-        if (low < v->at(0)) low = v->at(0);
-        if (high > v->at(3)) high = v->at(3);
-        v->resize(2);
-        v->at(0) = low;
-        v->at(1) = high;
-        CHECK(v->size() == 2);
+    static constexpr float LOCATION_GAP_EPSILON = 0.01;
+    static inline bool operator < (Series const &s1, Series const &s2) {
+        Meta const &m1 = s1.front().meta;
+        Meta const &m2 = s2.front().meta;
+        if (m1[Meta::SLICE_LOCATION] + LOCATION_GAP_EPSILON < m2[Meta::SLICE_LOCATION]) {
+            return true;
+        }
+        if (m1[Meta::SLICE_LOCATION] - LOCATION_GAP_EPSILON > m2[Meta::SLICE_LOCATION]) {
+            return false;
+        }
+        return m1[Meta::SERIES_NUMBER] < m2[Meta::SERIES_NUMBER];
+    }
+
+
+    bool Study::sanity_check (bool fix) {
+        bool ok = true;
+        if (fix) {
+            check_regroup();
+        }
+        for (auto &s: *this) {
+            if (!s.sanity_check(fix)) {
+                LOG(WARNING) << "Study " << path << " series " << s.path << " sanity check failed.";
+                if (fix) {
+                    CHECK(s.sanity_check(false));
+                }
+            }
+        }
+        for (unsigned i = 0; i < Meta::STUDY_FIELDS; ++i) {
+            // check that all series fields are the same
+            FreqCount<float> fc;
+            for (Series &s: *this) {
+                fc.update(s.front().meta[i]);
+            }
+            if (fc.unique()) break;
+            ok = false;
+            float mfv = fc.most_frequent();
+            for (Series &s: *this) {
+                if (s.front().meta[i] != mfv) {
+                    LOG(WARNING) << "Study field " << Meta::FIELDS[i] << "  mismatch: " << s.dir() << " found " << s.front().meta[i]
+                                 << " instead of most freq value " << mfv;
+                    if (fix) {
+                        for (auto &ss: s) {
+                            ss.meta[i] = mfv;
+                        }
+                    }
+                }
+            }
+        }
+        // check trigger time
+        //
+        sort(begin(), end());
+        unsigned off = 1;
+        for (unsigned i = 1; i < size(); ++i) {
+            Meta const &prev = at(off-1).front().meta;
+            Meta const &cur = at(i).front().meta;
+            if (std::abs(prev[Meta::SLICE_LOCATION] - cur[Meta::SLICE_LOCATION]) <= LOCATION_GAP_EPSILON) {
+                LOG(WARNING) << "replacing " << at(off-1).dir()
+                             << " (" << prev[Meta::SERIES_NUMBER] << ":" << prev[Meta::SLICE_LOCATION] << ") "
+                             << " with " << at(i).dir()
+                             << " (" << cur[Meta::SERIES_NUMBER] << ":" << cur[Meta::SLICE_LOCATION] << ") ";
+                std::swap(at(off-1), at(i));
+            }
+            else {
+                if (off != i) { // otherwise no need to swap
+                    std::swap(at(off), at(i));
+                }
+                ++off;
+            }
+        }
+        if (off != size()) {
+            LOG(WARNING) << "study " << path << " reduced from " << size() << " to " << off << " series.";
+            resize(off);
+        }
+        return ok;
+    }
+
+    void Study::check_regroup () {
+        vector<Series> v;
+        v.swap(*this);
+        for (Series &s: v) {
+            unsigned max_nn = 0;
+            unordered_map<float, vector<unsigned>> group;
+            for (unsigned i = 0; i < s.size(); ++i) {
+                auto const &ss = s[i];
+                unsigned nn = ss.meta[Meta::NUMBER_OF_IMAGES];
+                if (nn > max_nn) {
+                    max_nn = nn;
+                }
+                group[ss.meta[Meta::SLICE_LOCATION]].push_back(i);
+            }
+            if ((s.size() <= max_nn) && (group.size() <= 1)) {
+                emplace_back(std::move(s));
+            }
+            else { // regroup
+                LOG(WARNING) << "regrouping series " << s.dir() << " into " << group.size() << " groups.";
+                unsigned i;
+                for (auto const &p: group) {
+                    emplace_back();
+                    back().path = s.path;
+                    back().path += fs::path(':' + lexical_cast<string>(i));;
+                    for (unsigned j: p.second) {
+                        back().push_back(std::move(s[j]));
+                    }
+                    sort(back().begin(), back().end());
+                    ++i;
+                }
+            }
+        }
     }
 
     // histogram equilization
-    void getColorMap (Series const &stack, vector<float> *cmap, int colors) {
+    void getColorMap (Series const &series, vector<float> *cmap, int colors) {
         vector<uint16_t> all;
-        all.reserve(stack.front().image.total() * stack.size());
-        for (auto const &s: stack) {
+        all.reserve(series.front().image.total() * series.size());
+        for (auto const &s: series) {
             cv::Mat const &image = s.raw;
             CHECK(image.type() == CV_16UC1);
             for (int i = 0; i < image.rows; ++i) {
@@ -306,38 +600,42 @@ namespace adsb2 {
         }
     }
 
-    void Cook::apply (Series *stack) const {
+    void Cook::apply (Slice *slice) const {
+        CHECK(0) << "Unimplemented";   // not supported yet
+    }
+
+    void Cook::apply (Series *series) const {
         // normalize color
-        cv::Mat mu, sigma;
-        stack->getAvgStdDev(&mu, &sigma);
-        // compute var image
         cv::Mat vimage;
-        cv::normalize(sigma, vimage, 0, color_bins-1, cv::NORM_MINMAX, CV_32FC1);
+        series->getVImage(&vimage);
+        cv::Size raw_size = vimage.size();
+        // compute var image
+        cv::normalize(vimage, vimage, 0, color_bins-1, cv::NORM_MINMAX, CV_32FC1);
         float scale = -1;
         float raw_spacing = -1;
         cv::Size sz;
         if (spacing > 0) {
             //float scale = spacing / meta.spacing;
-            raw_spacing = stack->front().meta.raw_spacing;
+            raw_spacing = series->front().meta.raw_spacing;
             scale = raw_spacing / spacing;
-            sz = round(sigma.size() * scale);
+            sz = round(raw_size * scale);
             cv::resize(vimage, vimage, sz);
         }
         vector<float> cmap;
-        getColorMap(*stack, &cmap, color_bins);
+        getColorMap(*series, &cmap, color_bins);
 #pragma omp parallel for schedule(dynamic, 1)
-        for (unsigned i = 0; i < stack->size(); ++i) {
-            auto &s = stack->at(i);
+        for (unsigned i = 0; i < series->size(); ++i) {
+            auto &s = series->at(i);
             if (s.do_not_cook) continue;
             equalize(s.raw, &s.image, cmap);
             if (scale > 0) {
                 s.meta.spacing = spacing;
                 CHECK(s.meta.raw_spacing == raw_spacing);
-                CHECK(s.image.size() == sigma.size());
+                CHECK(s.image.size() == raw_size);
                 //float scale = s.meta.raw_spacing / s.meta.spacing;
                 cv::resize(s.image, s.image, sz);
-                if (s.annotated) {
-                    s.box = s.box * scale;
+                if (s.anno) {
+                    s.anno->scale(&s, scale);
                 }
             }
 #pragma omp critical
@@ -410,8 +708,8 @@ namespace adsb2 {
                 Slice &to = stack[p.second];
                 to.do_not_cook = false;
                 to.line = from.line;
-                to.annotated = from.annotated;
-                to.box = from.box;
+                to.anno = from.anno;
+                to.anno_data = from.anno_data;
             }
             // move annotation data to stack
             cook.apply(&stack);
@@ -420,143 +718,6 @@ namespace adsb2 {
                 std::swap(at(p.first), stack[p.second]);
             }
             ++progress;
-        }
-    }
-
-    Study::Study (fs::path const &input_dir, bool load, bool check, bool fix): study_path(input_dir) {
-        // enumerate DCM files
-        vector<fs::path> paths;
-        fs::directory_iterator end_itr;
-        for (fs::directory_iterator itr(input_dir);
-                itr != end_itr; ++itr) {
-            if (fs::is_directory(itr->status())) {
-                // found subdirectory,
-                // create tagger
-                auto path = itr->path();
-                string name = path.filename().native();
-                if (name.find("sax_") != 0) {
-                    continue;
-                }
-                paths.push_back(path);
-            }
-        }
-        std::sort(paths.begin(), paths.end());
-        CHECK(paths.size());
-        for (auto const &path: paths) {
-            emplace_back(path, load, false, false);    // do not fix for now
-        }
-        if (load && !sanity_check(fix) && fix) {
-            CHECK(sanity_check(false));
-        }
-    }
-
-    static constexpr float LOCATION_GAP_EPSILON = 0.01;
-    static inline bool operator < (Series const &s1, Series const &s2) {
-        Meta const &m1 = s1.front().meta;
-        Meta const &m2 = s2.front().meta;
-        if (m1[Meta::SLICE_LOCATION] + LOCATION_GAP_EPSILON < m2[Meta::SLICE_LOCATION]) {
-            return true;
-        }
-        if (m1[Meta::SLICE_LOCATION] - LOCATION_GAP_EPSILON > m2[Meta::SLICE_LOCATION]) {
-            return false;
-        }
-        return m1[Meta::SERIES_NUMBER] < m2[Meta::SERIES_NUMBER];
-    }
-
-
-    bool Study::sanity_check (bool fix) {
-        bool ok = true;
-        if (fix) {
-            check_regroup();
-        }
-        for (auto &s: *this) {
-            if (!s.sanity_check(fix)) {
-                LOG(WARNING) << "Study " << study_path << " series " << s.series_path << " sanity check failed.";
-                if (fix) {
-                    CHECK(s.sanity_check(false));
-                }
-            }
-        }
-        for (unsigned i = 0; i < Meta::STUDY_FIELDS; ++i) {
-            // check that all series fields are the same
-            FreqCount<float> fc;
-            for (Series &s: *this) {
-                fc.update(s.front().meta[i]);
-            }
-            if (fc.unique()) break;
-            ok = false;
-            float mfv = fc.most_frequent();
-            for (Series &s: *this) {
-                if (s.front().meta[i] != mfv) {
-                    LOG(WARNING) << "Study field " << Meta::FIELDS[i] << "  mismatch: " << s.dir() << " found " << s.front().meta[i]
-                                 << " instead of most freq value " << mfv;
-                    if (fix) {
-                        for (auto &ss: s) {
-                            ss.meta[i] = mfv;
-                        }
-                    }
-                }
-            }
-        }
-        // check trigger time
-        //
-        sort(begin(), end());
-        unsigned off = 1;
-        for (unsigned i = 1; i < size(); ++i) {
-            Meta const &prev = at(off-1).front().meta;
-            Meta const &cur = at(i).front().meta;
-            if (std::abs(prev[Meta::SLICE_LOCATION] - cur[Meta::SLICE_LOCATION]) <= LOCATION_GAP_EPSILON) {
-                LOG(WARNING) << "replacing " << at(off-1).dir()
-                             << " (" << prev[Meta::SERIES_NUMBER] << ":" << prev[Meta::SLICE_LOCATION] << ") "
-                             << " with " << at(i).dir()
-                             << " (" << cur[Meta::SERIES_NUMBER] << ":" << cur[Meta::SLICE_LOCATION] << ") ";
-                std::swap(at(off-1), at(i));
-            }
-            else {
-                if (off != i) { // otherwise no need to swap
-                    std::swap(at(off), at(i));
-                }
-                ++off;
-            }
-        }
-        if (off != size()) {
-            LOG(WARNING) << "study " << study_path << " reduced from " << size() << " to " << off << " series.";
-            resize(off);
-        }
-        return ok;
-    }
-
-    void Study::check_regroup () {
-        vector<Series> v;
-        v.swap(*this);
-        for (Series &s: v) {
-            unsigned max_nn = 0;
-            unordered_map<float, vector<unsigned>> group;
-            for (unsigned i = 0; i < s.size(); ++i) {
-                auto const &ss = s[i];
-                unsigned nn = ss.meta[Meta::NUMBER_OF_IMAGES];
-                if (nn > max_nn) {
-                    max_nn = nn;
-                }
-                group[ss.meta[Meta::SLICE_LOCATION]].push_back(i);
-            }
-            if ((s.size() <= max_nn) && (group.size() <= 1)) {
-                emplace_back(std::move(s));
-            }
-            else { // regroup
-                LOG(WARNING) << "regrouping series " << s.dir() << " into " << group.size() << " groups.";
-                unsigned i;
-                for (auto const &p: group) {
-                    emplace_back();
-                    back().series_path = s.series_path;
-                    back().series_path += fs::path(':' + lexical_cast<string>(i));;
-                    for (unsigned j: p.second) {
-                        back().push_back(std::move(s[j]));
-                    }
-                    sort(back().begin(), back().end());
-                    ++i;
-                }
-            }
         }
     }
 

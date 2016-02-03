@@ -74,8 +74,10 @@ int main(int argc, char **argv) {
     Study study(input_dir, true, true, true);
     cook.apply(&study);
     cv::Rect bound;
+    string bound_model = config.get("adsb2.caffe.bound_model", "bound_model");
+    string contour_model = config.get("adsb2.caffe.contour_model", "contour_model");
     if (vm.count("bound")) {
-        Detector *bb_det = make_caffe_detector(config);
+        Detector *bb_det = make_caffe_detector(bound_model);
         Bound(bb_det, &study, &bound, config);
         delete bb_det;
     }
@@ -92,11 +94,11 @@ int main(int argc, char **argv) {
         progress_display progress(slices.size(), cerr);
 #pragma omp parallel
         {
-            Detector *det = make_caffe_detector(config);
+            Detector *det = make_caffe_detector(bound_model);
             CHECK(det) << " cannot create detector.";
 #pragma omp for schedule(dynamic, 1)
             for (unsigned i = 0; i < slices.size(); ++i) {
-                det->apply(slices[i]);
+                det->apply(slices[i]->image, &slices[i]->prob);
 #pragma omp critical
                 ++progress;
             }
@@ -117,7 +119,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < slices.size(); ++i) {
             FindSquare(slices[i]->prob,
-                      &slices[i]->pred, config);
+                      &slices[i]->pred_box, config);
         }
     }
     Volume min, max;
@@ -159,7 +161,7 @@ int main(int argc, char **argv) {
                  << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
                  << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
             for (auto const &s: study[i]) {
-                float r = std::sqrt(s.pred.area())/2 * s.meta.spacing;
+                float r = std::sqrt(s.pred_box.area())/2 * s.meta.spacing;
                 gp << s.meta.trigger_time
                    << '\t' << s.meta[Meta::SLICE_LOCATION]
                    << '\t' << r << endl;

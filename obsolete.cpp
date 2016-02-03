@@ -71,3 +71,17 @@
         CHECK(out->size() == in.size());
     }
 
+    void shrink_expand (vector<uint16_t> &all, vector<uint16_t> *v, float eth) {
+        percentile(all, vector<float>{0, eth, 1 - eth, 1}, v);
+        CHECK(v->size() == 4);
+        int r = v->at(2) - v->at(1);
+        int low = v->at(1) - r * eth;
+        int high = v->at(2) + r * eth;
+        if (low < v->at(0)) low = v->at(0);
+        if (high > v->at(3)) high = v->at(3);
+        v->resize(2);
+        v->at(0) = low;
+        v->at(1) = high;
+        CHECK(v->size() == 2);
+    }
+

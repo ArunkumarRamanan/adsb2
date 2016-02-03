@@ -26,11 +26,13 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using namespace adsb2;
 
 string backend("lmdb");
-bool do_circle = false;
 
-void import (ImageAugment &aug,
-             vector<Slice *> const &samples,
-             fs::path const &dir, int channels, int round = 1) {
+void import (Sampler &sampler,
+             vector<Slice *> &samples,
+             fs::path const &dir,
+             bool polar,
+             int replica = 1) {
+
     CHECK(fs::create_directories(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
@@ -43,31 +45,42 @@ void import (ImageAugment &aug,
     label_db->Open(label_path.string(), db::NEW);
     scoped_ptr<db::Transaction> label_txn(label_db->NewTransaction());
 
-
     int count = 0;
     Slice tmp;
-    for (unsigned rr = 0; rr < round; ++rr) {
+    for (unsigned rr = 0; rr < replica; ++rr) {
+        if (rr) {
+            random_shuffle(samples.begin(), samples.end());
+        }
         for (Slice *sample: samples) {
             Datum datum;
             string key = lexical_cast<string>(count), value;
             CHECK(sample->image.data);
 
             cv::Mat image, label;
-            if (rr) {
-                CHECK(channels == 1);
-                aug.apply(*sample, &tmp);
-                CaffeAdaptor::apply(tmp, &image, &label, channels, do_circle);
+            bool do_not_perturb = (rr == 0);
+            if (polar) {
+                sampler.polar(sample->image,
+                              sample->_label,
+                              sample->_import_C,
+                              sample->_import_R,
+                              &image, &label, do_not_perturb);
             }
             else {
-                CaffeAdaptor::apply(*sample, &image, &label, channels, do_circle);
+                sampler.linear(sample->image, sample->_label,
+                        &image, &label, do_not_perturb);
             }
 
+            {
+                CHECK(image.type() == CV_32F);
+                cv::Mat u8;
+                image.convertTo(u8, CV_8U);
+                image = u8;
+            }
 
             /*
             cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
             imwrite((boost::format("abc/%d.png") % count).str(), image);
             */
-
             caffe::CVMatToDatum(image, &datum);
             datum.set_label(0);
             CHECK(datum.SerializeToString(&value));
@@ -108,7 +121,6 @@ void save_list (vector<Slice *> const &samples, fs::path path) {
     }
 }
 
-
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
@@ -116,10 +128,11 @@ int main(int argc, char **argv) {
     string list_path;
     string root_dir;
     string output_dir;
-    string pid_path;
+    string train_list_path;
     bool full = false;
     int F;
-    int auground;
+    int replica;
+    bool polar = false;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -131,9 +144,10 @@ int main(int argc, char **argv) {
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
     ("circle", "")
-    ("pids", po::value(&pid_path), "")
+    ("train-list", po::value(&train_list_path), "using ids in this file for training, rest for validation")
     ("output,o", po::value(&output_dir), "")
-    ("aug", po::value(&auground)->default_value(1), "")
+    ("replica", po::value(&replica)->default_value(1), "")
+    ("polar", "")
     ;
 
     po::positional_options_description p;
@@ -151,8 +165,8 @@ int main(int argc, char **argv) {
     }
     CHECK(F >= 1);
     full = vm.count("full") > 0;
-    if (vm.count("circle")) do_circle = true;
-
+    polar = vm.count("polar") != 0;
+    //if (vm.count("circle")) do_circle = true;
 
     Config config;
     try {
@@ -165,13 +179,39 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
 
     Cook cook(config);
-    int channels = config.get<int>("adsb2.caffe.channels", 1);
-    ImageAugment aug(config);
     Slices samples(list_path, root_dir, cook);
+    // generate labels
+    for (auto &s: samples) {
+        CHECK(s.anno);
+        s._label = cv::Mat(s.image.size(), CV_8UC1, cv::Scalar(0));
+        s.anno->fill(s, &s._label, cv::Scalar(1));
+        int min_x = s._label.cols;
+        int max_x = -1;
+        int min_y = s._label.rows;
+        int max_y = -1;
+        for (int y = 0; y < s._label.rows; ++y) {
+            uint8_t const *row = s._label.ptr<uint8_t const>(y);
+            for (int x = 0; x < s._label.cols; ++x) {
+                if (row[x]) {   // positive pixel found
+                    min_x = std::min(min_x, x);
+                    max_x = std::max(max_x, x);
+                    min_y = std::min(min_y, y);
+                    max_y = std::max(max_y, y);
+                }
+            }
+        }
+        CHECK(min_x <= max_x) << "no positive pixels are found.";
+        s._import_C = cv::Point_<float>(0.5 * (min_x + max_x), 0.5 * (min_y + max_y));
+        int dx = max_x - min_x + 1;
+        int dy = max_y - min_y + 1;
+        s._import_R = std::sqrt(dx * dx + dy * dy);
+    }
 
-    if (pid_path.size()) {
+    Sampler sampler(config);
+
+    if (train_list_path.size()) {
         unordered_set<int> pids;
-        ifstream is(pid_path.c_str());
+        ifstream is(train_list_path.c_str());
         int i; 
         while (is >> i) {
             pids.insert(i);
@@ -199,8 +239,8 @@ int main(int argc, char **argv) {
         CHECK(fs::create_directories(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(aug, train, fold_path / fs::path("train"), channels, auground);
-        import(aug, val, fold_path / fs::path("val"), channels, 1);
+        import(sampler, train, fold_path / fs::path("train"), polar, replica);
+        import(sampler, val, fold_path / fs::path("val"), polar, 1);
         return 0;
 
     }
@@ -210,7 +250,7 @@ int main(int argc, char **argv) {
         for (unsigned i = 0; i < ss.size(); ++i) {
             ss[i] = &samples[i];
         }
-        import(aug, ss, fs::path(output_dir), channels, auground);
+        import(sampler, ss, fs::path(output_dir), polar, replica);
         return 0;
     }
     // N-fold cross validation
@@ -221,7 +261,7 @@ int main(int argc, char **argv) {
     }
 
     for (unsigned f = 0; f < F; ++f) {
-        vector<Slice *> const &val = folds[f];
+        vector<Slice *> &val = folds[f];
         // collect training examples
         vector<Slice *> train;
         for (unsigned i = 0; i < F; ++i) {
@@ -235,8 +275,8 @@ int main(int argc, char **argv) {
         CHECK(fs::create_directories(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(aug, train, fold_path / fs::path("train"), channels, auground);
-        import(aug, val, fold_path / fs::path("val"), channels, 1);
+        import(sampler, train, fold_path / fs::path("train"), polar, replica);
+        import(sampler, val, fold_path / fs::path("val"), polar, 1);
         if (!full) break;
     }
 
