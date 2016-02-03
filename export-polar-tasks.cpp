@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
     string list_path;
     string root_dir;
     string output_dir;
+    int resize;
     bool full = false;
     int F;
 
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
     ("list", po::value(&list_path), "")
     ("root", po::value(&root_dir), "")
     ("output,o", po::value(&output_dir), "")
+    ("resize", po::value(&resize)->default_value(256), "")
     ;
 
     po::positional_options_description p;
@@ -92,9 +94,14 @@ int main(int argc, char **argv) {
         cv::normalize(image, image, 0, 255, cv::NORM_MINMAX, CV_32F);
         cv::Mat polar;
         linearPolar(image, &polar, c, R);
-        cv::equalizeHist(polar, polar);
+        cerr << R << ' ' << polar.cols << ' ' << polar.rows << endl;
+        cv::Mat roi = image(round(cscale(slice.box, 2)));
+        cv::resize(roi, roi, cv::Size(resize,resize));
+        cv::resize(polar, polar, cv::Size(resize,resize));
+        cv::hconcat(roi, polar, polar);
         cv::Mat out;
         polar.convertTo(out, CV_8UC1);
+        cv::equalizeHist(out, out);
         fs::path outf(out_dir/fs::path(fmt::format("{}.png", cc++)));
         cv::imwrite(outf.native(), out);
         Json json = Json::object{
