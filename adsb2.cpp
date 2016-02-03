@@ -204,6 +204,9 @@ namespace adsb2 {
                 cv::rectangle(pp, pred_box, color);
             }
             cv::hconcat(image, pp, image);
+            cv::Mat u8;
+            image.convertTo(u8, CV_8U);
+            image = u8;
 #endif
         }
     }
