@@ -147,4 +147,10 @@ namespace adsb2 {
         */
         cvReleaseImage(&tmp_out);
     }
+
+    static inline void vconcat3 (cv::Mat a, cv::Mat b, cv::Mat c, cv::Mat *out) {
+        cv::Mat tmp;
+        cv::vconcat(a, b, tmp);
+        cv::vconcat(tmp, c, *out);
+    }
 }

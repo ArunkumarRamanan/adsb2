@@ -118,6 +118,8 @@ namespace adsb2 {
     extern BoxAnnoOps box_anno_ops;
     extern PolyAnnoOps poly_anno_ops;
 
+    class Detector;
+
     struct Slice {
         int id;
         fs::path path;          // must always present
@@ -140,6 +142,12 @@ namespace adsb2 {
         cv::Mat prob;           // pixel-level prediction
         cv::Rect pred_box;      // bounding box prediction
         bool pred_box_reliable;
+
+        cv::Point_<float> polar_C;   //
+        float polar_R;              // available after update_polar is called
+        cv::Mat polar_prob;         //
+        vector<int> polar_contour;
+
         float pred_area;        // area prediction
 
         cv::Mat _label;         // temporarily used by import.cpp
@@ -167,6 +175,14 @@ namespace adsb2 {
 #endif
             image = raw;
         }
+
+        void update_polar (cv::Point_<float> const &C, float R, Detector *);
+        /*
+        void update_polar (Detector *det) {
+            cv::Rect_<float> r = unround(pred_box);
+            update_polar(r, det);
+        }
+        */
 
 #if 0
         cv::Mat roi () {
@@ -406,6 +422,27 @@ namespace adsb2 {
         }
     };
 #endif
+
+    class CA {
+    public:
+        ~CA () {
+        }
+        virtual int level () const {
+            return 0;
+        }
+        virtual void apply (Series *, Detector *det) const = 0;
+        virtual void apply (Study *ss) const {
+            for (Series &s: *ss) {
+                apply(&s);
+            }
+        }
+    };
+
+    CA *make_ca_1 (Config const &);
+    CA *make_ca_2 (Config const &);
+    CA *make_ca_3 (Config const &);
+
+
 
     // use variance image (big variance == big motion)
     // to filter out static regions

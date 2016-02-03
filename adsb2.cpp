@@ -194,6 +194,29 @@ namespace adsb2 {
         }
     }
 
+    void Slice::update_polar (cv::Point_<float> const &C, float R, Detector *) {
+        polar_C = C;
+        polar_R = R;
+
+        cv::Mat polar;
+        linearPolar(image, &polar, polar_C, polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
+        if (!det) {
+            polar_prob = polar;
+        }
+        else {
+            int m = polar.rows / 4;
+            cv::Mat extended;
+            vconcat3(polar.rowRange(polar.rows - m, polar.rows),
+                     polar,
+                     polar.rowRange(0, m),
+                     &extended);
+            cv::Mat extended_prob;
+            det->apply(extended, &extended_prob);
+            polar_prob = extended_prob.rowRange(m, m + polar.rows).clone();
+            polar_prob *= 255;
+        }
+    }
+
 #if 0
     void Slice::eval (cv::Mat mat, float *s1, float *s2) const {
         CHECK(box.x >=0 && box.y >= 0);
