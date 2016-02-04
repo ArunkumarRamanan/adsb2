@@ -84,50 +84,21 @@ int main(int argc, char **argv) {
         delete bb_det;
     }
 
-    vector<Slice *> slices;
+    ComputeBoundProb(&study, config);
+    cerr << "Filtering..." << endl;
+    ProbFilter(&study, config);
+    /*
     for (auto &s: study) {
-        for (auto &ss: s) {
-            slices.push_back(&ss);
-        }
+        MotionFilter(&s, config);
     }
-    //config.put("adsb2.caffe.model", "model2");
-    {
-        cerr << "Detecting " << slices.size() << "  slices..." << endl;
-        progress_display progress(slices.size(), cerr);
-#pragma omp parallel
-        {
-            Detector *det;
-#pragma omp critical
-            det = make_caffe_detector(bound_model);
-            CHECK(det) << " cannot create detector.";
-#pragma omp for schedule(dynamic, 1)
-            for (unsigned i = 0; i < slices.size(); ++i) {
-                det->apply(slices[i]->image, &slices[i]->prob);
-#pragma omp critical
-                ++progress;
-            }
-#pragma omp critical
-            delete det;
-        }
-    }
-    {
-        cerr << "Filtering..." << endl;
-        ProbFilter(&study, config);
-        /*
-        for (auto &s: study) {
-            MotionFilter(&s, config);
-        }
-        */
-    }
-    {
-        cerr << "Finding squares..." << endl;
+    */
+    cerr << "Finding squares..." << endl;
 #pragma omp parallel for schedule(dynamic, 1)
-        for (unsigned i = 0; i < slices.size(); ++i) {
-            FindSquare(slices[i]->prob,
-                      &slices[i]->pred_box, config);
-        }
+    for (unsigned i = 0; i < slices.size(); ++i) {
+        FindSquare(slices[i]->prob,
+                  &slices[i]->pred_box, config);
     }
-    setup_polar(&study, config);
+    ComputeContourProb(&study, config);
     study_CA1(&study, config);
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);

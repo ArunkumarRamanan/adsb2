@@ -355,10 +355,44 @@ namespace adsb2 {
         *maxv = max;
     }
 
-    void setup_polar (Study *, Config const &config)
+    void ComputeBoundProb (Study *study, Config const &config) {
+        string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
+        vector<Slice *> slices;
+        for (auto &s: *study) {
+            for (auto &ss: s) {
+                slices.push_back(&ss);
+            }
+        }
+        //config.put("adsb2.caffe.model", "model2");
+        std::cerr << "Computing bound probablity of " << slices.size() << "  slices..." << std::endl;
+        boost::progress_display progress(slices.size(), std::cerr);
+#pragma omp parallel
+        {
+            Detector *det;
+#pragma omp critical
+            det = make_caffe_detector(bound_model);
+            CHECK(det) << " cannot create detector.";
+#pragma omp for schedule(dynamic, 1)
+            for (unsigned i = 0; i < slices.size(); ++i) {
+                det->apply(slices[i]->image, &slices[i]->prob);
+#pragma omp critical
+                ++progress;
+            }
+#pragma omp critical
+            delete det;
+        }
+    }
+
+    struct ContourTask {
+        cv::Point_<float> C;
+        float R;
+        Slice *slice;
+    };
+
+    void ComputeContourProb (Study *study, Config const &config)
     {
         // compute bouding box
-        vector<Task> tasks;
+        vector<ContourTask> tasks;
         for (Series &ss: *study) {
             cv::Rect_<float> lb = ss.front().pred_box;
             cv::Rect_<float> ub = lb;
@@ -367,7 +401,7 @@ namespace adsb2 {
                 lb &= r;
                 ub |= r;
             }
-            Task task;
+            ContourTask task;
             task.C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
             task.R = max_R(task.C, ub) * 3;
             if (lb.width == 0) task.R = 0;
@@ -377,6 +411,8 @@ namespace adsb2 {
             }
         }
         string contour_model = config.get("adsb2.caffe.contour_model", (home_dir/fs::path("contour_model")).native());
+        std::cerr << "Computing contour probablity of " << tasks.size() << "  slices..." << std::endl;
+        boost::progress_display progress(tasks.size(), std::cerr);
 #pragma omp parallel
         {
             Detector *det;
@@ -389,9 +425,12 @@ namespace adsb2 {
                 Slice &slice = *task.slice;
                 if (task.R == 0) {
                     slice.pred_area = 0;
-                    continue;
                 }
-                slice.update_polar(task.C, task.R, det);
+                else {
+                    slice.update_polar(task.C, task.R, det);
+                }
+#pragma omp critical
+                ++progress;
             }
 #pragma omp critical
             delete det;

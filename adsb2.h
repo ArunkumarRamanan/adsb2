@@ -454,7 +454,8 @@ namespace adsb2 {
     void MotionFilter (Series *stack, Config const &config); 
     void ProbFilter (Study *study, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
-    void setup_polar (Study *, Config const &config);
+    void ComputeBoundProb (Study *, Config const &config);
+    void ComputeContourProb (Study *, Config const &config);
     void study_CA1 (Study *, Config const &config);
     void study_CA2 (Study *, Config const &config);
 

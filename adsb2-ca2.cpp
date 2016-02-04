@@ -2,7 +2,7 @@
 #include "adsb2.h"
 
 namespace adsb2 {
-    class CA1: public CA {
+    class CA2: public CA {
         struct E {
             float opt;    
             int prev;    // prev slice
@@ -109,7 +109,7 @@ namespace adsb2 {
         }
     };
 
-    void study_CA1 (Study *study, Config const &config) {
+    void study_CA2 (Study *study, Config const &config) {
         // compute bouding box
         vector<Slice *> tasks;
         for (Series &ss: *study) {
