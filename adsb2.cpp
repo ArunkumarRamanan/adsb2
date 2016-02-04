@@ -218,7 +218,6 @@ namespace adsb2 {
         polar_C = C;
         polar_R = R;
 
-        cv::Mat polar;
         linearPolar(image, &polar, polar_C, polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
         if (!det) {
             polar_prob = polar;
@@ -226,12 +225,12 @@ namespace adsb2 {
         else {
             cv::Mat u8;
             polar.convertTo(u8, CV_8U);
-            equalizeHist(u8, polar);
+            equalizeHist(u8, u8);
             int m = polar.rows / 4;
             cv::Mat extended;
-            vconcat3(polar.rowRange(polar.rows - m, polar.rows),
-                     polar,
-                     polar.rowRange(0, m),
+            vconcat3(u8.rowRange(polar.rows - m, polar.rows),
+                     u8,
+                     u8.rowRange(0, m),
                      &extended);
             cv::Mat extended_prob;
             det->apply(extended, &extended_prob);

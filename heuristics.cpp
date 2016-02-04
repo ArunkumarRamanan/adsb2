@@ -354,5 +354,48 @@ namespace adsb2 {
         *minv = min;
         *maxv = max;
     }
+
+    void setup_polar (Study *, Config const &config)
+    {
+        // compute bouding box
+        vector<Task> tasks;
+        for (Series &ss: *study) {
+            cv::Rect_<float> lb = ss.front().pred_box;
+            cv::Rect_<float> ub = lb;
+            for (auto &s: ss) {
+                cv::Rect_<float> r = unround(s.pred_box);
+                lb &= r;
+                ub |= r;
+            }
+            Task task;
+            task.C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
+            task.R = max_R(task.C, ub) * 3;
+            if (lb.width == 0) task.R = 0;
+            for (auto &s: ss) {
+                task.slice = &s;
+                tasks.push_back(task);
+            }
+        }
+        string contour_model = config.get("adsb2.caffe.contour_model", (home_dir/fs::path("contour_model")).native());
+#pragma omp parallel
+        {
+            Detector *det;
+#pragma omp critical
+            det = make_caffe_detector(contour_model);
+            CHECK(det) << " cannot create detector.";
+#pragma omp for schedule(dynamic, 1)
+            for (unsigned i = 0; i < tasks.size(); ++i) {
+                auto &task = tasks[i];
+                Slice &slice = *task.slice;
+                if (task.R == 0) {
+                    slice.pred_area = 0;
+                    continue;
+                }
+                slice.update_polar(task.C, task.R, det);
+            }
+#pragma omp critical
+            delete det;
+        }
+    }
 }
 

@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
                       &slices[i]->pred_box, config);
         }
     }
+    setup_polar(&study, config);
     study_CA1(&study, config);
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);

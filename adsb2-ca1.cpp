@@ -121,68 +121,41 @@ namespace adsb2 {
 
     void study_CA1 (Study *study, Config const &config) {
         // compute bouding box
-        vector<Task> tasks;
+        vector<Slice *> tasks;
         for (Series &ss: *study) {
-            cv::Rect_<float> lb = ss.front().pred_box;
-            cv::Rect_<float> ub = lb;
             for (auto &s: ss) {
-                cv::Rect_<float> r = unround(s.pred_box);
-                lb &= r;
-                ub |= r;
-            }
-            Task task;
-            task.C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
-            task.R = max_R(task.C, ub) * 3;
-            if (lb.width == 0) task.R = 0;
-            for (auto &s: ss) {
-                task.slice = &s;
-                tasks.push_back(task);
+                tasks.push_back(&s);
             }
         }
-        string contour_model = config.get("adsb2.caffe.contour_model", (home_dir/fs::path("contour_model")).native());
         CA1 ca1(config);
-#pragma omp parallel
-        {
-            Detector *det;
-#pragma omp critical
-            det = make_caffe_detector(contour_model);
-            CHECK(det) << " cannot create detector.";
-#pragma omp for schedule(dynamic, 1)
-            for (unsigned i = 0; i < tasks.size(); ++i) {
-                auto &task = tasks[i];
-                Slice &slice = *task.slice;
-                if (task.R == 0) {
-                    slice.pred_area = 0;
-                    continue;
-                }
-                slice.update_polar(task.C, task.R, det);
-                ca1.apply_slice(&slice);
-                if (slice.polar_contour.empty()) {
-                    slice.pred_area = 0;
-                    continue;
-                }
-                auto const &cc = slice.polar_contour;
-                CHECK(cc.size() == slice.image.rows);
-                cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
-                for (int y = 0; y < polar.rows; ++y) {
-                    float *row = polar.ptr<float>(y);
-                    for (int x = 0; x < cc[y]; ++x) {
-                        row[x] = 1;
-                    }
-                }
-                cv::Mat vis(slice.image.size(), CV_32F, cv::Scalar(0));
-                for (int i = 1; i < cc.size(); ++i) {
-                    cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
-                }
-
-                cv::Mat cart, vis_cart;
-                linearPolar(polar, &cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
-                slice.pred_area = cv::sum(cart)[0];
-                linearPolar(vis, &vis_cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
-                slice._extra = slice.image + vis_cart;
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned i = 0; i < tasks.size(); ++i) {
+            Slice &slice = *tasks[i];
+            if (!slice.polar_prob.data) continue;
+            ca1.apply_slice(&slice);
+            if (slice.polar_contour.empty()) {
+                slice.pred_area = 0;
+                continue;
             }
-#pragma omp critical
-            delete det;
+            auto const &cc = slice.polar_contour;
+            CHECK(cc.size() == slice.image.rows);
+            cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
+            for (int y = 0; y < polar.rows; ++y) {
+                float *row = polar.ptr<float>(y);
+                for (int x = 0; x < cc[y]; ++x) {
+                    row[x] = 1;
+                }
+            }
+            cv::Mat vis(slice.image.size(), CV_32F, cv::Scalar(0));
+            for (int i = 1; i < cc.size(); ++i) {
+                cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
+            }
+
+            cv::Mat cart, vis_cart;
+            linearPolar(polar, &cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            slice.pred_area = cv::sum(cart)[0];
+            linearPolar(vis, &vis_cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+            cv::hconcat(slice.polar + vis, slice.image + vis_cart, slice._extra);
         }
     }
 
