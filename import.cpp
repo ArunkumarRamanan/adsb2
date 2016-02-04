@@ -74,6 +74,9 @@ void import (Sampler &sampler,
                 CHECK(image.type() == CV_32F);
                 cv::Mat u8;
                 image.convertTo(u8, CV_8U);
+                if (polar) {
+                    equalizeHist(u8, u8);
+                }
                 image = u8;
             }
 
