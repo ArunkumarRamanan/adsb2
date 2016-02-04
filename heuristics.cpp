@@ -291,22 +291,28 @@ namespace adsb2 {
         float location;
     };
 
+    float calc_volume (float a, float b, float d) {
+        return d * (a + b + std::sqrt(a * b)) / 3;
+    }
+
     void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config) {
         // steps
         int W = config.get<int>("adsb2.smooth.W", 3);
-        CHECK(W >= 3);
+        CHECK(W >= 1);
         vector<SeriesVolume> seriesV;
         for (auto const &series: study) {
+            SeriesVolume v;
+            v.location = series.front().meta[Meta::SLICE_LOCATION];
             vector<float> r;
             for (auto const &s: series) {
+                CHECK(s.pred_area >= 0);
+                CHECK(s.meta[Meta::SLICE_LOCATION] == v.location);
                 r.push_back(s.pred_area * s.meta.spacing * s.meta.spacing);
             }
             for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing
                 r.push_back(r[j]);
             }
             // smooth r
-            SeriesVolume v;
-            v.location = series.front().meta[Meta::SLICE_LOCATION];
             for (unsigned j = 0; j + W <= r.size(); ++j) {
                 namespace ba = boost::accumulators;
                 typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::variance>> Acc;
@@ -340,10 +346,10 @@ namespace adsb2 {
             auto const &b = seriesV[i];
             float gap = b.location - a.location;
             CHECK(gap > 0);
-            min.mean += (a.min.mean + b.min.mean) * gap/2;
-            min.var += (a.min.var + b.min.var) * gap/2;
-            max.mean += (a.max.mean + b.max.mean) * gap/2;
-            max.var += (a.max.var + b.max.var) * gap/2;
+            min.mean += calc_volume(a.min.mean, b.min.mean, gap);
+            min.var += calc_volume(a.min.var, b.min.var, gap);
+            max.mean += calc_volume(a.max.mean, b.max.mean, gap);
+            max.var += calc_volume(a.max.var,  b.max.var, gap);
         }
         *minv = min;
         *maxv = max;

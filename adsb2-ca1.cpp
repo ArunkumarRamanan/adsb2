@@ -175,12 +175,11 @@ namespace adsb2 {
                     cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
                 }
 
-                cv::Mat cart;
+                cv::Mat cart, vis_cart;
                 linearPolar(polar, &cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
-                //linearPolar(polar, &cart, task.C, task.R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
                 slice.pred_area = cv::sum(cart)[0];
-                linearPolar(vis, &cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
-                slice._extra = slice.image + cart;
+                linearPolar(vis, &vis_cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+                slice._extra = slice.image + vis_cart;
             }
 #pragma omp critical
             delete det;
