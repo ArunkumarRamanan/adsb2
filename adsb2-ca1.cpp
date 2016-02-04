@@ -161,17 +161,25 @@ namespace adsb2 {
                     slice.pred_area = 0;
                     continue;
                 }
-                CHECK(slice.polar_contour.size() == slice.image.rows);
+                auto const &cc = slice.polar_contour;
+                CHECK(cc.size() == slice.image.rows);
                 cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
                 for (int y = 0; y < polar.rows; ++y) {
                     float *row = polar.ptr<float>(y);
-                    for (int x = 0; x < slice.polar_contour[y]; ++x) {
+                    for (int x = 0; x < cc[y]; ++x) {
                         row[x] = 1;
                     }
                 }
+                cv::Mat vis(slice.image.size(), CV_32F, cv::Scalar(0));
+                for (int i = 1; i < cc.size(); ++i) {
+                    cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
+                }
+
                 cv::Mat cart;
                 linearPolar(polar, &cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
                 slice.pred_area = cv::sum(cart)[0];
+                linearPolar(vis, &cart, task.C, task.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+                slice._extra = slice.image + cart;
             }
 #pragma omp critical
             delete det;

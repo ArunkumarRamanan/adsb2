@@ -204,6 +204,9 @@ namespace adsb2 {
                 cv::rectangle(pp, pred_box, color);
             }
             cv::hconcat(image, pp, image);
+            if (_extra.data) {
+                cv::hconcat(image, _extra, image);
+            }
             cv::Mat u8;
             image.convertTo(u8, CV_8U);
             image = u8;
@@ -221,6 +224,9 @@ namespace adsb2 {
             polar_prob = polar;
         }
         else {
+            cv::Mat u8;
+            polar.convertTo(u8, CV_8U);
+            equalizeHist(u8, polar);
             int m = polar.rows / 4;
             cv::Mat extended;
             vconcat3(polar.rowRange(polar.rows - m, polar.rows),

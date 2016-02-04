@@ -154,6 +154,7 @@ namespace adsb2 {
         cv::Mat _label;         // temporarily used by import.cpp
         cv::Point_<float> _import_C; // nothing should be assumed for this field
         float _import_R;
+        cv::Mat _extra;
 
         Slice ()
             : do_not_cook(false),

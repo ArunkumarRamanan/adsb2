@@ -10,9 +10,14 @@ namespace adsb2 {
             : impl(path) {
         }
         virtual void apply (cv::Mat image, cv::Mat *o) {
-            CHECK(image.type() == CV_32F);
             cv::Mat u8;
-            image.convertTo(u8, CV_8UC1);
+            if (image.type() == CV_8U) {
+                u8 = image;
+            }
+            else if (image.type() == CV_32F) {
+                image.convertTo(u8, CV_8UC1);
+            }
+            else CHECK(0);
             std::vector<float> prob;
             impl.apply(u8, &prob);
             //std::cerr << prob.size() << ' ' << input.total() << std::endl;
