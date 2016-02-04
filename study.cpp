@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
     ("input,i", po::value(&input_dir), "")
     ("output,o", po::value(&output_dir), "")
     ("bound", "")
+    ("no-gif", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -58,6 +59,8 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
+
+    bool do_gif = vm.count("no-gif") == 0;
 
     Config config;
     try {
@@ -154,10 +157,12 @@ int main(int argc, char **argv) {
         gp << "set style data pm3d;" << endl;
         gp << "set dgrid3d 50,50 qnorm 2;" << endl;
         gp << "splot '-' using 1:2:3 notitle" << endl;
+        if (do_gif) {
 #pragma omp parallel for
-        for (unsigned i = 0; i < study.size(); ++i) {
-            study[i].visualize();
-            study[i].save_gif(dir/fs::path(fmt::format("{}.gif", i)));
+            for (unsigned i = 0; i < study.size(); ++i) {
+                study[i].visualize();
+                study[i].save_gif(dir/fs::path(fmt::format("{}.gif", i)));
+            }
         }
         for (unsigned i = 0; i < study.size(); ++i) {
             html << "<tr>"
