@@ -859,6 +859,8 @@ namespace adsb2 {
             CHECK(x[i] <= 1);
             if (i > 0) CHECK(x[i] >= x[i-1]);
         }
+        CHECK(x.front() == 0);
+        CHECK(x.back() == 1);
         return sum/VALUES;
     }
 
