@@ -44,7 +44,7 @@ namespace adsb2 {
             SLICE_THICKNESS,
             NOMINAL_INTERVAL,
             NUMBER_OF_IMAGES,
-            SLICE_LOCATION,
+            SLICE_LOCATION_RAW,
             SERIES_NUMBER,
             
             SERIES_FIELDS,
@@ -53,6 +53,7 @@ namespace adsb2 {
         float trigger_time;
         float spacing;      //  mm
         float raw_spacing;  // original spacing as in file
+        float slice_location;
         MetaBase (): spacing(-1), raw_spacing(-1) {
         }
         static char const *FIELDS[];
@@ -247,6 +248,7 @@ namespace adsb2 {
         Study () {};
         // load from a directory of DCM files
         Study (fs::path const &, bool load = true, bool check = true, bool fix = false);
+        bool detect_topdown (bool fix);
         fs::path dir () const {
             return path;
         }

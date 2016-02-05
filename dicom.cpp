@@ -64,7 +64,7 @@ namespace adsb2 {
         meta->at(Meta::SLICE_THICKNESS) = dicom_get<float>(ff, DCM_SliceThickness, path);
         //meta->series.slice_spacing = dicom_get<float>(ff, DCM_SpacingBetweenSlices, path);
         meta->at(Meta::NOMINAL_INTERVAL) = dicom_get<float>(ff, DCM_NominalInterval, path);
-        meta->at(Meta::SLICE_LOCATION) = dicom_get<float>(ff, DCM_SliceLocation, path);
+        meta->at(Meta::SLICE_LOCATION_RAW) = meta->slice_location = dicom_get<float>(ff, DCM_SliceLocation, path);
         meta->at(Meta::NUMBER_OF_IMAGES) = dicom_get<int>(ff, DCM_CardiacNumberOfImages, path);
         meta->at(Meta::SERIES_NUMBER) = dicom_get<int>(ff, DCM_SeriesNumber, path);
         meta->trigger_time = dicom_get<float>(ff, DCM_TriggerTime, path);

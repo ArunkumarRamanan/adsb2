@@ -308,11 +308,11 @@ namespace adsb2 {
         vector<SeriesVolume> seriesV;
         for (auto const &series: study) {
             SeriesVolume v;
-            v.location = series.front().meta[Meta::SLICE_LOCATION];
+            v.location = series.front().meta.slice_location;
             vector<float> r;
             for (auto const &s: series) {
                 CHECK(s.pred_area >= 0);
-                CHECK(s.meta[Meta::SLICE_LOCATION] == v.location);
+                CHECK(s.meta.slice_location == v.location);
                 r.push_back(s.pred_area * s.meta.spacing * s.meta.spacing);
             }
             for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing

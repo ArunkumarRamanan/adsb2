@@ -495,14 +495,41 @@ namespace adsb2 {
         }
     }
 
+    bool Study::detect_topdown (bool fix) {
+        // some of the study have slice_location of a wrong sign
+        // if sorted with slice_location the series will be in a wrong order
+        vector<std::pair<int, float>> rank;
+        for (auto const &ss: *this) {
+            auto const &s = ss.front();
+            rank.emplace_back(s.meta[Meta::SERIES_NUMBER], s.meta.slice_location);
+        }
+        sort(rank.begin(), rank.end());
+        int good = 0;
+        int bad = 0;
+        for (unsigned i = 1; i < rank.size(); ++i) {
+            if (rank[i].second > rank[i-1].second) ++good;
+            else if (rank[i].second < rank[i-1].second) ++bad;
+        }
+        bool topdown = bad > good;
+        if (topdown && fix) {
+            LOG(WARNING) << "fixing slice " << path << " topdown";
+            for (auto &ss: *this) {
+                for (auto &s: ss) {
+                    s.meta.slice_location = -s.meta.slice_location;
+                }
+            }
+        }
+        return topdown;
+    }
+
     static constexpr float LOCATION_GAP_EPSILON = 0.01;
     static inline bool operator < (Series const &s1, Series const &s2) {
         Meta const &m1 = s1.front().meta;
         Meta const &m2 = s2.front().meta;
-        if (m1[Meta::SLICE_LOCATION] + LOCATION_GAP_EPSILON < m2[Meta::SLICE_LOCATION]) {
+        if (m1.slice_location + LOCATION_GAP_EPSILON < m2.slice_location) {
             return true;
         }
-        if (m1[Meta::SLICE_LOCATION] - LOCATION_GAP_EPSILON > m2[Meta::SLICE_LOCATION]) {
+        if (m1.slice_location - LOCATION_GAP_EPSILON > m2.slice_location) {
             return false;
         }
         return m1[Meta::SERIES_NUMBER] < m2[Meta::SERIES_NUMBER];
@@ -514,6 +541,7 @@ namespace adsb2 {
         if (fix) {
             check_regroup();
         }
+        detect_topdown(fix);
         cv::Size image_size = front().front().image.size();
         for (auto &s: *this) {
             if (!s.sanity_check(fix)) {
@@ -554,11 +582,11 @@ namespace adsb2 {
         for (unsigned i = 1; i < size(); ++i) {
             Meta const &prev = at(off-1).front().meta;
             Meta const &cur = at(i).front().meta;
-            if (std::abs(prev[Meta::SLICE_LOCATION] - cur[Meta::SLICE_LOCATION]) <= LOCATION_GAP_EPSILON) {
+            if (std::abs(prev.slice_location - cur.slice_location) <= LOCATION_GAP_EPSILON) {
                 LOG(WARNING) << "replacing " << at(off-1).dir()
-                             << " (" << prev[Meta::SERIES_NUMBER] << ":" << prev[Meta::SLICE_LOCATION] << ") "
+                             << " (" << prev[Meta::SERIES_NUMBER] << ":" << prev.slice_location << ") "
                              << " with " << at(i).dir()
-                             << " (" << cur[Meta::SERIES_NUMBER] << ":" << cur[Meta::SLICE_LOCATION] << ") ";
+                             << " (" << cur[Meta::SERIES_NUMBER] << ":" << cur.slice_location << ") ";
                 std::swap(at(off-1), at(i));
             }
             else {
@@ -587,7 +615,7 @@ namespace adsb2 {
                 if (nn > max_nn) {
                     max_nn = nn;
                 }
-                group[ss.meta[Meta::SLICE_LOCATION]].push_back(i);
+                group[ss.meta.slice_location].push_back(i);
             }
             if ((s.size() <= max_nn) && (group.size() <= 1)) {
                 emplace_back(std::move(s));

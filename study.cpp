@@ -156,14 +156,14 @@ int main(int argc, char **argv) {
         for (unsigned i = 0; i < study.size(); ++i) {
             html << "<tr>"
                  << "<td>" << study[i].dir().filename().native() << "</td>"
-                 << "<td>" << study[i].front().meta[Meta::SLICE_LOCATION] << "</td>"
+                 << "<td>" << study[i].front().meta.slice_location << "</td>"
                  << "<td>" << study[i].front().meta[Meta::SLICE_THICKNESS] << "</td>"
                  << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
                  << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
             for (auto const &s: study[i]) {
                 float r = std::sqrt(s.pred_box.area())/2 * s.meta.spacing;
                 gp << s.meta.trigger_time
-                   << '\t' << s.meta[Meta::SLICE_LOCATION]
+                   << '\t' << s.meta.slice_location
                    << '\t' << r << endl;
             }
         }
