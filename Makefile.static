@@ -5,6 +5,8 @@ CXXFLAGS += $(OPENMP) -g -O3 -std=c++11 -I/opt/caffe-fcn/include -Icaffex-fcn
 LDFLAGS += $(OPENMP) -L/opt/caffe-fcn/lib -static
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
 LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
+	 -lgmpxx \
+	 -lgmp \
 	 -lcppformat \
 	 -lopencv_ml -lopencv_imgproc -lopencv_highgui -lopencv_core \
 	 -lboost_timer -lboost_chrono -lboost_thread -lboost_filesystem -lboost_system -lboost_program_options \
@@ -18,14 +20,14 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lunwind -lrt -lm -lpthread -ldl
 	 
 HEADERS = adsb2.h
-COMMON = adsb2.o adsb2-ca1.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o
+COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o
 
 
-PROGS = detect import eval study score submit scc export-polar-tasks import-polar
+PROGS = submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
 
 all:	$(PROGS)
 
-$(PROGS):	%:      %.o caffex $(HEADERS) $(COMMON)
+$(PROGS):	%:      %.o  $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
 
 %.o:	%.cpp $(HEADERS)

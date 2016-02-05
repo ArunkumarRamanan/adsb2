@@ -75,7 +75,7 @@ namespace adsb2 {
         if (!raw.data) {
             // failed, resort to convert
             ostringstream ss;
-            fs::path tmp(fs::unique_path("%%%%-%%%%-%%%%-%%%%.pgm"));
+            fs::path tmp(temp_path("%%%%-%%%%-%%%%-%%%%.pgm"));
             ss << "convert " << path << " " << tmp.native();
             ::system(ss.str().c_str());
             raw = cv::imread(tmp.native(), -1);

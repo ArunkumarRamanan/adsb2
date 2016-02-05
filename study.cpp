@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
     vector<string> overrides;
     string input_dir;
     string output_dir;
+    int ca;
     /*
     string output_dir;
     string gif;
@@ -33,6 +34,7 @@ int main(int argc, char **argv) {
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&input_dir), "")
     ("output,o", po::value(&output_dir), "")
+    ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
     ("no-gif", "")
     //("output,o", po::value(&output_dir), "")
@@ -92,6 +94,8 @@ int main(int argc, char **argv) {
         MotionFilter(&s, config);
     }
     */
+    vector<Slice *> slices;
+    study.pool(&slices);
     cerr << "Finding squares..." << endl;
 #pragma omp parallel for schedule(dynamic, 1)
     for (unsigned i = 0; i < slices.size(); ++i) {
@@ -99,7 +103,15 @@ int main(int argc, char **argv) {
                   &slices[i]->pred_box, config);
     }
     ComputeContourProb(&study, config);
-    study_CA1(&study, config);
+    if (ca == 1) {
+        study_CA1(&study, config);
+    }
+    else if (ca == 2) {
+        study_CA2(&study, config);
+    }
+    else {
+        CHECK(0) << "CA value not supported.";
+    }
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (output_dir.size()) {
@@ -110,6 +122,11 @@ int main(int argc, char **argv) {
             fs::ofstream vol(dir/fs::path("volume.txt"));
             vol << min.mean << '\t' << std::sqrt(min.var)
                 << '\t' << max.mean << '\t' << std::sqrt(max.var) << endl;
+        }
+        {
+            fs::ofstream vol(dir/fs::path("coef.txt"));
+            vol << min.mean << '\t' << min.coef1 << '\t' << min.coef2
+                << '\t' << max.mean << '\t' << max.coef1 << '\t' << max.coef2 << endl;
         }
         fs::ofstream html(dir/fs::path("index.html"));
         html << "<html><body>" << endl;

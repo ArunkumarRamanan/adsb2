@@ -153,4 +153,14 @@ namespace adsb2 {
         cv::vconcat(a, b, tmp);
         cv::vconcat(tmp, c, *out);
     }
+    static inline void hconcat3 (cv::Mat a, cv::Mat b, cv::Mat c, cv::Mat *out) {
+        cv::Mat tmp;
+        cv::hconcat(a, b, tmp);
+        cv::hconcat(tmp, c, *out);
+    }
+    static inline void type_convert (cv::Mat *v, int t) {
+        cv::Mat tmp;
+        v->convertTo(tmp, t);
+        *v = tmp;
+    }
 }

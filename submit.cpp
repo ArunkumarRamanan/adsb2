@@ -21,7 +21,7 @@ struct Case {
 void GaussianAcc (Volume const &v, float scale, vector<float> *s) {
     s->clear();
     for (unsigned i = 0; i < Eval::VALUES; ++i) {
-        float x = -(float(i) * 1000 - v.mean) / (sqrt(v.var*2))/ scale;
+        float x = -(float(i) * 1000 - v.mean) / scale;
         s->push_back(0.5*erfc(x));
     }
 }

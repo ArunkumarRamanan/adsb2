@@ -66,6 +66,8 @@ namespace adsb2 {
     void dicom_setup (char const *path, Config const &config);
     cv::Mat load_dicom (fs::path const &, Meta *);
 
+    fs::path temp_path (const fs::path& model="%%%%-%%%%-%%%%-%%%%");
+
     class Slice;
 
     enum {
@@ -242,7 +244,7 @@ namespace adsb2 {
         void check_regroup ();  // some times its necessary to regroup one series into
                                 // multiple series
     public:
-        Study ();
+        Study () {};
         // load from a directory of DCM files
         Study (fs::path const &, bool load = true, bool check = true, bool fix = false);
         fs::path dir () const {
@@ -251,6 +253,14 @@ namespace adsb2 {
         void shrink (cv::Rect const &bb) {
             for (auto &s: *this) {
                 s.shrink(bb);
+            }
+        }
+
+        void pool (vector<Slice *> *slices) {
+            for (auto &ss: *this) {
+                for (auto &s: ss) {
+                    slices->push_back(&s);
+                }
             }
         }
     };
@@ -462,7 +472,9 @@ namespace adsb2 {
     struct Volume {
         float mean;
         float var;
-        Volume (): mean(0), var(0) {
+        float coef1;
+        float coef2;
+        Volume (): mean(0), var(0), coef1(0), coef2(0) {
         }
     };
 

@@ -55,15 +55,22 @@ namespace adsb2 {
     }
 
     fs::path home_dir;
+    fs::path temp_dir;
     void GlobalInit (char const *path, Config const &config) {
         FLAGS_logtostderr = 1;
         FLAGS_minloglevel = 1;
         home_dir = fs::path(path).parent_path();
+        temp_dir = fs::path(config.get("adsb2.tmp_dir", "/tmp"));
         google::InitGoogleLogging(path);
         dicom_setup(path, config);
         //openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
     }
+
+    fs::path temp_path (const fs::path& model) {
+        return fs::unique_path(temp_dir / model);
+    }
+
 
     BoxAnnoOps box_anno_ops;
     PolyAnnoOps poly_anno_ops;
@@ -207,11 +214,11 @@ namespace adsb2 {
             if (_extra.data) {
                 cv::hconcat(image, _extra, image);
             }
-            cv::Mat u8;
-            image.convertTo(u8, CV_8U);
-            image = u8;
 #endif
         }
+        cv::Mat u8;
+        image.convertTo(u8, CV_8U);
+        image = u8;
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R, Detector *det) {
@@ -317,7 +324,7 @@ namespace adsb2 {
     }
 
     void Series::save_gif (fs::path const &path) {
-        fs::path tmp(fs::unique_path());
+        fs::path tmp(temp_path());
         fs::create_directories(tmp);
         ostringstream gif_cmd;
         gif_cmd << "convert -delay 5 ";
@@ -413,6 +420,9 @@ namespace adsb2 {
     bool Series::sanity_check (bool fix) {
         bool ok = true;
         for (Slice &s: *this) {
+            if (s.image.size() != front().image.size()) {
+                LOG(WARNING) << "image size mismatch: " << s.path;
+            }
             if (s.meta[Meta::NUMBER_OF_IMAGES] != size()) {
                 ok = false;
                 LOG(WARNING) << "Series field #images mismatch: " << s.path << " found " << s.meta[Meta::NUMBER_OF_IMAGES] << " instead of actually # images found " << size();
@@ -504,12 +514,16 @@ namespace adsb2 {
         if (fix) {
             check_regroup();
         }
+        cv::Size image_size = front().front().image.size();
         for (auto &s: *this) {
             if (!s.sanity_check(fix)) {
                 LOG(WARNING) << "Study " << path << " series " << s.path << " sanity check failed.";
                 if (fix) {
                     CHECK(s.sanity_check(false));
                 }
+            }
+            if (s.front().image.size() != image_size) {
+                LOG(WARNING) << "Study " << path << " series " << s.path << " image size mismatch.";
             }
         }
         for (unsigned i = 0; i < Meta::STUDY_FIELDS; ++i) {

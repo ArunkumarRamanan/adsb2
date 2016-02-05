@@ -295,6 +295,12 @@ namespace adsb2 {
         return d * (a + b + std::sqrt(a * b)) / 3;
     }
 
+    void acc_volume (Volume *v, float a, float b, float d) {
+        v->mean += d * (a + b + std::sqrt(a * b)) / 3;
+        v->coef1 += (sqrt(a) + sqrt(b)) * d;
+        v->coef2 += d;
+    }
+
     void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config) {
         // steps
         int W = config.get<int>("adsb2.smooth.W", 3);
@@ -336,7 +342,20 @@ namespace adsb2 {
                     }
                 }
             }
+            CHECK(v.min.mean >= 0);
+            CHECK(v.max.mean >= 0);
             seriesV.push_back(v);
+        }
+        for (unsigned i = 1; i < seriesV.size() - 1; ++i) {
+            if (seriesV[i].min.mean == 0) {
+                seriesV[i].min.mean = std::sqrt(seriesV[i-1].min.mean
+                                              * seriesV[i+1].min.mean);
+
+            }
+            if (seriesV[i].max.mean == 0) {
+                seriesV[i].max.mean = std::sqrt(seriesV[i-1].max.mean
+                                              * seriesV[i+1].max.mean);
+            }
         }
         // accumulate
         Volume min;
@@ -346,10 +365,8 @@ namespace adsb2 {
             auto const &b = seriesV[i];
             float gap = b.location - a.location;
             CHECK(gap > 0);
-            min.mean += calc_volume(a.min.mean, b.min.mean, gap);
-            min.var += calc_volume(a.min.var, b.min.var, gap);
-            max.mean += calc_volume(a.max.mean, b.max.mean, gap);
-            max.var += calc_volume(a.max.var,  b.max.var, gap);
+            acc_volume(&min, a.min.mean, b.min.mean, gap);
+            acc_volume(&max, a.max.mean, b.max.mean, gap);
         }
         *minv = min;
         *maxv = max;
@@ -358,11 +375,7 @@ namespace adsb2 {
     void ComputeBoundProb (Study *study, Config const &config) {
         string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
         vector<Slice *> slices;
-        for (auto &s: *study) {
-            for (auto &ss: s) {
-                slices.push_back(&ss);
-            }
-        }
+        study->pool(&slices);
         //config.put("adsb2.caffe.model", "model2");
         std::cerr << "Computing bound probablity of " << slices.size() << "  slices..." << std::endl;
         boost::progress_display progress(slices.size(), std::cerr);
