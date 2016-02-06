@@ -93,9 +93,9 @@ namespace adsb2 {
     public:
         CA1 (Config const &conf)
             : margin(conf.get<int>("adsb2.ca1.margin", 5)),
-            thr(conf.get<float>("adsb2.ca1.th", 0.6)),
-            smooth(conf.get<float>("adsb2.ca1.smooth", 500)),
-            wall(conf.get<float>("adsb2.ca1.wall", 500))
+            thr(conf.get<float>("adsb2.ca1.th", 0.3)),
+            smooth(conf.get<float>("adsb2.ca1.smooth", 200)),
+            wall(conf.get<float>("adsb2.ca1.wall", 300))
         {
         }
         void apply_slice (Slice *s) {
