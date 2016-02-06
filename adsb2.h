@@ -145,15 +145,15 @@ namespace adsb2 {
         // the following are prediction results
         cv::Mat prob;           // pixel-level prediction
         cv::Rect pred_box;      // bounding box prediction
+        float pred_area;        // area prediction
         bool pred_box_reliable;
 
         cv::Point_<float> polar_C;   //
         float polar_R;              // available after update_polar is called
         cv::Mat polar;
         cv::Mat polar_prob;         //
+        cv::Rect polar_box;
         vector<int> polar_contour;
-
-        float pred_area;        // area prediction
 
         cv::Mat _label;         // temporarily used by import.cpp
         cv::Point_<float> _import_C; // nothing should be assumed for this field
@@ -468,8 +468,9 @@ namespace adsb2 {
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
     void ComputeBoundProb (Study *, Config const &config);
     void ComputeContourProb (Study *, Config const &config);
-    void study_CA1 (Study *, Config const &config);
-    void study_CA2 (Study *, Config const &config);
+    void RefinePolarBound (Study *, Config const &config);
+    void study_CA1 (Study *, Config const &config, bool);
+    void study_CA2 (Study *, Config const &config, bool);
 
     struct Volume {
         float mean;

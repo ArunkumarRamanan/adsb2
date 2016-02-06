@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     string input_dir;
     string output_dir;
     int ca;
+    int ca_it;
     /*
     string output_dir;
     string gif;
@@ -37,6 +38,7 @@ int main(int argc, char **argv) {
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
     ("no-gif", "")
+    ("ca-it", po::value(&ca_it)->default_value(2), "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -102,16 +104,24 @@ int main(int argc, char **argv) {
         FindSquare(slices[i]->prob,
                   &slices[i]->pred_box, config);
     }
+#if 0
+    for (unsigned i = 0; i < ca_it; ++i) {
+        ComputeContourProb(&study, config);
+        if (ca == 1) {
+            study_CA1(&study, config, i + 1 == ca_it);
+        }
+        else if (ca == 2) {
+            study_CA2(&study, config, i + 1 == ca_it);
+        }
+        else {
+            CHECK(0) << "CA value not supported.";
+        }
+        RefinePolarBound(&study, config);
+    }
+#else
     ComputeContourProb(&study, config);
-    if (ca == 1) {
-        study_CA1(&study, config);
-    }
-    else if (ca == 2) {
-        study_CA2(&study, config);
-    }
-    else {
-        CHECK(0) << "CA value not supported.";
-    }
+    study_CA1(&study, config, true);
+#endif
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (output_dir.size()) {

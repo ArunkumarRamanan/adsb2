@@ -93,9 +93,9 @@ namespace adsb2 {
     public:
         CA1 (Config const &conf)
             : margin(conf.get<int>("adsb2.ca1.margin", 5)),
-            thr(conf.get<float>("adsb2.ca1.th", 0.3)),
-            smooth(conf.get<float>("adsb2.ca1.smooth", 200)),
-            wall(conf.get<float>("adsb2.ca1.wall", 300))
+            thr(conf.get<float>("adsb2.ca1.th", 0.6)),
+            smooth(conf.get<float>("adsb2.ca1.smooth", 500)),
+            wall(conf.get<float>("adsb2.ca1.wall", 500))
         {
         }
         void apply_slice (Slice *s) {
@@ -109,7 +109,7 @@ namespace adsb2 {
         }
     };
 
-    void study_CA1 (Study *study, Config const &config) {
+    void study_CA1 (Study *study, Config const &config, bool vis) {
         // compute bouding box
         vector<Slice *> tasks;
         for (Series &ss: *study) {
@@ -136,16 +136,21 @@ namespace adsb2 {
                     row[x] = 1;
                 }
             }
-            cv::Mat vis(slice.image.size(), CV_32F, cv::Scalar(0));
-            for (int i = 1; i < cc.size(); ++i) {
-                cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
-            }
 
-            cv::Mat cart, vis_cart;
+            cv::Mat cart;
             linearPolar(polar, &cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            bound_box(cart, &slice.polar_box);
             slice.pred_area = cv::sum(cart)[0];
-            linearPolar(vis, &vis_cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
-            cv::hconcat(slice.polar + vis, slice.image + vis_cart, slice._extra);
+
+            if (vis) {
+                cv::Mat vis_cart;
+                cv::Mat vis(slice.image.size(), CV_32F, cv::Scalar(0));
+                for (int i = 1; i < cc.size(); ++i) {
+                    cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
+                }
+                linearPolar(vis, &vis_cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+                cv::hconcat(slice.polar + vis, slice.image + vis_cart, slice._extra);
+            }
         }
     }
 

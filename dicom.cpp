@@ -55,11 +55,14 @@ namespace adsb2 {
         string age = dicom_get<string>(ff, DCM_PatientAge, path);
         CHECK(age.size() >= 2);
         char U = age.back();
-        CHECK(U == 'Y' || U == 'M');
+        CHECK(U == 'Y' || U == 'M' || U == 'W');
         age.pop_back();
         meta->at(Meta::AGE) = boost::lexical_cast<float>(age);
         if (U == 'M') {
             meta->at(Meta::AGE) /= 12.0;
+        }
+        else if (U == 'W') {
+            meta->at(Meta::AGE) *= 7.0 / 365.25;
         }
         meta->at(Meta::SLICE_THICKNESS) = dicom_get<float>(ff, DCM_SliceThickness, path);
         //meta->series.slice_spacing = dicom_get<float>(ff, DCM_SpacingBetweenSlices, path);

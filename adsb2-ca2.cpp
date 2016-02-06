@@ -25,7 +25,7 @@ namespace adsb2 {
         }
     };
 
-    void study_CA2 (Study *study, Config const &config) {
+    void study_CA2 (Study *study, Config const &config, bool) {
     }
 
 }

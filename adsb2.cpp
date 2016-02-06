@@ -453,7 +453,7 @@ namespace adsb2 {
         // check trigger time
         bool ooo = false;
         for (unsigned i = 1; i < size(); ++i) {
-            if (!(at(i).meta.trigger_time > at(i-1).meta.trigger_time)) {
+            if (!(at(i).meta.trigger_time >= at(i-1).meta.trigger_time)) {
                 ooo = true;
                 ok = false;
                 LOG(WARNING) << "Trigger time out of order: "
@@ -534,7 +534,6 @@ namespace adsb2 {
         }
         return m1[Meta::SERIES_NUMBER] < m2[Meta::SERIES_NUMBER];
     }
-
 
     bool Study::sanity_check (bool fix) {
         bool ok = true;
@@ -731,8 +730,36 @@ namespace adsb2 {
     }
 
     void Cook::apply (Study *study) const {
-        for (auto &s: *study) {
-            apply(&s);
+        for (auto &ss: *study) {
+            apply(&ss);
+        }
+        cv::Size sz(0, 0);
+        for (auto &ss: *study) {
+            CHECK(ss.size());
+            cv::Size ssz = ss[0].image.size();
+            if (ssz.width > sz.width) sz.width = ssz.width;
+            if (ssz.height > sz.height) sz.height = ssz.height;
+            for (unsigned i = 1; i < ss.size(); ++i) {
+                CHECK(ss[i].image.size() == ssz);
+            }
+        }
+        for (auto &ss: *study) {
+            if (ss[0].image.size() == sz) continue;
+            // otherwise expand all images in this one
+            cv::Size ssz = ss[0].image.size();
+            int top = (sz.height - ssz.height) / 2;
+            int bottom = (sz.height - ssz.height - top);
+            int left = (sz.width - ssz.width) / 2;
+            int right = (sz.width - ssz.width - left);
+            LOG(WARNING) << "resizing series " << ss.dir() << " into " << sz.width << "x" << sz.height;
+            cv::Mat vimage(sz, CV_32F);
+            cv::copyMakeBorder(ss[0].vimage, vimage, top, bottom, left, right, cv::BORDER_REPLICATE);
+            for (auto &s: ss) {
+                cv::Mat image(sz, CV_32F);
+                cv::copyMakeBorder(s.image, image, top, bottom, left, right, cv::BORDER_REPLICATE);
+                s.vimage = vimage;
+                s.image = image;
+            }
         }
     }
 

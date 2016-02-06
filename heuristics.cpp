@@ -3,10 +3,118 @@
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
+#include "spline.h"
 #include "adsb2.h"
 
 namespace adsb2 {
     using std::queue;
+
+    struct InterpEntry {
+        bool good;
+        cv::Scalar v;
+
+        void pack (float area, cv::Rect const &box) {
+            v[0] = area;
+            // radius
+            v[1] = std::sqrt(box.width * box.width
+                             + box.height * box.height) / 2;
+            // cx
+            v[2] = box.x + 0.5 * box.width;
+            // cy
+            v[3] = box.y + 0.5 * box.height;
+        }
+
+        void unpack (float *area, cv::Rect *box) {
+            *area = v[0];
+            float r = v[1];
+            *box = round(cv::Rect_<float>(v[2]-r, v[3]-r, 2*r, 2*r));
+        }
+    };
+
+    class Interp: public vector<InterpEntry> {
+        static int constexpr EXT = 3;   // for circular
+        template <int dim>
+        void fill (vector<double> *v, int ext) {
+            v->clear();
+            int sz = size();
+            for (int i = sz - ext; i < sz; ++i) {
+                if (!at(i).good) continue;
+                if (dim < 0) {
+                    v->push_back(i - sz);
+                }
+                else {
+                    v->push_back(at(i).v[dim]);
+                }
+            }
+            for (int i = 0; i < sz; ++i) {
+                if (!at(i).good) continue;
+                if (dim < 0) {
+                    v->push_back(i);
+                }
+                else {
+                    v->push_back(at(i).v[dim]);
+                }
+            }
+            for (int i = 0; i < ext; ++i) {
+                if (!at(i).good) continue;
+                if (dim < 0) {
+                    v->push_back(i + sz);
+                }
+                else {
+                    v->push_back(at(i).v[dim]);
+                }
+            }
+        }
+        template <int dim>
+        void estimate (vector<double> const &X, int ext) {
+            vector<double> Y;
+            fill<dim>(&Y, ext);
+            tk::spline s;
+            s.set_points(X, Y);
+            for (int i = 0; i < size(); ++i) {
+                if (!at(i).good) {
+                    at(i).v[dim] = s(i + ext);
+                }
+            }
+        }
+    public:
+        void run (bool circular) {
+            CHECK(size() >= EXT);
+            vector<double> X;
+            int ext = circular ? EXT: 0;
+            fill<-1>(&X, ext);
+            estimate<0>(X, ext);
+            estimate<1>(X, ext);
+            estimate<2>(X, ext);
+            estimate<3>(X, ext);
+        }
+    };
+    /*
+    class InterBox: public vector<InterBoxEntry> {
+    public:
+        enum {
+            MODE_TIME;
+            MODE_SPACE;
+        };
+        void run (bool mode) {
+            CHECK(viable);
+            if (mode == MODE_TIME) {
+                std::swap(left, right);
+            }
+            else if (mode == MODE_SPACE) {
+                right[0] = right[1] = 0;
+            }
+            cv::Scalar lb = left;
+            unsigned next = 0;
+            while (next < size()) {
+                if (at(next).good) {
+                    lb = 
+                }
+            }
+            
+        }
+    };
+    */
 
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config) {
         float ext = config.get<float>("adsb2.bound.ext", 4);
@@ -447,6 +555,92 @@ namespace adsb2 {
             }
 #pragma omp critical
             delete det;
+        }
+    }
+
+    void RefinePolarBound (Study *study, Config const &config) {
+        float fill_rate = config.get("adsb2.refine.fill_rate", M_PI/4 * 0.85);
+        float good_slice_rate = config.get("adsb2.refine.good_slice_rate", 0.75);
+        // evaluate healthness of bound and contour
+        vector<int> bads;
+        vector<cv::Rect> ubs;
+        for (unsigned i = 0; i < study->size(); ++i) {
+            Series &ss = study->at(i);
+            cv::Rect lb(cv::Point(0, 0), ss[0].image.size());
+            cv::Rect ub;
+            float max_area = 0;
+            // bad slice: contour is not detected, area is 0, or area/polar_bb_area < fill_rate
+            // rest are good slice
+            int good = 0;
+            for (Slice &s: ss) {
+                if (s.pred_area <= 0) continue; // bad anyway
+                if (s.pred_area / s.polar_box.area() < fill_rate) {
+                    s.pred_area = 0;
+                    continue;
+                }
+                ++good;
+                lb = lb & s.polar_box;
+                ub = ub | s.polar_box;
+            }
+            ubs.push_back(ub);
+            if ((lb.area() == 0) || (good < (ss.size() * good_slice_rate))) {
+                // whole slice is bad
+                bads.push_back(i);
+                for (auto &s: ss) { // invalidate everything, rely on findMinMax to interpolate
+                    s.pred_area = 0;
+                    s.pred_box = cv::Rect();
+                }
+            }
+            else {
+                // use the good ones
+                // interpolate the bad ones
+                // !! TODO
+                Interp interp;
+                interp.resize(ss.size());
+                for (unsigned j = 0; j < ss.size(); ++j) {
+                    Slice &s = ss[j];
+                    auto &w = interp[j];
+                    if (s.pred_area > 0) {  // good
+                        w.good = true;
+                        w.pack(s.pred_area, s.pred_box);
+                    }
+                    else {
+                        w.good = false;
+                    }
+                }
+                interp.run(true);
+                for (unsigned j = 0; j < ss.size(); ++j) {
+                    Slice &s = ss[j];
+                    auto &w = interp[j];
+                    if (!w.good) {  // interp value
+                        w.unpack(&s.pred_area, &s.pred_box);
+                    }
+                }
+            }
+        }
+        if (bads.empty()) return;
+        // if the series is good, we try to save the bad slices by interpolating
+        // then we try to save the bad series by interpolating
+        // if this doesn't do, then just fail
+        Interp interp;  // interpolate bounding box
+        interp.resize(ubs.size());
+        for (unsigned i = 0; i < interp.size(); ++i) {
+            auto &w = interp[i];
+            w.good = true;
+            w.pack(0, ubs[i]);
+        }
+        for (unsigned i: bads) {
+            interp[i].good = false;
+        }
+        interp.run(false);
+        // extract interpolations
+        for (unsigned i: bads) {
+            float dummy;
+            cv::Rect box;
+            interp[i].unpack(&dummy, &box);
+            for (Slice &s: study->at(i)) {
+                s.pred_box = box;
+            }
         }
     }
 }
