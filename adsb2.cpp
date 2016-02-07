@@ -468,6 +468,41 @@ namespace adsb2 {
         return ok;
     }
 
+    void Study::probe (fs::path const &path_, Meta *meta) {
+        // enumerate DCM files
+        vector<fs::path> paths;
+        fs::directory_iterator end_itr;
+        for (fs::directory_iterator itr(path);
+                itr != end_itr; ++itr) {
+            if (fs::is_directory(itr->status())) {
+                // found subdirectory,
+                // create tagger
+                auto sax = itr->path();
+                string name = sax.filename().native();
+                if (name.find("sax_") != 0) {
+                    continue;
+                }
+                fs::directory_iterator end_itr2;
+                for (fs::directory_iterator itr2(sax);
+                        itr2 != end_itr2; ++itr2) {
+                    if (fs::is_regular_file(itr->status())) {
+                        // found subdirectory,
+                        // create tagger
+                        auto path2 = itr->path();
+                        auto ext = path2.extension();
+                        if (ext.string() != ".dcm") {
+                            LOG(WARNING) << "Unknown file type: " << path2.string();
+                            continue;
+                        }
+                        cv::Mat m = load_dicom (path, meta);
+                        if (m.data) return;
+                    }
+                }
+            }
+        }
+        CHECK(0) << "no DCM file found/loaded.";
+    }
+
     Study::Study (fs::path const &path_, bool load, bool check, bool fix): path(path_) {
         // enumerate DCM files
         vector<fs::path> paths;

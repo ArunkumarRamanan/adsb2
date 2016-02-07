@@ -245,6 +245,7 @@ namespace adsb2 {
         void check_regroup ();  // some times its necessary to regroup one series into
                                 // multiple series
     public:
+        static void probe (fs::path const &, Meta *meta);
         Study () {};
         // load from a directory of DCM files
         Study (fs::path const &, bool load = true, bool check = true, bool fix = false);
