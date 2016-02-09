@@ -234,7 +234,7 @@ namespace adsb2 {
 
         void visualize (bool show_prob = true);
         void save_dir (fs::path const &dir, fs::path const &ext); 
-        void save_gif (fs::path const &path); 
+        void save_gif (fs::path const &path, int delay = 5); 
 
         void getVImage (cv::Mat *);
     };
@@ -294,9 +294,12 @@ namespace adsb2 {
     public:
         virtual ~Detector () {}
         virtual void apply (cv::Mat image, cv::Mat *prob) = 0;
+        virtual void apply (cv::Mat image, vector<float> *prob) = 0;
+        // get thread-local detector
+        static Detector *get (string const &name);
     };
 
-    Detector *make_caffe_detector (string const &path);
+    Detector *make_caffe_detector (fs::path const &path);
     /*
     Detector *make_cascade_detector (Config const &);
     Detector *make_scd_detector (Config const &);

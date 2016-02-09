@@ -480,27 +480,20 @@ namespace adsb2 {
         *maxv = max;
     }
 
-    void ComputeBoundProb (Study *study, Config const &config) {
-        string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
+    void ComputeBoundProb (Study *study, Config const &) {
+        //string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
         vector<Slice *> slices;
         study->pool(&slices);
         //config.put("adsb2.caffe.model", "model2");
         std::cerr << "Computing bound probablity of " << slices.size() << "  slices..." << std::endl;
         boost::progress_display progress(slices.size(), std::cerr);
-#pragma omp parallel
-        {
-            Detector *det;
-#pragma omp critical
-            det = make_caffe_detector(bound_model);
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned i = 0; i < slices.size(); ++i) {
+            Detector *det = Detector::get("bound");
             CHECK(det) << " cannot create detector.";
-#pragma omp for schedule(dynamic, 1)
-            for (unsigned i = 0; i < slices.size(); ++i) {
-                det->apply(slices[i]->image, &slices[i]->prob);
+            det->apply(slices[i]->image, &slices[i]->prob);
 #pragma omp critical
-                ++progress;
-            }
-#pragma omp critical
-            delete det;
+            ++progress;
         }
     }
 
@@ -510,7 +503,7 @@ namespace adsb2 {
         Slice *slice;
     };
 
-    void ComputeContourProb (Study *study, Config const &config)
+    void ComputeContourProb (Study *study, Config const &)
     {
         // compute bouding box
         vector<ContourTask> tasks;
@@ -531,30 +524,22 @@ namespace adsb2 {
                 tasks.push_back(task);
             }
         }
-        string contour_model = config.get("adsb2.caffe.contour_model", (home_dir/fs::path("contour_model")).native());
         std::cerr << "Computing contour probablity of " << tasks.size() << "  slices..." << std::endl;
         boost::progress_display progress(tasks.size(), std::cerr);
-#pragma omp parallel
-        {
-            Detector *det;
-#pragma omp critical
-            det = make_caffe_detector(contour_model);
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned i = 0; i < tasks.size(); ++i) {
+            Detector *det = Detector::get("contour");
             CHECK(det) << " cannot create detector.";
-#pragma omp for schedule(dynamic, 1)
-            for (unsigned i = 0; i < tasks.size(); ++i) {
-                auto &task = tasks[i];
-                Slice &slice = *task.slice;
-                if (task.R == 0) {
-                    slice.pred_area = 0;
-                }
-                else {
-                    slice.update_polar(task.C, task.R, det);
-                }
-#pragma omp critical
-                ++progress;
+            auto &task = tasks[i];
+            Slice &slice = *task.slice;
+            if (task.R == 0) {
+                slice.pred_area = 0;
+            }
+            else {
+                slice.update_polar(task.C, task.R, det);
             }
 #pragma omp critical
-            delete det;
+            ++progress;
         }
     }
 

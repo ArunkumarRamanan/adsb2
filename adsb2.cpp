@@ -1,3 +1,5 @@
+#include <thread>
+#include <mutex>
 #include <unordered_map>
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/xml_parser.hpp>
@@ -54,17 +56,63 @@ namespace adsb2 {
         }
     }
 
+
     fs::path home_dir;
     fs::path temp_dir;
+    fs::path model_dir;
     void GlobalInit (char const *path, Config const &config) {
         FLAGS_logtostderr = 1;
         FLAGS_minloglevel = 1;
         home_dir = fs::path(path).parent_path();
         temp_dir = fs::path(config.get("adsb2.tmp_dir", "/tmp"));
+        model_dir = fs::path(config.get("adsb2.models", (home_dir/fs::path("models")).native()));
         google::InitGoogleLogging(path);
         dicom_setup(path, config);
         //openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
+    }
+
+    struct pairhash {
+    public:
+      template <typename T, typename U>
+      std::size_t operator()(const std::pair<T, U> &x) const
+      {
+        return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
+      }
+    };
+
+    class DetectorManager {
+        unordered_map<std::pair<std::thread::id, string>, Detector *, pairhash> insts;   // instance for each thread
+        std::mutex mutex;
+    public:
+        DetectorManager () {
+        }
+
+        ~DetectorManager () {
+            for (auto &p: insts) {
+                CHECK(p.second);
+                delete p.second;
+            }
+        }
+
+        Detector *get (string const &name) {
+            std::lock_guard<std::mutex> lock(mutex); 
+            std::pair<std::thread::id, string> key(std::this_thread::get_id(), name);
+            auto it = insts.find(key);
+            if (it == insts.end()) {
+                Detector *det = make_caffe_detector(model_dir / fs::path(name));
+                CHECK(det) << "failed to create detector " << name;
+                insts[key] = det;
+                return det;
+            }
+            else {
+                return it->second;
+            }
+        }
+    } detector_manager;
+
+    Detector *Detector::get (string const &name) {
+        return detector_manager.get(name);
     }
 
     fs::path temp_path (const fs::path& model) {
@@ -323,16 +371,17 @@ namespace adsb2 {
         }
     }
 
-    void Series::save_gif (fs::path const &path) {
+    void Series::save_gif (fs::path const &path, int delay) {
         fs::path tmp(temp_path());
         fs::create_directories(tmp);
         ostringstream gif_cmd;
-        gif_cmd << "convert -delay 5 ";
+        gif_cmd << "convert -delay " << delay << " ";
         fs::path pgm(".pgm");
         fs::path pbm(".pbm");
+        int cc = 0;
         for (auto const &s: *this) {
             CHECK(s.image.depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
-            fs::path pnm(tmp / s.path.stem());
+            fs::path pnm(tmp / fs::path(lexical_cast<string>(cc++)));
             if (s.image.channels() == 1) {
                 pnm += pgm;
             }
@@ -472,7 +521,7 @@ namespace adsb2 {
         // enumerate DCM files
         vector<fs::path> paths;
         fs::directory_iterator end_itr;
-        for (fs::directory_iterator itr(path);
+        for (fs::directory_iterator itr(path_);
                 itr != end_itr; ++itr) {
             if (fs::is_directory(itr->status())) {
                 // found subdirectory,
@@ -494,7 +543,7 @@ namespace adsb2 {
                             LOG(WARNING) << "Unknown file type: " << path2.string();
                             continue;
                         }
-                        cv::Mat m = load_dicom (path, meta);
+                        cv::Mat m = load_dicom (path2, meta);
                         if (m.data) return;
                     }
                 }
@@ -966,5 +1015,7 @@ namespace adsb2 {
         float v = volumes[n1][n2];
         return crps(v, x);
     }
+
+    
 }
 
