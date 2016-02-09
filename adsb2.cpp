@@ -595,7 +595,7 @@ namespace adsb2 {
             else if (rank[i].second < rank[i-1].second) ++bad;
         }
         bool topdown = bad > good;
-        if (topdown && fix) {
+        if ((!topdown) && fix) {
             LOG(WARNING) << "fixing slice " << path << " topdown";
             for (auto &ss: *this) {
                 for (auto &s: ss) {
@@ -683,6 +683,8 @@ namespace adsb2 {
             LOG(WARNING) << "study " << path << " reduced from " << size() << " to " << off << " series.";
             resize(off);
         }
+        pop_back();
+        pop_back();
         return ok;
     }
 
