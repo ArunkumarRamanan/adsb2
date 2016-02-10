@@ -34,6 +34,11 @@ int main(int argc, char **argv) {
     vector<string> paths;
     float scale;
     bool do_eval = false;
+#define DO_LINEAR 1
+#ifdef DO_LINEAR
+    float sa, sb;
+    float da, db;
+#endif
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -42,6 +47,12 @@ int main(int argc, char **argv) {
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&paths), "")
     ("scale,s", po::value(&scale)->default_value(80), "")
+#ifdef DO_LINEAR
+    ("sa", po::value(&sa)->default_value(1.0), "")
+    ("sb", po::value(&sb)->default_value(0.0), "")
+    ("da", po::value(&da)->default_value(1.0), "")
+    ("db", po::value(&db)->default_value(0.0), "")
+#endif
     ("eval", "")
     ;
 
@@ -67,6 +78,12 @@ int main(int argc, char **argv) {
         fs::ifstream is(path);
         CHECK(is);
         is >> c.min.mean >> c.min.var >> c.max.mean >> c.max.var;
+#ifdef DO_LINEAR
+        c.min.mean *= sa;
+        c.min.mean += sb;
+        c.max.mean *= da;
+        c.max.mean += db;
+#endif
         c.min.var *= c.min.var;
         c.max.var *= c.max.var;
         CHECK(is);

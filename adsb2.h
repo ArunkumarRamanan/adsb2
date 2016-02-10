@@ -268,6 +268,8 @@ namespace adsb2 {
         }
     };
 
+    fs::path find24ch (fs::path const &, string const &pat = "2ch_");
+
     class Cook {
         float spacing;
         int color_bins;
@@ -475,6 +477,7 @@ namespace adsb2 {
     void RefinePolarBound (Study *, Config const &config);
     void study_CA1 (Study *, Config const &config, bool);
     void study_CA2 (Study *, Config const &config, bool);
+    void RefineTop (Study *study, Config const &conf);
 
     struct Volume {
         float mean;

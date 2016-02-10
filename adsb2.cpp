@@ -595,7 +595,7 @@ namespace adsb2 {
             else if (rank[i].second < rank[i-1].second) ++bad;
         }
         bool topdown = bad > good;
-        if ((!topdown) && fix) {
+        if (topdown && fix) {
             LOG(WARNING) << "fixing slice " << path << " topdown";
             for (auto &ss: *this) {
                 for (auto &s: ss) {
@@ -683,8 +683,6 @@ namespace adsb2 {
             LOG(WARNING) << "study " << path << " reduced from " << size() << " to " << off << " series.";
             resize(off);
         }
-        pop_back();
-        pop_back();
         return ok;
     }
 
@@ -1018,6 +1016,25 @@ namespace adsb2 {
         return crps(v, x);
     }
 
+    fs::path find24ch (fs::path const &root, string const &pat) {
+        vector<fs::path> paths;
+        fs::directory_iterator end_itr;
+        for (fs::directory_iterator itr(root);
+                itr != end_itr; ++itr) {
+            if (fs::is_directory(itr->status())) {
+                // found subdirectory,
+                // create tagger
+                auto sax = itr->path();
+                string name = sax.filename().native();
+                if (name.find(pat) != 0) {
+                    continue;
+                }
+                paths.push_back(sax);
+            }
+        }
+        CHECK(paths.size() == 1);
+        return root/paths[0];
+    }
     
 }
 

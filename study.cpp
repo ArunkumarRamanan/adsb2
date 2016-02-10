@@ -122,6 +122,7 @@ int main(int argc, char **argv) {
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
 #endif
+    RefineTop(&study, config);
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (output_dir.size()) {
