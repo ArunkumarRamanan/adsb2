@@ -133,7 +133,7 @@ namespace adsb2 {
         Series ss;
         ss.resize(1);
         mid[0].clone(&ss[0]);
-        det->apply(ss[0].image, &ss[0].prob);
+        det->apply(ss[0].image_eq, &ss[0].prob);
         MotionFilter(&ss, config);
         FindSquare(ss[0].prob, &ss[0].pred_box, config);
         cv::Rect bb = round(cscale(unround(ss[0].pred_box), ext));
@@ -491,7 +491,7 @@ namespace adsb2 {
         for (unsigned i = 0; i < slices.size(); ++i) {
             Detector *det = Detector::get("bound");
             CHECK(det) << " cannot create detector.";
-            det->apply(slices[i]->image, &slices[i]->prob);
+            det->apply(slices[i]->image_eq, &slices[i]->prob);
 #pragma omp critical
             ++progress;
         }
@@ -642,7 +642,7 @@ namespace adsb2 {
                 Detector *det = Detector::get("top");
                 CHECK(det) << " cannot create detector.";
                 vector<float> prob(2);
-                det->apply(slices[i].image, &prob);
+                det->apply(slices[i].image_eq, &prob);
                 float p = prob[1];
                 slices[i].pred_area *= p;
                 if (p < th) {

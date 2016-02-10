@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
                 linearPolar(sample->slice.image, &imageF, cc, rr, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
                 linearPolar(sample->label, &labelF, cc, rr, CV_INTER_NN+CV_WARP_FILL_OUTLIERS);
                 imageF.convertTo(image, CV_8UC1);
-                cv::equalizeHist(image, image);
+                //cv::equalizeHist(image, image);
                 labelF.convertTo(label, CV_8UC1);
                 cv::morphologyEx(label, label, cv::MORPH_CLOSE, kernel);
                 /*

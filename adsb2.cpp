@@ -150,6 +150,7 @@ namespace adsb2 {
     void BoxAnnoOps::fill (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
     {
         Data const &box = slice.anno_data.box;
+        *out = cv::Mat(slice.image.size(), CV_8U, cv::Scalar(0));
 #define BOX_AS_CIRCLE 1
 #ifdef BOX_AS_CIRCLE
         cv::circle(*out, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
@@ -163,20 +164,65 @@ namespace adsb2 {
 
     void PolyAnnoOps::load (Slice *slice, string const *txt) const
     {
-        CHECK(0);
+        slice->anno = this;
+        Data &poly = slice->anno_data.poly;
+        poly.R = lexical_cast<float>(txt[0]);
+        poly.C.x = lexical_cast<float>(txt[1]);
+        poly.C.y = lexical_cast<float>(txt[2]);
+        int n = lexical_cast<float>(txt[3]);
+        int off = 4;
+        poly.contour.clear();
+        for (int i = 0; i < n; ++i) {
+            poly.contour.emplace_back(lexical_cast<float>(txt[off]),
+                                      lexical_cast<float>(txt[off+1]));
+            off += 2;
+        }
     }
 
     void PolyAnnoOps::shift (Slice *slice, cv::Point_<float> const &pt) const {
-        CHECK(0);
+        Data &poly = slice->anno_data.poly;
+        poly.C += pt;
     }
 
     void PolyAnnoOps::scale (Slice *slice, float rate) const {
-        CHECK(0);
+        Data &poly = slice->anno_data.poly;
+        poly.C.x *= rate;
+        poly.C.y *= rate;
+        poly.R *= rate;
     }
 
-    void PolyAnnoOps::fill (Slice const &, cv::Mat *, cv::Scalar const &) const
+    void PolyAnnoOps::fill (Slice const &slice, cv::Mat *label, cv::Scalar const &v) const
     {
-        CHECK(0);
+        int xx = 0;
+        auto const &anno = slice.anno_data.poly;
+        auto const &cc = anno.contour;
+        {
+            float bx = cc.back().x;
+            float by = 1 - cc.back().y;
+            float fx = cc.front().x;
+            float fy = cc.front().y;
+            xx = std::round((by * fx + fy * bx) / (fy + by) * slice.image.cols);
+        }
+        vector<cv::Point> ps(cc.size());
+        for (unsigned i = 0; i < cc.size(); ++i) {
+            auto const &from = cc[i];
+            auto &to = ps[i];
+            to.x = std::round(slice.image.cols * from.x);
+            to.y = std::round(slice.image.rows * from.y);
+        }
+        ps.emplace_back(xx, slice.image.rows - 1);
+        ps.emplace_back(0, slice.image.rows - 1);
+        ps.emplace_back(0, 0);
+        ps.emplace_back(xx, 0);
+        cv::Point const *pps = &ps[0];
+        int const nps = ps.size();
+        cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
+        cv::fillPoly(polar, &pps, &nps, 1, v);
+        //cv::polylines(polar, &pps, &nps, 1, true, cv::Scalar(255), 2);
+        //imwrite("/home/wdong/public_html/xxx.png", polar);
+        cv::Mat out;
+        linearPolar(polar, &out, anno.C, anno.R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+        out.convertTo(*label, CV_8U);
     }
 
 
@@ -280,7 +326,7 @@ namespace adsb2 {
         else {
             cv::Mat u8;
             polar.convertTo(u8, CV_8U);
-            equalizeHist(u8, u8);
+            //equalizeHist(u8, u8);
             int m = polar.rows / 4;
             cv::Mat extended;
             vconcat3(u8.rowRange(polar.rows - m, polar.rows),
@@ -797,13 +843,15 @@ namespace adsb2 {
         for (unsigned i = 0; i < series->size(); ++i) {
             auto &s = series->at(i);
             if (s.do_not_cook) continue;
-            equalize(s.raw, &s.image, cmap);
+            s.raw.convertTo(s.image, CV_32F);
+            equalize(s.raw, &s.image_eq, cmap);
             if (scale > 0) {
                 s.meta.spacing = spacing;
                 CHECK(s.meta.raw_spacing == raw_spacing);
                 CHECK(s.image.size() == raw_size);
                 //float scale = s.meta.raw_spacing / s.meta.spacing;
                 cv::resize(s.image, s.image, sz);
+                cv::resize(s.image_eq, s.image_eq, sz);
                 if (s.anno) {
                     s.anno->scale(&s, scale);
                 }

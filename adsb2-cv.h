@@ -130,16 +130,29 @@ namespace adsb2 {
                         cv::norm(p - cv::Point2f(r.x, r.y + r.height))});
     }
 
-    static inline void linearPolar (cv::Mat image,
+    static inline void linearPolar (cv::Mat from,
                       cv::Mat *out,
                       cv::Point_<float> O, float R, int flags = CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS) {
+        cv::Mat image;
+        if (from.type() == CV_32F) {
+            image = from;
+        }
+        else {
+            from.convertTo(image, CV_32F);
+        }
         IplImage tmp_in = image;
         IplImage *tmp_out = cvCreateImage(cvSize(image.cols, image.rows), IPL_DEPTH_32F, 1);
         CvPoint2D32f center;
         center.x = O.x;
         center.y = O.y;
         cvLinearPolar(&tmp_in, tmp_out, center, R, flags);
-        *out = cv::Mat(tmp_out, true);
+        cv::Mat to = cv::Mat(tmp_out, true);
+        if (from.type() == CV_32F) {
+            *out = to;
+        }
+        else {
+            to.convertTo(*out, from.type());
+        }
         /*
         cv::Mat out;
         cv::normalize(polar, out, 0, 255, cv::NORM_MINMAX, CV_8UC1);

@@ -101,9 +101,12 @@ namespace adsb2 {
         virtual void fill (Slice const &, cv::Mat *, cv::Scalar const &) const;
     };
 
-    class PolyAnnoOps {
+    class PolyAnnoOps: public AnnoOps {
     public:
         struct Data {
+            float R;    
+            cv::Point_<float> C;  
+            vector<cv::Point_<float>> contour;
         };
         virtual int type () const {
             return ANNO_POLY;
@@ -133,6 +136,7 @@ namespace adsb2 {
 
         // size of image,vimage,label and prob must be the same when present
         cv::Mat image;          // cooked image             CV_32FC1
+        cv::Mat image_eq;
         cv::Mat vimage;         // cooked variance image    CV_32FC1
 
         bool do_not_cook;
@@ -156,7 +160,7 @@ namespace adsb2 {
         vector<int> polar_contour;
 
         cv::Mat _label;         // temporarily used by import.cpp
-        cv::Point_<float> _import_C; // nothing should be assumed for this field
+        cv::Point_<float> _import_C;
         float _import_R;
         cv::Mat _extra;
 
@@ -335,7 +339,7 @@ namespace adsb2 {
             linear_scale(-max_linear_scale, max_linear_scale),
             polar_R(config.get<float>("adsb2.aug.min_polar_R", 0.75),
                     config.get<float>("adsb2.aug.max_polar_R", 1.5)),
-            polar_C(0, config.get<float>("adsb2.aug.max_polar_C", 0.4)),
+            polar_C(0, config.get<float>("adsb2.aug.max_polar_C", 0.3)),
             polar_phi(0, M_PI * 2),
             polar_kernel_size(config.get<int>("adsb2.aug.polar_kernel", 3)),
             polar_kernel(cv::Mat::ones(polar_kernel_size, polar_kernel_size, CV_8U))

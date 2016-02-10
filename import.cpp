@@ -26,6 +26,9 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using namespace adsb2;
 
 string backend("lmdb");
+fs::path sample_dir;
+int sample_max = 100;
+int sample_count = 0;
 
 void import (Sampler &sampler,
              vector<Slice *> &samples,
@@ -61,8 +64,8 @@ void import (Sampler &sampler,
             if (polar) {
                 sampler.polar(sample->image,
                               sample->_label,
-                              sample->_import_C,
-                              sample->_import_R,
+                              sample->anno_data.poly.C,
+                              sample->anno_data.poly.R,
                               &image, &label, do_not_perturb);
             }
             else {
@@ -74,9 +77,11 @@ void import (Sampler &sampler,
                 CHECK(image.type() == CV_32F);
                 cv::Mat u8;
                 image.convertTo(u8, CV_8U);
+                /*
                 if (polar) {
                     equalizeHist(u8, u8);
                 }
+                */
                 image = u8;
             }
 
@@ -93,14 +98,13 @@ void import (Sampler &sampler,
             datum.set_label(0);
             CHECK(datum.SerializeToString(&value));
             label_txn->Put(key, value);
-#if 0
-            static int debug_count = 0;
-            Mat out;
-            rectangle(image, roi, Scalar(255));
-            hconcat(image, label, out);
-            imwrite((boost::format("%d.png") % debug_count).str(), out);
-            ++debug_count;
-#endif
+
+            if (sample_count < sample_max) {
+                fs::path op(sample_dir / fs::path(fmt::format("s{}.jpg", sample_count++)));
+                Mat out;
+                vconcat(image, image + label * 255, out);
+                imwrite(op.native(), out);
+            }
 
             if (++count % 1000 == 0) {
                 // Commit db
@@ -183,11 +187,21 @@ int main(int argc, char **argv) {
 
     Cook cook(config);
     Slices samples(list_path, root_dir, cook);
+
+    sample_dir = fs::path(output_dir) / fs::path("samples");
+    fs::create_directories(sample_dir);
     // generate labels
     for (auto &s: samples) {
         CHECK(s.anno);
-        s._label = cv::Mat(s.image.size(), CV_8UC1, cv::Scalar(0));
         s.anno->fill(s, &s._label, cv::Scalar(1));
+        if (sample_count < sample_max) {
+            fs::path op(sample_dir / fs::path(fmt::format("l{}.jpg", sample_count++)));
+            Mat out;
+            cv::Mat l;
+            s._label.convertTo(l, CV_32F);
+            vconcat(s.image, s.image + l* 255, out);
+            imwrite(op.native(), out);
+        }
         int min_x = s._label.cols;
         int max_x = -1;
         int min_y = s._label.rows;
@@ -209,6 +223,7 @@ int main(int argc, char **argv) {
         int dy = max_y - min_y + 1;
         s._import_R = std::sqrt(dx * dx + dy * dy);
     }
+    sample_count = 0;
 
     Sampler sampler(config);
 
@@ -275,7 +290,7 @@ int main(int argc, char **argv) {
         if (full) {
             fold_path /= lexical_cast<string>(f);
         }
-        CHECK(fs::create_directories(fold_path));
+        fs::create_directories(fold_path);
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
         import(sampler, train, fold_path / fs::path("train"), polar, replica);
