@@ -1035,6 +1035,5 @@ namespace adsb2 {
         CHECK(paths.size() == 1);
         return root/paths[0];
     }
-    
 }
 
