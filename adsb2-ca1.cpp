@@ -93,7 +93,7 @@ namespace adsb2 {
     public:
         CA1 (Config const &conf)
             : margin(conf.get<int>("adsb2.ca1.margin", 5)),
-            thr(conf.get<float>("adsb2.ca1.th", 0.3)),
+            thr(conf.get<float>("adsb2.ca1.th", 0.5)),
             smooth(conf.get<float>("adsb2.ca1.smooth", 200)),
             wall(conf.get<float>("adsb2.ca1.wall", 300))
         {
