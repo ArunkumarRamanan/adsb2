@@ -484,7 +484,6 @@ namespace adsb2 {
 
     void ComputeContourProb (Study *study, Config const &conf)
     {
-        // compute bouding box
         for (Series &ss: *study) {
             cv::Rect_<float> lb = ss.front().box;
             cv::Rect_<float> ub = lb;
@@ -506,7 +505,7 @@ namespace adsb2 {
                 }
             }
         }
-        ApplyDetector("bound", study, IM_IMAGE, IM_PROB, conf, 1.0, study->front().front().images[IM_IMAGE].rows/4);
+        ApplyDetector("contour", study, IM_POLAR, IM_POLAR_PROB, 1.0, study->front().front().images[IM_IMAGE].rows/4);
     }
 
 #if 0

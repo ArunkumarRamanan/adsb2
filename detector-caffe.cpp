@@ -7,7 +7,7 @@ namespace adsb2 {
         caffex::Caffex impl;
     public:
         CaffeDetector (string const &path)
-            : impl(path, 1) {
+            : impl(path, caffe_batch) {
         }
         virtual void apply (cv::Mat image, cv::Mat *o) {
             /*

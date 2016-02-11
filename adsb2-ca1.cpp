@@ -94,8 +94,8 @@ namespace adsb2 {
         CA1 (Config const &conf)
             : margin(conf.get<int>("adsb2.ca1.margin", 5)),
             thr(conf.get<float>("adsb2.ca1.th", 0.6)),
-            smooth(conf.get<float>("adsb2.ca1.smooth", 150)),
-            wall(conf.get<float>("adsb2.ca1.wall", 300))
+            smooth(conf.get<float>("adsb2.ca1.smooth", 150/255.0)),
+            wall(conf.get<float>("adsb2.ca1.wall", 300/255.0))
         {
         }
         void apply_slice (Slice *s) {
@@ -112,11 +112,7 @@ namespace adsb2 {
     void study_CA1 (Study *study, Config const &config, bool vis) {
         // compute bouding box
         vector<Slice *> tasks;
-        for (Series &ss: *study) {
-            for (auto &s: ss) {
-                tasks.push_back(&s);
-            }
-        }
+        study->pool(&tasks);
         CA1 ca1(config);
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < tasks.size(); ++i) {
