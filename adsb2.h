@@ -104,9 +104,11 @@ namespace adsb2 {
     class PolyAnnoOps: public AnnoOps {
     public:
         struct Data {
-            float R;    
-            cv::Point_<float> C;  
+            float R;                // polar radius in raw dicom file   
+            cv::Point_<float> C;    // polar center in raw dicom file
             vector<cv::Point_<float>> contour;
+                                    // contour in polar space
+                                    // x, y are ratios
         };
         virtual int type () const {
             return ANNO_POLY;
@@ -136,7 +138,7 @@ namespace adsb2 {
 
         // size of image,vimage,label and prob must be the same when present
         cv::Mat image;          // cooked image             CV_32FC1
-        cv::Mat image_eq;
+        cv::Mat image_eq;       // cooked image with color equalization
         cv::Mat vimage;         // cooked variance image    CV_32FC1
 
         bool do_not_cook;
@@ -150,7 +152,6 @@ namespace adsb2 {
         cv::Mat prob;           // pixel-level prediction
         cv::Rect pred_box;      // bounding box prediction
         float pred_area;        // area prediction
-        bool pred_box_reliable;
 
         cv::Point_<float> polar_C;   //
         float polar_R;              // available after update_polar is called
@@ -168,7 +169,6 @@ namespace adsb2 {
             : do_not_cook(false),
             anno(nullptr),
             pred_box(-1,-1,0,0),
-            pred_box_reliable(false),
             pred_area(-1) {
         }
 
@@ -301,6 +301,7 @@ namespace adsb2 {
         virtual ~Detector () {}
         virtual void apply (cv::Mat image, cv::Mat *prob) = 0;
         virtual void apply (cv::Mat image, vector<float> *prob) = 0;
+        virtual void apply (vector<cv::Mat> &image, vector<cv::Mat> *prob) = 0;
         // get thread-local detector
         static Detector *get (string const &name);
     };
@@ -409,45 +410,6 @@ namespace adsb2 {
         }
     };
 
-#if 0
-    class CaffeAdaptor {
-    public:
-        static void apply (Slice &sample, cv::Mat *image, cv::Mat *label, int channels = 1, bool circle = false) {
-            CHECK(sample.image.type() == CV_32FC1);
-            cv::Mat color;
-            sample.image.convertTo(color, CV_8UC1);
-            if (channels == 1) {
-                *image = color;
-            }
-            else if (channels == 2) {
-#if 0
-                CHECK(sample.vimage.data);
-                cv::Mat v;
-                cv::normalize(sample.vimage, v, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-                cv::Mat z(v.size(), CV_8UC1, cv::Scalar(0));
-                vector<cv::Mat> channels{color, v, z};
-                cv::merge(channels, *image);
-                CHECK(image->type() == CV_8UC3);
-#else
-                cv::normalize(sample.vimage, *image, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-#endif
-            }
-            if (label) {
-                CHECK(sample.anno > 0);
-                label->create(color.size(), CV_8UC1);
-                // save label
-                label->setTo(cv::Scalar(0));
-                if (circle) {
-                    sample.fill_circle(label, cv::Scalar(1));
-                }
-                else {
-                    sample.fill_roi(label, cv::Scalar(1));
-                }
-            }
-        }
-    };
-#endif
-
     class CA {
     public:
         ~CA () {
@@ -472,11 +434,11 @@ namespace adsb2 {
     // use variance image (big variance == big motion)
     // to filter out static regions
     // applies to the prob image of each slice
+    void ComputeBoundProb (Study *, Config const &config);
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config);
     void MotionFilter (Series *stack, Config const &config); 
     void ProbFilter (Study *study, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
-    void ComputeBoundProb (Study *, Config const &config);
     void ComputeContourProb (Study *, Config const &config);
     void RefinePolarBound (Study *, Config const &config);
     void study_CA1 (Study *, Config const &config, bool);

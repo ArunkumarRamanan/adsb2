@@ -21,6 +21,7 @@ int main(int argc, char **argv) {
     string output_dir;
     int ca;
     int ca_it;
+    int decap;
     /*
     string output_dir;
     string gif;
@@ -39,6 +40,7 @@ int main(int argc, char **argv) {
     ("bound", "")
     ("no-gif", "")
     ("ca-it", po::value(&ca_it)->default_value(2), "")
+    ("decap", po::value(&decap)->default_value(0), "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -104,25 +106,21 @@ int main(int argc, char **argv) {
         FindSquare(slices[i]->prob,
                   &slices[i]->pred_box, config);
     }
-#if 0
-    for (unsigned i = 0; i < ca_it; ++i) {
-        ComputeContourProb(&study, config);
-        if (ca == 1) {
-            study_CA1(&study, config, i + 1 == ca_it);
-        }
-        else if (ca == 2) {
-            study_CA2(&study, config, i + 1 == ca_it);
-        }
-        else {
-            CHECK(0) << "CA value not supported.";
-        }
-        RefinePolarBound(&study, config);
-    }
-#else
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
-#endif
-    //RefineTop(&study, config);
+
+    if (decap > 0) {
+        CHECK(decap < 5);
+        for (int i = 0; i < decap; ++i) {
+            for (auto &s: study[i]) {
+                s.pred_area = 0;
+            }
+        }
+    }
+    else if (decap < 0) {
+        RefineTop(&study, config);
+    }
+    
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (output_dir.size()) {

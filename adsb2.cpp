@@ -229,7 +229,6 @@ namespace adsb2 {
     Slice::Slice (string const &txt)
         : do_not_cook(false),
         pred_box(-1,-1,0,0),
-        pred_box_reliable(false),
         pred_area(-1)
     {
         using namespace boost::algorithm;
@@ -279,14 +278,7 @@ namespace adsb2 {
 
     void Slice::visualize (bool show_prob) {
         CHECK(image.type() == CV_32FC1);
-#if 0
-        cv::Mat rgb;
-        cv::cvtColor(image, rgb, CV_GRAY2BGR, 0);
-        rgb.convertTo(image, CV_8UC3);
-        cv::Scalar color = pred_box_reliable ? cv::Scalar(0, 0xFF, 0) : cv::Scalar(0, 0, 0xFF);
-#else
         cv::Scalar color(0xFF);
-#endif
         if (pred_box.x >= 0) {
             cv::rectangle(image, pred_box, color);
         }
@@ -767,7 +759,7 @@ namespace adsb2 {
     }
 
     // histogram equilization
-    void getColorMap (Series const &series, vector<float> *cmap, int colors) {
+    void getColorMap (Series const &series, vector<float> *cmap, int colors, uint16_t *lb, uint16_t *ub) {
         vector<uint16_t> all;
         all.reserve(series.front().image.total() * series.size());
         for (auto const &s: series) {
@@ -781,6 +773,8 @@ namespace adsb2 {
             }
         }
         sort(all.begin(), all.end());
+        uint16_t lb1 = all[all.size() * 0.2];
+        uint16_t ub1 = all[all.size() - all.size() * 0.05];
         cmap->resize(all.back()+1);
         unsigned b = 0;
         for (unsigned c = 0; c < colors; ++c) {
@@ -802,6 +796,11 @@ namespace adsb2 {
             }
             b = e;
         }
+        all.resize(unique(all.begin(), all.end()) - all.begin());
+        uint16_t lb2 = all[all.size() * 0.01];
+        uint16_t ub2 = all[all.size()-1 - all.size() * 0.3];
+        *lb = std::max(lb1, lb2);
+        *ub = std::min(ub1, ub2);
     }
 
     void equalize (cv::Mat from, cv::Mat *to, vector<float> const &cmap) {
@@ -838,12 +837,21 @@ namespace adsb2 {
             cv::resize(vimage, vimage, sz);
         }
         vector<float> cmap;
-        getColorMap(*series, &cmap, color_bins);
+        uint16_t lb, ub;
+        getColorMap(*series, &cmap, color_bins, &lb, &ub);
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < series->size(); ++i) {
             auto &s = series->at(i);
             if (s.do_not_cook) continue;
             s.raw.convertTo(s.image, CV_32F);
+            adsb2::foreach<float>(&s.image, [lb, ub, this](float *pv) {
+                        float v = *pv;
+                        v = std::round((v - lb) / (ub - lb) * color_bins);
+                        if (v < 0) v = 0;
+                        else if (v >= color_bins) v = color_bins - 1;
+                        *pv = v;
+                    });
+            cv::normalize(s.raw, s.image, 0, 255, cv::NORM_MINMAX, CV_32F);
             equalize(s.raw, &s.image_eq, cmap);
             if (scale > 0) {
                 s.meta.spacing = spacing;
@@ -1018,8 +1026,10 @@ namespace adsb2 {
             CHECK(x[i] <= 1);
             if (i > 0) CHECK(x[i] >= x[i-1]);
         }
+        /*
         CHECK(x.front() == 0);
         CHECK(x.back() == 1);
+        */
         return sum/VALUES;
     }
 

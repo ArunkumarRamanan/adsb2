@@ -37,6 +37,7 @@ void import (Sampler &sampler,
              int replica = 1) {
 
     CHECK(fs::create_directories(dir));
+    CHECK(fs::is_directory(dir));
     fs::path image_path = dir / fs::path("images");
     fs::path label_path = dir / fs::path("labels");
   // Create new DB
@@ -190,6 +191,7 @@ int main(int argc, char **argv) {
 
     sample_dir = fs::path(output_dir) / fs::path("samples");
     fs::create_directories(sample_dir);
+    CHECK(fs::is_directory(sample_dir));
     // generate labels
     for (auto &s: samples) {
         CHECK(s.anno);
@@ -254,7 +256,8 @@ int main(int argc, char **argv) {
             //ss[i] = &samples[i];
         }
         fs::path fold_path(output_dir);
-        CHECK(fs::create_directories(fold_path));
+        fs::create_directories(fold_path);
+        CHECK(fs::is_directory(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
         import(sampler, train, fold_path / fs::path("train"), polar, replica);
@@ -291,6 +294,7 @@ int main(int argc, char **argv) {
             fold_path /= lexical_cast<string>(f);
         }
         fs::create_directories(fold_path);
+        CHECK(fs::is_directory(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
         import(sampler, train, fold_path / fs::path("train"), polar, replica);

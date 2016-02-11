@@ -133,7 +133,7 @@ namespace adsb2 {
         Series ss;
         ss.resize(1);
         mid[0].clone(&ss[0]);
-        det->apply(ss[0].image_eq, &ss[0].prob);
+        det->apply(ss[0].image, &ss[0].prob);
         MotionFilter(&ss, config);
         FindSquare(ss[0].prob, &ss[0].pred_box, config);
         cv::Rect bb = round(cscale(unround(ss[0].pred_box), ext));
@@ -480,21 +480,44 @@ namespace adsb2 {
         *maxv = max;
     }
 
-    void ComputeBoundProb (Study *study, Config const &) {
+    void ComputeBoundProb (Study *study, Config const &conf) {
         //string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
         vector<Slice *> slices;
         study->pool(&slices);
         //config.put("adsb2.caffe.model", "model2");
         std::cerr << "Computing bound probablity of " << slices.size() << "  slices..." << std::endl;
         boost::progress_display progress(slices.size(), std::cerr);
+#define CPU_ONLY 1
+#ifdef CPU_ONLY
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < slices.size(); ++i) {
             Detector *det = Detector::get("bound");
             CHECK(det) << " cannot create detector.";
             det->apply(slices[i]->image_eq, &slices[i]->prob);
+            //det->apply(slices[i]->image, &slices[i]->prob);
 #pragma omp critical
             ++progress;
         }
+#else
+        unsigned batch = conf.get<int>("adsb2.batch", 32);
+        Detector *det = Detector::get("bound");
+        for (unsigned i = 0; i < slices.size(); i += batch) {
+            unsigned e = i + batch;
+            if (e > slices.size()) e = slices.size();
+            vector<Mat> input(e - i);
+            for (unsigned j = i; j < e; ++j) {
+                input[j-i] = slices[j]->image_eq;
+                //input[j-i] = slices[j]->image;
+            }
+            vector<Mat> output;
+            det->apply(input, &output);
+            CHECK(output->size() == e-i);
+            for (unsigned j = i; j < e; ++j) {
+                slices[j]->prob = output[j-i];
+            }
+            progress += e - i;
+        }
+#endif
     }
 
     struct ContourTask {

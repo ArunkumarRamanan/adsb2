@@ -202,4 +202,24 @@ namespace adsb2 {
             bb->height = max_y - min_y + 1;
         }
     }
+
+    template<typename T, typename F>
+    void foreach (cv::Mat const &m, F f) {
+        for (int i = 0; i < m.rows; ++i) {
+            T const *p = m.ptr<T const>(i);
+            for (int j = 0; j < m.cols; ++j) {
+                f(p[j]);
+            }
+        }
+    }
+
+    template<typename T, typename F>
+    void foreach (cv::Mat *m, F f) {
+        for (int i = 0; i < m->rows; ++i) {
+            T *p = m->ptr<T>(i);
+            for (int j = 0; j < m->cols; ++j) {
+                f(&p[j]);
+            }
+        }
+    }
 }
