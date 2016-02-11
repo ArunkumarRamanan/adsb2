@@ -64,6 +64,7 @@ namespace adsb2 {
     struct Meta: public MetaBase, public std::array<float, MetaBase::SERIES_FIELDS> {
     };
 
+    extern int caffe_batch;
     void GlobalInit (char const *path, Config const &config);
 
     cv::Mat load_dicom (fs::path const &, Meta *);

@@ -60,8 +60,14 @@ namespace adsb2 {
     fs::path home_dir;
     fs::path temp_dir;
     fs::path model_dir;
+    int caffe_batch = 0;
     void dicom_setup (char const *path, Config const &config);
     void GlobalInit (char const *path, Config const &config) {
+#ifdef CPU_ONLY
+        caffe_batch = 1;
+#else
+        caffe_batch = config.get<int>("adsb2.caffe.batch", 32);
+#endif
         FLAGS_logtostderr = 1;
         FLAGS_minloglevel = 1;
         home_dir = fs::path(path).parent_path();
@@ -1126,7 +1132,7 @@ namespace adsb2 {
         //config.put("adsb2.caffe.model", "model2");
         std::cerr << "Applying model " << name << " to "  << slices.size() << "  slices..." << std::endl;
         boost::progress_display progress(slices.size(), std::cerr);
-#define CPU_ONLY 1
+//#define CPU_ONLY 1
 #ifdef CPU_ONLY
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < slices.size(); ++i) {
@@ -1146,14 +1152,13 @@ namespace adsb2 {
             ++progress;
         }
 #else   // batch processing using GPU
-        unsigned batch = conf.get<int>("adsb2.batch", 32);
         Detector *det = Detector::get(name);
         CHECK(det) << " cannot create detector.";
         unsigned i = 0;
         while (i < slices.size()) {
-            vector<Mat> input;
-            vector<Mat *> output;
-            while ((i < slices.size()) && (input.size() < batch)) {
+            vector<cv::Mat> input;
+            vector<cv::Mat *> output;
+            while ((i < slices.size()) && (input.size() < caffe_batch)) {
                 cv::Mat from = slices[i]->images[FROM];
                 if (from.data) {
                     input.push_back(virtical_extend(from, vext));
@@ -1161,7 +1166,7 @@ namespace adsb2 {
                 }
                 ++i;
             }
-            vector<Mat> tmp;
+            vector<cv::Mat> tmp;
             det->apply(input, &tmp);
             CHECK(tmp.size() == input.size());
             for (unsigned j = 0; j < input.size(); ++j) {
