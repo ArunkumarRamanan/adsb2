@@ -58,19 +58,19 @@ void import (Sampler &sampler,
         for (Slice *sample: samples) {
             Datum datum;
             string key = lexical_cast<string>(count), value;
-            CHECK(sample->image.data);
+            CHECK(sample->images[IM_IMAGE].data);
 
             cv::Mat image, label;
             bool do_not_perturb = (rr == 0);
             if (polar) {
-                sampler.polar(sample->image,
-                              sample->_label,
+                sampler.polar(sample->images[IM_IMAGE],
+                              sample->images[IM_LABEL],
                               sample->anno_data.poly.C,
                               sample->anno_data.poly.R,
                               &image, &label, do_not_perturb);
             }
             else {
-                sampler.linear(sample->image, sample->_label,
+                sampler.linear(sample->images[IM_IMAGE], sample->images[IM_LABEL],
                         &image, &label, do_not_perturb);
             }
 
@@ -195,22 +195,23 @@ int main(int argc, char **argv) {
     // generate labels
     for (auto &s: samples) {
         CHECK(s.anno);
-        s.anno->fill(s, &s._label, cv::Scalar(1));
+        s.anno->fill(s, &s.images[IM_LABEL], cv::Scalar(1));
         if (sample_count < sample_max) {
             fs::path op(sample_dir / fs::path(fmt::format("l{}.jpg", sample_count++)));
             Mat out;
             cv::Mat l;
-            s._label.convertTo(l, CV_32F);
-            vconcat(s.image, s.image + l* 255, out);
+            s.images[IM_LABEL].convertTo(l, CV_32F);
+            vconcat(s.images[IM_IMAGE], s.images[IM_IMAGE] + l* 255, out);
             imwrite(op.native(), out);
         }
-        int min_x = s._label.cols;
+        cv::Mat label = s.images[IM_LABEL];
+        int min_x = label.cols;
         int max_x = -1;
-        int min_y = s._label.rows;
+        int min_y = label.rows;
         int max_y = -1;
-        for (int y = 0; y < s._label.rows; ++y) {
-            uint8_t const *row = s._label.ptr<uint8_t const>(y);
-            for (int x = 0; x < s._label.cols; ++x) {
+        for (int y = 0; y < label.rows; ++y) {
+            uint8_t const *row = label.ptr<uint8_t const>(y);
+            for (int x = 0; x < label.cols; ++x) {
                 if (row[x]) {   // positive pixel found
                     min_x = std::min(min_x, x);
                     max_x = std::max(max_x, x);

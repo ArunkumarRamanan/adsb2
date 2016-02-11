@@ -421,7 +421,7 @@ namespace adsb2 {
             v.location = series.front().meta.slice_location;
             vector<float> r;
             for (auto const &s: series) {
-                CHECK(s.area >= 0);
+                //CHECK(s.area >= 0);
                 CHECK(s.meta.slice_location == v.location);
                 r.push_back(s.area * s.meta.spacing * s.meta.spacing);
             }
@@ -452,8 +452,8 @@ namespace adsb2 {
                     }
                 }
             }
-            CHECK(v.min.mean >= 0);
-            CHECK(v.max.mean >= 0);
+            //CHECK(v.min.mean >= 0);
+            //CHECK(v.max.mean >= 0);
             seriesV.push_back(v);
         }
         for (unsigned i = 1; i < seriesV.size() - 1; ++i) {

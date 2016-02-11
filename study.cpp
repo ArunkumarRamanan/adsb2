@@ -13,6 +13,7 @@ using namespace cv;
 using namespace adsb2;
 
 int main(int argc, char **argv) {
+    nice(10);
     //Series stack("sax", "tmp");
     namespace po = boost::program_options; 
     string config_path;
