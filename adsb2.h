@@ -163,6 +163,7 @@ namespace adsb2 {
         float polar_R;              // available after update_polar is called
         vector<int> polar_contour;
         cv::Rect polar_box;
+        float polar_score;  // (polar_box && box) / (polar_box || box)
 
         cv::Rect local_box;
         // the following are prediction results

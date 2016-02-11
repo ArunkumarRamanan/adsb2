@@ -117,7 +117,11 @@ namespace adsb2 {
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < tasks.size(); ++i) {
             Slice &slice = *tasks[i];
-            if (!slice.images[IM_POLAR_PROB].data) continue;
+            if (!slice.images[IM_POLAR_PROB].data) {
+                slice.polar_box = cv::Rect();
+                slice.polar_score = 0;
+                continue;
+            }
             ca1.apply_slice(&slice);
             if (slice.polar_contour.empty()) {
                 slice.area = 0;
@@ -133,10 +137,11 @@ namespace adsb2 {
                 }
             }
 
-            cv::Mat cart;
-            linearPolar(polar, &cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
-            bound_box(cart, &slice.polar_box);
-            slice.area = cv::sum(cart)[0];
+            linearPolar(polar, &slice.images[IM_LABEL], slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            bound_box(slice.images[IM_LABEL], &slice.polar_box);
+            slice.area = cv::sum(slice.images[IM_LABEL])[0];
+            float in_box = cv::sum(slice.images[IM_LABEL](slice.box))[0];
+            slice.polar_score = in_box / (slice.box.area() + slice.area - in_box);
 
             if (vis) {
                 cv::Mat vis_cart;
