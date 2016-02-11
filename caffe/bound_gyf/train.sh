@@ -11,7 +11,7 @@ then
     exit
 fi
 
-cd caffe/contour
+cd caffe/bound_gyf
 
 CAFFE=caffe
 
