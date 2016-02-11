@@ -840,7 +840,7 @@ namespace adsb2 {
         uint16_t ub1 = all[all.size() - all.size() * 0.05];
         all.resize(unique(all.begin(), all.end()) - all.begin());
         uint16_t lb2 = all[all.size() * 0.005];
-        uint16_t ub2 = all[all.size()-1 - all.size() * 0.1];
+        uint16_t ub2 = all[all.size()-1 - all.size() * 0.2];
 
         *lb = std::max(lb1, lb2);
         *ub = std::min(ub1, ub2);
@@ -882,7 +882,7 @@ namespace adsb2 {
             if (s.do_not_cook) continue;
             s.images[IM_RAW].convertTo(s.images[IM_IMAGE], CV_32F);
             loop<float>(s.images[IM_IMAGE], [lb, ub, this](float &v) {
-                        v = std::round((v - lb) / (ub - lb) * color_bins);
+                        v = std::round((v - lb) * color_bins / (ub - lb));
                         if (v < 0) v = 0;
                         else if (v >= color_bins) v = color_bins - 1;
             });
