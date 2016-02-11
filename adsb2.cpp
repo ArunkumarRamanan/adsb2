@@ -1164,6 +1164,7 @@ namespace adsb2 {
                     input.push_back(virtical_extend(from, vext));
                     output.push_back(&slices[i]->images[TO]);
                 }
+                progress += input.size();
                 ++i;
             }
             vector<cv::Mat> tmp;
@@ -1176,7 +1177,6 @@ namespace adsb2 {
                     *output[j] *= scale;
                 }
             }
-            progress += input.size();
         }
 #endif
     }
