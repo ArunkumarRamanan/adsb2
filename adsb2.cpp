@@ -1032,7 +1032,7 @@ namespace adsb2 {
     }
 
     Eval::Eval () {
-        ifstream is("train.csv");
+        ifstream is("data/train.csv");
         CHECK(is);
         string dummy;
         getline(is, dummy);
