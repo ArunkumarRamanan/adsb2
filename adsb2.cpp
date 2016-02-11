@@ -302,10 +302,10 @@ namespace adsb2 {
                 cv::rectangle(pp, box, color);
             }
             cv::hconcat(image, pp, image);
-            if (_extra.data) {
-                cv::hconcat(image, _extra, image);
-            }
 #endif
+        }
+        if (_extra.data) {
+            cv::hconcat(image, _extra, image);
         }
         image.convertTo(images[IM_VISUAL], CV_8U);
     }
@@ -774,6 +774,7 @@ namespace adsb2 {
     }
 
     // histogram equilization
+#if 0
     void getColorMap (Series &series, vector<float> *cmap, int colors, uint16_t *lb, uint16_t *ub) {
         vector<uint16_t> all;
         all.reserve(series.front().images[IM_RAW].total() * series.size());
@@ -824,6 +825,29 @@ namespace adsb2 {
             }
         }
     }
+#endif
+
+    void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub) {
+        vector<uint16_t> all;
+        all.reserve(series.front().images[IM_RAW].total() * series.size());
+        for (auto &s: series) {
+            loop<uint16_t>(s.images[IM_RAW], [&all](uint16_t v) {
+                all.push_back(v);
+            });
+        }
+        sort(all.begin(), all.end());
+        uint16_t lb1 = all[all.size() * 0.2];
+        uint16_t ub1 = all[all.size() - all.size() * 0.05];
+        all.resize(unique(all.begin(), all.end()) - all.begin());
+        uint16_t lb2 = all[all.size() * 0.005];
+        uint16_t ub2 = all[all.size()-1 - all.size() * 0.1];
+
+        *lb = std::max(lb1, lb2);
+        *ub = std::min(ub1, ub2);
+        if (*lb + color_bins > *ub) {
+            *ub = *lb + color_bins;
+        }
+    }
 
     void Cook::apply (Slice *slice) const {
         CHECK(0) << "Unimplemented";   // not supported yet
@@ -846,9 +870,12 @@ namespace adsb2 {
             sz = round(raw_size * scale);
             cv::resize(vimage, vimage, sz);
         }
-        vector<float> cmap;
         uint16_t lb, ub;
+        /*
+        vector<float> cmap;
         getColorMap(*series, &cmap, color_bins, &lb, &ub);
+        */
+        getColorBounds(*series, color_bins, &lb, &ub);
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < series->size(); ++i) {
             auto &s = series->at(i);
@@ -862,13 +889,13 @@ namespace adsb2 {
             /*
             equalize(s.images[IM_RAW], &s.images[IM_EQUAL], cmap);
             */
-            s.images[IM_EQUAL] = s.images[IM_IMAGE].clone();
+            //s.images[IM_EQUAL] = s.images[IM_IMAGE].clone();
             if (scale > 0) {
                 s.meta.spacing = spacing;
                 CHECK(s.meta.raw_spacing == raw_spacing);
                 //float scale = s.meta.raw_spacing / s.meta.spacing;
                 cv::resize(s.images[IM_IMAGE], s.images[IM_IMAGE], sz);
-                cv::resize(s.images[IM_EQUAL], s.images[IM_EQUAL], sz);
+                //cv::resize(s.images[IM_EQUAL], s.images[IM_EQUAL], sz);
                 if (s.anno) {
                     s.anno->scale(&s, scale);
                 }
@@ -1124,7 +1151,6 @@ namespace adsb2 {
     void ApplyDetector (string const &name,
                         Study *study,
                         int FROM, int TO,
-                        Config const &conf,
                         float scale, unsigned vext) {
         //string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
         vector<Slice *> slices;

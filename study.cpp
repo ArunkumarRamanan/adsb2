@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     }
     */
 
-    ComputeBoundProb(&study, config);
+    ComputeBoundProb(&study);
     cerr << "Filtering..." << endl;
     ProbFilter(&study, config);
     /*

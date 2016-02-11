@@ -133,7 +133,6 @@ namespace adsb2 {
     enum {
         IM_RAW = 0, // raw image as loaded from DICOM, U16C1
         IM_IMAGE,   // cooked
-        IM_EQUAL,   // cooked and color-equalized
         IM_VAR,     // variance
         IM_PROB,    // bound probability
         IM_LABEL,
@@ -443,15 +442,15 @@ namespace adsb2 {
     // use variance image (big variance == big motion)
     // to filter out static regions
     // applies to the prob image of each slice
-    void ApplyDetector (string const &name, Study *, int from, int to, Config const &config, float scale = 1, unsigned vext = 0);
+    void ApplyDetector (string const &name, Study *, int from, int to, float scale = 1, unsigned vext = 0);
 
-    static inline void ComputeBoundProb (Study *study, Config const &conf) {
-        ApplyDetector("bound", study, IM_IMAGE, IM_PROB, conf, 1.0, 0);
+    static inline void ComputeBoundProb (Study *study) {
+        ApplyDetector("bound", study, IM_IMAGE, IM_PROB, 1.0, 0);
     }
+    void ProbFilter (Study *study, Config const &config); 
 
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config);
     void MotionFilter (Series *stack, Config const &config); 
-    void ProbFilter (Study *study, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
 
     void ComputeContourProb (Study *study, Config const &conf);
@@ -460,6 +459,7 @@ namespace adsb2 {
     void study_CA1 (Study *, Config const &config, bool);
     void study_CA2 (Study *, Config const &config, bool);
     void RefineTop (Study *study, Config const &conf);
+    void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub);
 
     struct Volume {
         float mean;
