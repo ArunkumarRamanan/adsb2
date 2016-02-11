@@ -136,10 +136,10 @@ public:
 };
 
 void SCC_Analysis (Series *s, Config const &conf) {
-    cv::Rect_<float> lb = unround(s->front().pred_box);
+    cv::Rect_<float> lb = unround(s->front().box);
     cv::Rect_<float> ub = lb;
     for (auto &ss: *s) {
-        cv::Rect_<float> r = unround(ss.pred_box);
+        cv::Rect_<float> r = unround(ss.box);
         lb &= r;
         ub |= r;
     }
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel for
     for (unsigned i = 0; i < stack.size(); ++i) {
         auto &s = stack[i];
-        FindSquare(s.prob, &s.pred_box, config);
+        FindSquare(s.prob, &s.box, config);
     }
     SCC_Analysis(&stack, config);
     if (gif.size()) {

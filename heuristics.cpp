@@ -116,6 +116,7 @@ namespace adsb2 {
     };
     */
 
+#if 0
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config) {
         float ext = config.get<float>("adsb2.bound.ext", 4);
         if (study->size() < 3) return;
@@ -135,8 +136,8 @@ namespace adsb2 {
         mid[0].clone(&ss[0]);
         det->apply(ss[0].image, &ss[0].prob);
         MotionFilter(&ss, config);
-        FindSquare(ss[0].prob, &ss[0].pred_box, config);
-        cv::Rect bb = round(cscale(unround(ss[0].pred_box), ext));
+        FindSquare(ss[0].prob, &ss[0].box, config);
+        cv::Rect bb = round(cscale(unround(ss[0].box), ext));
         if (bb.x < 0) bb.x = 0;
         if (bb.y < 0) bb.y = 0;
 #pragma omp parallel for
@@ -145,6 +146,7 @@ namespace adsb2 {
         }
         *box = bb;
     }
+#endif
 
     static int conn_comp (cv::Mat *mat, cv::Mat const &weight, vector<float> *cnt) {
         // return # components
@@ -203,14 +205,14 @@ namespace adsb2 {
         float supp_th = config.get<float>("adsb2.mf.supp_th", 0.6);
         int dilate = config.get<int>("adsb2.mf.dilate", 10);
 
-        cv::Mat p(stack.front().image.size(), CV_32F, cv::Scalar(0));
+        cv::Mat p(stack.front().images[IM_IMAGE].size(), CV_32F, cv::Scalar(0));
         for (auto &s: stack) {
-            p = cv::max(p, s.prob);
+            p = cv::max(p, s.images[IM_PROB]);
         }
         cv::normalize(p, p, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         cv::threshold(p, p, 255 * bin_th, 255, cv::THRESH_BINARY);
         vector<float> cc;
-        conn_comp(&p, stack.front().vimage, &cc);
+        conn_comp(&p, stack.front().images[IM_VAR], &cc);
         CHECK(cc.size());
         float max_c = *std::max_element(cc.begin(), cc.end());
         for (unsigned i = 0; i < cc.size(); ++i) {
@@ -233,8 +235,8 @@ namespace adsb2 {
 #pragma omp parallel for
         for (unsigned i = 0; i < stack.size(); ++i) {
             auto &s = stack[i];
-            cv::Mat prob = s.prob.mul(np);
-            s.prob = prob;
+            cv::Mat prob = s.images[IM_PROB].mul(np);
+            s.images[IM_PROB] = prob;
         }
         // find connected components of p
     }
@@ -244,15 +246,15 @@ namespace adsb2 {
         float supp_th = config.get<float>("adsb2.pf.supp_th", 0.6);
         int dilate = config.get<int>("adsb2.pf.dilate", 10);
 
-        cv::Mat p(study->front().front().image.size(), CV_32F, cv::Scalar(0));
-        cv::Mat pv(study->front().front().image.size(), CV_32F, cv::Scalar(0));
+        cv::Mat p(study->front().front().images[IM_IMAGE].size(), CV_32F, cv::Scalar(0));
+        cv::Mat pv(study->front().front().images[IM_IMAGE].size(), CV_32F, cv::Scalar(0));
         vector<Slice *> slices;
         for (auto &s: *study) {
             for (auto &ss: s) {
                 slices.push_back(&ss);
-                p = cv::max(p, ss.prob);
+                p = cv::max(p, ss.images[IM_PROB]);
             }
-            pv = cv::max(pv, s.front().vimage);
+            pv = cv::max(pv, s.front().images[IM_VAR]);
         }
         cv::normalize(p, p, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         cv::threshold(p, p, 255 * bin_th, 255, cv::THRESH_BINARY);
@@ -279,8 +281,8 @@ namespace adsb2 {
         p.convertTo(np, CV_32F);
 #pragma omp parallel for
         for (unsigned i = 0; i < slices.size(); ++i) {
-            cv::Mat prob = slices[i]->prob.mul(np);
-            slices[i]->prob = prob;
+            cv::Mat prob = slices[i]->images[IM_PROB].mul(np);
+            slices[i]->images[IM_PROB] = prob;
         }
         // find connected components of p
     }
@@ -419,9 +421,9 @@ namespace adsb2 {
             v.location = series.front().meta.slice_location;
             vector<float> r;
             for (auto const &s: series) {
-                CHECK(s.pred_area >= 0);
+                CHECK(s.area >= 0);
                 CHECK(s.meta.slice_location == v.location);
-                r.push_back(s.pred_area * s.meta.spacing * s.meta.spacing);
+                r.push_back(s.area * s.meta.spacing * s.meta.spacing);
             }
             for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing
                 r.push_back(r[j]);
@@ -480,92 +482,34 @@ namespace adsb2 {
         *maxv = max;
     }
 
-    void ComputeBoundProb (Study *study, Config const &conf) {
-        //string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
-        vector<Slice *> slices;
-        study->pool(&slices);
-        //config.put("adsb2.caffe.model", "model2");
-        std::cerr << "Computing bound probablity of " << slices.size() << "  slices..." << std::endl;
-        boost::progress_display progress(slices.size(), std::cerr);
-#define CPU_ONLY 1
-#ifdef CPU_ONLY
-#pragma omp parallel for schedule(dynamic, 1)
-        for (unsigned i = 0; i < slices.size(); ++i) {
-            Detector *det = Detector::get("bound");
-            CHECK(det) << " cannot create detector.";
-            det->apply(slices[i]->image_eq, &slices[i]->prob);
-            //det->apply(slices[i]->image, &slices[i]->prob);
-#pragma omp critical
-            ++progress;
-        }
-#else
-        unsigned batch = conf.get<int>("adsb2.batch", 32);
-        Detector *det = Detector::get("bound");
-        for (unsigned i = 0; i < slices.size(); i += batch) {
-            unsigned e = i + batch;
-            if (e > slices.size()) e = slices.size();
-            vector<Mat> input(e - i);
-            for (unsigned j = i; j < e; ++j) {
-                input[j-i] = slices[j]->image_eq;
-                //input[j-i] = slices[j]->image;
-            }
-            vector<Mat> output;
-            det->apply(input, &output);
-            CHECK(output->size() == e-i);
-            for (unsigned j = i; j < e; ++j) {
-                slices[j]->prob = output[j-i];
-            }
-            progress += e - i;
-        }
-#endif
-    }
-
-    struct ContourTask {
-        cv::Point_<float> C;
-        float R;
-        Slice *slice;
-    };
-
-    void ComputeContourProb (Study *study, Config const &)
+    void ComputeContourProb (Study *study, Config const &conf)
     {
         // compute bouding box
-        vector<ContourTask> tasks;
         for (Series &ss: *study) {
-            cv::Rect_<float> lb = ss.front().pred_box;
+            cv::Rect_<float> lb = ss.front().box;
             cv::Rect_<float> ub = lb;
             for (auto &s: ss) {
-                cv::Rect_<float> r = unround(s.pred_box);
+                cv::Rect_<float> r = unround(s.box);
                 lb &= r;
                 ub |= r;
             }
-            ContourTask task;
-            task.C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
-            task.R = max_R(task.C, ub) * 3;
-            if (lb.width == 0) task.R = 0;
+            cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
+            float R = max_R(C, ub) * 3;
+            if (lb.width == 0) R = 0;
             for (auto &s: ss) {
-                task.slice = &s;
-                tasks.push_back(task);
+                if (R == 0) {
+                    s.area = 0;
+                    s.images[IM_POLAR] = cv::Mat();
+                }
+                else {
+                    s.update_polar(C, R);
+                }
             }
         }
-        std::cerr << "Computing contour probablity of " << tasks.size() << "  slices..." << std::endl;
-        boost::progress_display progress(tasks.size(), std::cerr);
-#pragma omp parallel for schedule(dynamic, 1)
-        for (unsigned i = 0; i < tasks.size(); ++i) {
-            Detector *det = Detector::get("contour");
-            CHECK(det) << " cannot create detector.";
-            auto &task = tasks[i];
-            Slice &slice = *task.slice;
-            if (task.R == 0) {
-                slice.pred_area = 0;
-            }
-            else {
-                slice.update_polar(task.C, task.R, det);
-            }
-#pragma omp critical
-            ++progress;
-        }
+        ApplyDetector("bound", study, IM_IMAGE, IM_PROB, conf, 1.0, study->front().front().images[IM_IMAGE].rows/4);
     }
 
+#if 0
     void RefinePolarBound (Study *study, Config const &config) {
         float fill_rate = config.get("adsb2.refine.fill_rate", M_PI/4 * 0.85);
         float good_slice_rate = config.get("adsb2.refine.good_slice_rate", 0.75);
@@ -581,9 +525,9 @@ namespace adsb2 {
             // rest are good slice
             int good = 0;
             for (Slice &s: ss) {
-                if (s.pred_area <= 0) continue; // bad anyway
-                if (s.pred_area / s.polar_box.area() < fill_rate) {
-                    s.pred_area = 0;
+                if (s.area <= 0) continue; // bad anyway
+                if (s.area / s.polar_box.area() < fill_rate) {
+                    s.area = 0;
                     continue;
                 }
                 ++good;
@@ -595,8 +539,8 @@ namespace adsb2 {
                 // whole slice is bad
                 bads.push_back(i);
                 for (auto &s: ss) { // invalidate everything, rely on findMinMax to interpolate
-                    s.pred_area = 0;
-                    s.pred_box = cv::Rect();
+                    s.area = 0;
+                    s.box = cv::Rect();
                 }
             }
             else {
@@ -608,9 +552,9 @@ namespace adsb2 {
                 for (unsigned j = 0; j < ss.size(); ++j) {
                     Slice &s = ss[j];
                     auto &w = interp[j];
-                    if (s.pred_area > 0) {  // good
+                    if (s.area > 0) {  // good
                         w.good = true;
-                        w.pack(s.pred_area, s.pred_box);
+                        w.pack(s.area, s.box);
                     }
                     else {
                         w.good = false;
@@ -621,7 +565,7 @@ namespace adsb2 {
                     Slice &s = ss[j];
                     auto &w = interp[j];
                     if (!w.good) {  // interp value
-                        w.unpack(&s.pred_area, &s.pred_box);
+                        w.unpack(&s.area, &s.box);
                     }
                 }
             }
@@ -647,12 +591,14 @@ namespace adsb2 {
             cv::Rect box;
             interp[i].unpack(&dummy, &box);
             for (Slice &s: study->at(i)) {
-                s.pred_box = box;
+                s.box = box;
             }
         }
     }
+#endif
 
     void RefineTop (Study *study, Config const &conf) {
+#if 0
         float th = conf.get("adsb2.top.th", 0.8);
         //config.put("adsb2.caffe.model", "model2");
         for (unsigned sid = 0; sid < study->size(); ++sid) {
@@ -665,11 +611,11 @@ namespace adsb2 {
                 Detector *det = Detector::get("top");
                 CHECK(det) << " cannot create detector.";
                 vector<float> prob(2);
-                det->apply(slices[i].image_eq, &prob);
+                det->apply(slices[i].images[IM_EQUAL], &prob);
                 float p = prob[1];
-                slices[i].pred_area *= p;
+                slices[i].area *= p;
                 if (p < th) {
-                    slices[i].pred_box = cv::Rect();
+                    slices[i].box = cv::Rect();
                     ++bad;
                 }
 #pragma omp critical
@@ -677,6 +623,7 @@ namespace adsb2 {
             }
             if (bad == 0) break;
         }
+#endif
     }
 }
 

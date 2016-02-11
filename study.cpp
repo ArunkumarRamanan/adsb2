@@ -83,12 +83,14 @@ int main(int argc, char **argv) {
     Study study(input_dir, true, true, true);
     cook.apply(&study);
     cv::Rect bound;
+    /*
     string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
     if (vm.count("bound")) {
         Detector *bb_det = make_caffe_detector(bound_model);
         Bound(bb_det, &study, &bound, config);
         delete bb_det;
     }
+    */
 
     ComputeBoundProb(&study, config);
     cerr << "Filtering..." << endl;
@@ -103,8 +105,7 @@ int main(int argc, char **argv) {
     cerr << "Finding squares..." << endl;
 #pragma omp parallel for schedule(dynamic, 1)
     for (unsigned i = 0; i < slices.size(); ++i) {
-        FindSquare(slices[i]->prob,
-                  &slices[i]->pred_box, config);
+        FindSquare(slices[i]->images[IM_PROB], &slices[i]->box, config);
     }
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
@@ -113,7 +114,7 @@ int main(int argc, char **argv) {
         CHECK(decap < 5);
         for (int i = 0; i < decap; ++i) {
             for (auto &s: study[i]) {
-                s.pred_area = 0;
+                s.area = 0;
             }
         }
     }
@@ -170,7 +171,7 @@ int main(int argc, char **argv) {
                  << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
                  << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
             for (auto const &s: study[i]) {
-                float r = std::sqrt(s.pred_box.area())/2 * s.meta.spacing;
+                float r = std::sqrt(s.box.area())/2 * s.meta.spacing;
                 gp << s.meta.trigger_time
                    << '\t' << s.meta.slice_location
                    << '\t' << r << endl;

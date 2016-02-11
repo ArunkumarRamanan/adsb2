@@ -60,6 +60,7 @@ namespace adsb2 {
     fs::path home_dir;
     fs::path temp_dir;
     fs::path model_dir;
+    void dicom_setup (char const *path, Config const &config);
     void GlobalInit (char const *path, Config const &config) {
         FLAGS_logtostderr = 1;
         FLAGS_minloglevel = 1;
@@ -150,7 +151,7 @@ namespace adsb2 {
     void BoxAnnoOps::fill (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
     {
         Data const &box = slice.anno_data.box;
-        *out = cv::Mat(slice.image.size(), CV_8U, cv::Scalar(0));
+        *out = cv::Mat(slice.images[IM_IMAGE].size(), CV_8U, cv::Scalar(0));
 #define BOX_AS_CIRCLE 1
 #ifdef BOX_AS_CIRCLE
         cv::circle(*out, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
@@ -158,7 +159,6 @@ namespace adsb2 {
         // TODO, use rotated rect to draw ellipse 
 #else
         cv::rectangle(*out, round(box), v, CV_FILLED);
-        
 #endif
     }
 
@@ -194,6 +194,7 @@ namespace adsb2 {
     void PolyAnnoOps::fill (Slice const &slice, cv::Mat *label, cv::Scalar const &v) const
     {
         int xx = 0;
+        auto const &image = slice.images[IM_IMAGE];
         auto const &anno = slice.anno_data.poly;
         auto const &cc = anno.contour;
         {
@@ -201,25 +202,23 @@ namespace adsb2 {
             float by = 1 - cc.back().y;
             float fx = cc.front().x;
             float fy = cc.front().y;
-            xx = std::round((by * fx + fy * bx) / (fy + by) * slice.image.cols);
+            xx = std::round((by * fx + fy * bx) / (fy + by) * image.cols);
         }
         vector<cv::Point> ps(cc.size());
         for (unsigned i = 0; i < cc.size(); ++i) {
             auto const &from = cc[i];
             auto &to = ps[i];
-            to.x = std::round(slice.image.cols * from.x);
-            to.y = std::round(slice.image.rows * from.y);
+            to.x = std::round(image.cols * from.x);
+            to.y = std::round(image.rows * from.y);
         }
-        ps.emplace_back(xx, slice.image.rows - 1);
-        ps.emplace_back(0, slice.image.rows - 1);
+        ps.emplace_back(xx, image.rows - 1);
+        ps.emplace_back(0, image.rows - 1);
         ps.emplace_back(0, 0);
         ps.emplace_back(xx, 0);
         cv::Point const *pps = &ps[0];
         int const nps = ps.size();
-        cv::Mat polar(slice.image.size(), CV_32F, cv::Scalar(0));
+        cv::Mat polar(image.size(), CV_32F, cv::Scalar(0));
         cv::fillPoly(polar, &pps, &nps, 1, v);
-        //cv::polylines(polar, &pps, &nps, 1, true, cv::Scalar(255), 2);
-        //imwrite("/home/wdong/public_html/xxx.png", polar);
         cv::Mat out;
         linearPolar(polar, &out, anno.C, anno.R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
         out.convertTo(*label, CV_8U);
@@ -228,8 +227,8 @@ namespace adsb2 {
 
     Slice::Slice (string const &txt)
         : do_not_cook(false),
-        pred_box(-1,-1,0,0),
-        pred_area(-1)
+        box(-1,-1,0,0),
+        area(0)
     {
         using namespace boost::algorithm;
         line = txt;
@@ -264,37 +263,37 @@ namespace adsb2 {
         s->id = id;
         s->path = path;
         s->meta = meta;
-        s->raw = raw.clone();
-        s->image = image.clone();
-        s->vimage = vimage.clone();
+        for (unsigned i = 0; i < IM_SIZE; ++i) {
+            s->images[i] = images[i].clone();
+        }
         s->do_not_cook = do_not_cook;
         s->line = line;
         s->anno = anno;
         s->anno_data = anno_data;
-        s->prob = prob.clone();
-        s->pred_box = pred_box;
-        s->pred_area = pred_area;
+        s->box = box;
+        s->area = area;
     }
 
     void Slice::visualize (bool show_prob) {
-        CHECK(image.type() == CV_32FC1);
         cv::Scalar color(0xFF);
-        if (pred_box.x >= 0) {
-            cv::rectangle(image, pred_box, color);
+        cv::Mat image = images[IM_IMAGE];
+        CHECK(image.type() == CV_32FC1);
+        if (box.x >= 0) {
+            cv::rectangle(image, box, color);
         }
-        if (show_prob && prob.data) {
+        if (show_prob && images[IM_PROB].data) {
             cv::Mat pp;
-            cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_32F);
+            cv::normalize(images[IM_PROB], pp, 0, 255, cv::NORM_MINMAX, CV_32F);
 #if 0
             cv::normalize(prob, pp, 0, 255, cv::NORM_MINMAX, CV_8U);
             cv::cvtColor(pp, rgb, CV_GRAY2BGR);
-            if (pred_box.x >= 0) {
-                cv::rectangle(rgb, pred_box, color);
+            if (box.x >= 0) {
+                cv::rectangle(rgb, box, color);
             }
             cv::hconcat(image, rgb, image);
 #else
-            if (pred_box.x >= 0) {
-                cv::rectangle(pp, pred_box, color);
+            if (box.x >= 0) {
+                cv::rectangle(pp, box, color);
             }
             cv::hconcat(image, pp, image);
             if (_extra.data) {
@@ -302,16 +301,14 @@ namespace adsb2 {
             }
 #endif
         }
-        cv::Mat u8;
-        image.convertTo(u8, CV_8U);
-        image = u8;
+        image.convertTo(images[IM_VISUAL], CV_8U);
     }
 
-    void Slice::update_polar (cv::Point_<float> const &C, float R, Detector *det) {
+    void Slice::update_polar (cv::Point_<float> const &C, float R) {
         polar_C = C;
         polar_R = R;
-
-        linearPolar(image, &polar, polar_C, polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
+        linearPolar(images[IM_IMAGE], &images[IM_POLAR], polar_C, polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
+#if 0
         if (!det) {
             polar_prob = polar;
         }
@@ -330,6 +327,12 @@ namespace adsb2 {
             polar_prob = extended_prob.rowRange(m, m + polar.rows).clone();
             polar_prob *= 255;
         }
+#endif
+    }
+
+    void Slice::update_local (cv::Rect const &l) {
+        local_box = l;
+        images[IM_LOCAL] = images[IM_IMAGE](local_box).clone();
     }
 
 #if 0
@@ -371,7 +374,7 @@ namespace adsb2 {
                 s.load_raw();
                 if (i) {
                     CHECK(s.meta.spacing == at(0).meta.spacing);
-                    CHECK(s.image.size() == at(0).image.size());
+                    CHECK(s.images[IM_IMAGE].size() == at(0).images[IM_IMAGE].size());
                 }
             }
         }
@@ -381,6 +384,7 @@ namespace adsb2 {
     }
 
     void Series::shrink (cv::Rect const &bb) {
+#if 0
         CHECK(size());
         CHECK(bb.x >= 0);
         CHECK(bb.y >= 0);
@@ -393,19 +397,20 @@ namespace adsb2 {
             if (s.anno) {
                 s.anno->shift(&s, unround(bb.tl()));
             }
-            CHECK(s.pred_box.x < 0);
-            CHECK(s.pred_box.y < 0);
+            CHECK(s.box.x < 0);
+            CHECK(s.box.y < 0);
             CHECK(!s.prob.data);
         }
+#endif
     }
 
     void Series::save_dir (fs::path const &dir, fs::path const &ext) {
         fs::create_directories(dir);
         for (auto const &s: *this) {
-            CHECK(s.image.depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
+            CHECK(s.images[IM_VISUAL].depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
             fs::path path(dir / s.path.stem());
             path += ext;
-            cv::imwrite(path.native(), s.image);
+            cv::imwrite(path.native(), s.images[IM_VISUAL]);
         }
     }
 
@@ -418,18 +423,19 @@ namespace adsb2 {
         fs::path pbm(".pbm");
         int cc = 0;
         for (auto const &s: *this) {
-            CHECK(s.image.depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
+            cv::Mat visual = s.images[IM_VISUAL];
+            CHECK(visual.data && visual.depth() == CV_8U) << "image not suitable for visualization, call visualize() first";
             fs::path pnm(tmp / fs::path(lexical_cast<string>(cc++)));
-            if (s.image.channels() == 1) {
+            if (visual.channels() == 1) {
                 pnm += pgm;
             }
-            else if (s.image.channels() == 3) {
+            else if (visual.channels() == 3) {
                 pnm += pbm;
             }
             else {
                 CHECK(0) << "image depth not supported.";
             }
-            cv::imwrite(pnm.native(), s.image);
+            cv::imwrite(pnm.native(), visual);
             gif_cmd << " " << pnm;
         }
         gif_cmd << " " << path;
@@ -443,24 +449,27 @@ namespace adsb2 {
         }
     }
 
-    void Series::getVImage (cv::Mat *vimage) {
+    void Series::getVarImageRaw (cv::Mat *vimage) {
+        cv::Mat first = front().images[IM_RAW];
         if (size() <= 1) {
-            *vimage = cv::Mat(front().image.size(), CV_32F, cv::Scalar(0));
+            *vimage = cv::Mat(first.size(), CV_32F, cv::Scalar(0));
             return;
         }
         namespace ba = boost::accumulators;
         typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max, ba::tag::count, ba::tag::variance, ba::tag::moment<2>>> Acc;
         CHECK(size());
-        CHECK(at(0).image.type() == CV_16U);
 
-        cv::Size shape = at(0).image.size();
+        cv::Size shape = first.size();
         unsigned pixels = shape.area();
 
         cv::Mat mu(shape, CV_32F);
         cv::Mat sigma(shape, CV_32F);
         vector<Acc> accs(pixels);
-        for (auto const &s: *this) {
-            uint16_t const *v = s.image.ptr<uint16_t const>(0);
+        for (auto &s: *this) {
+            cv::Mat &raw = s.images[IM_RAW];
+            CHECK(raw.type() == CV_16U);
+            CHECK(raw.isContinuous());
+            uint16_t const *v = raw.ptr<uint16_t const>(0);
             for (auto &acc: accs) {
                 acc(*v);
                 ++v;
@@ -507,8 +516,8 @@ namespace adsb2 {
     bool Series::sanity_check (bool fix) {
         bool ok = true;
         for (Slice &s: *this) {
-            if (s.image.size() != front().image.size()) {
-                LOG(WARNING) << "image size mismatch: " << s.path;
+            if (s.images[IM_RAW].size() != front().images[IM_RAW].size()) {
+                LOG(ERROR) << "image size mismatch: " << s.path;
             }
             if (s.meta[Meta::NUMBER_OF_IMAGES] != size()) {
                 ok = false;
@@ -663,7 +672,7 @@ namespace adsb2 {
             check_regroup();
         }
         detect_topdown(fix);
-        cv::Size image_size = front().front().image.size();
+        cv::Size image_size = front().front().images[IM_RAW].size();
         for (auto &s: *this) {
             if (!s.sanity_check(fix)) {
                 LOG(WARNING) << "Study " << path << " series " << s.path << " sanity check failed.";
@@ -671,8 +680,8 @@ namespace adsb2 {
                     CHECK(s.sanity_check(false));
                 }
             }
-            if (s.front().image.size() != image_size) {
-                LOG(WARNING) << "Study " << path << " series " << s.path << " image size mismatch.";
+            if (s.front().images[IM_RAW].size() != image_size) {
+                LOG(ERROR) << "Study " << path << " series " << s.path << " image size mismatch.";
             }
         }
         for (unsigned i = 0; i < Meta::STUDY_FIELDS; ++i) {
@@ -759,18 +768,13 @@ namespace adsb2 {
     }
 
     // histogram equilization
-    void getColorMap (Series const &series, vector<float> *cmap, int colors, uint16_t *lb, uint16_t *ub) {
+    void getColorMap (Series &series, vector<float> *cmap, int colors, uint16_t *lb, uint16_t *ub) {
         vector<uint16_t> all;
-        all.reserve(series.front().image.total() * series.size());
-        for (auto const &s: series) {
-            cv::Mat const &image = s.raw;
-            CHECK(image.type() == CV_16UC1);
-            for (int i = 0; i < image.rows; ++i) {
-                uint16_t const *p = image.ptr<uint16_t const>(i);
-                for (int j = 0; j < image.cols; ++j) {
-                    all.push_back(p[j]);
-                }
-            }
+        all.reserve(series.front().images[IM_RAW].total() * series.size());
+        for (auto &s: series) {
+            loop<uint16_t>(s.images[IM_RAW], [&all](uint16_t v) {
+                all.push_back(v);
+            });
         }
         sort(all.begin(), all.end());
         uint16_t lb1 = all[all.size() * 0.2];
@@ -797,8 +801,8 @@ namespace adsb2 {
             b = e;
         }
         all.resize(unique(all.begin(), all.end()) - all.begin());
-        uint16_t lb2 = all[all.size() * 0.01];
-        uint16_t ub2 = all[all.size()-1 - all.size() * 0.3];
+        uint16_t lb2 = all[all.size() * 0.005];
+        uint16_t ub2 = all[all.size()-1 - all.size() * 0.2];
         *lb = std::max(lb1, lb2);
         *ub = std::min(ub1, ub2);
     }
@@ -822,10 +826,10 @@ namespace adsb2 {
     void Cook::apply (Series *series) const {
         // normalize color
         cv::Mat vimage;
-        series->getVImage(&vimage);
+        series->getVarImageRaw(&vimage);
         cv::Size raw_size = vimage.size();
         // compute var image
-        cv::normalize(vimage, vimage, 0, color_bins-1, cv::NORM_MINMAX, CV_32FC1);
+        cv::normalize(vimage, vimage, 0, color_bins-1, cv::NORM_MINMAX, CV_32F);
         float scale = -1;
         float raw_spacing = -1;
         cv::Size sz;
@@ -843,29 +847,28 @@ namespace adsb2 {
         for (unsigned i = 0; i < series->size(); ++i) {
             auto &s = series->at(i);
             if (s.do_not_cook) continue;
-            s.raw.convertTo(s.image, CV_32F);
-            adsb2::foreach<float>(&s.image, [lb, ub, this](float *pv) {
-                        float v = *pv;
+            s.images[IM_RAW].convertTo(s.images[IM_IMAGE], CV_32F);
+            loop<float>(s.images[IM_IMAGE], [lb, ub, this](float &v) {
                         v = std::round((v - lb) / (ub - lb) * color_bins);
                         if (v < 0) v = 0;
                         else if (v >= color_bins) v = color_bins - 1;
-                        *pv = v;
-                    });
-            cv::normalize(s.raw, s.image, 0, 255, cv::NORM_MINMAX, CV_32F);
-            equalize(s.raw, &s.image_eq, cmap);
+            });
+            /*
+            equalize(s.images[IM_RAW], &s.images[IM_EQUAL], cmap);
+            */
+            s.images[IM_EQUAL] = s.images[IM_IMAGE].clone();
             if (scale > 0) {
                 s.meta.spacing = spacing;
                 CHECK(s.meta.raw_spacing == raw_spacing);
-                CHECK(s.image.size() == raw_size);
                 //float scale = s.meta.raw_spacing / s.meta.spacing;
-                cv::resize(s.image, s.image, sz);
-                cv::resize(s.image_eq, s.image_eq, sz);
+                cv::resize(s.images[IM_IMAGE], s.images[IM_IMAGE], sz);
+                cv::resize(s.images[IM_EQUAL], s.images[IM_EQUAL], sz);
                 if (s.anno) {
                     s.anno->scale(&s, scale);
                 }
             }
 #pragma omp critical
-            s.vimage = vimage;
+            s.images[IM_VAR] = vimage;
         }
     }
 
@@ -876,29 +879,30 @@ namespace adsb2 {
         cv::Size sz(0, 0);
         for (auto &ss: *study) {
             CHECK(ss.size());
-            cv::Size ssz = ss[0].image.size();
+            cv::Size ssz = ss[0].images[IM_IMAGE].size();
             if (ssz.width > sz.width) sz.width = ssz.width;
             if (ssz.height > sz.height) sz.height = ssz.height;
             for (unsigned i = 1; i < ss.size(); ++i) {
-                CHECK(ss[i].image.size() == ssz);
+                CHECK(ss[i].images[IM_IMAGE].size() == ssz);
             }
         }
         for (auto &ss: *study) {
-            if (ss[0].image.size() == sz) continue;
+            if (ss[0].images[IM_IMAGE].size() == sz) continue;
             // otherwise expand all images in this one
-            cv::Size ssz = ss[0].image.size();
+            cv::Size ssz = ss[0].images[IM_IMAGE].size();
             int top = (sz.height - ssz.height) / 2;
             int bottom = (sz.height - ssz.height - top);
             int left = (sz.width - ssz.width) / 2;
             int right = (sz.width - ssz.width - left);
             LOG(WARNING) << "resizing series " << ss.dir() << " into " << sz.width << "x" << sz.height;
             cv::Mat vimage(sz, CV_32F);
-            cv::copyMakeBorder(ss[0].vimage, vimage, top, bottom, left, right, cv::BORDER_REPLICATE);
+            cv::copyMakeBorder(ss[0].images[IM_VAR], vimage, top, bottom, left, right, cv::BORDER_REPLICATE);
             for (auto &s: ss) {
+                if (s.do_not_cook) continue;
                 cv::Mat image(sz, CV_32F);
-                cv::copyMakeBorder(s.image, image, top, bottom, left, right, cv::BORDER_REPLICATE);
-                s.vimage = vimage;
-                s.image = image;
+                cv::copyMakeBorder(s.images[IM_IMAGE], image, top, bottom, left, right, cv::BORDER_REPLICATE);
+                s.images[IM_VAR] = vimage;
+                s.images[IM_IMAGE] = image;
             }
         }
     }
@@ -1092,6 +1096,84 @@ namespace adsb2 {
         }
         CHECK(paths.size() == 1);
         return root/paths[0];
+    }
+
+    cv::Mat virtical_extend (cv::Mat in, unsigned r) {
+        if (r == 0) return in;
+        cv::Mat extended;
+        vconcat3(in.rowRange(in.rows - r, in.rows),
+                 in,
+                 in.rowRange(0, r),
+                 &extended);
+        return extended;
+    }
+
+    cv::Mat virtical_unextend (cv::Mat in, int r) {
+        if (r == 0) return in;
+        return in.rowRange(r, in.rows - r);
+    }
+
+
+
+    void ApplyDetector (string const &name,
+                        Study *study,
+                        int FROM, int TO,
+                        Config const &conf,
+                        float scale, unsigned vext) {
+        //string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
+        vector<Slice *> slices;
+        study->pool(&slices);
+        //config.put("adsb2.caffe.model", "model2");
+        std::cerr << "Applying model " << name << " to "  << slices.size() << "  slices..." << std::endl;
+        boost::progress_display progress(slices.size(), std::cerr);
+#define CPU_ONLY 1
+#ifdef CPU_ONLY
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned i = 0; i < slices.size(); ++i) {
+            cv::Mat from = slices[i]->images[FROM];
+            if (!from.data) continue;
+            from = virtical_extend(from, vext);
+            cv::Mat to;
+            Detector *det = Detector::get(name);
+            CHECK(det) << " cannot create detector.";
+            det->apply(from, &to);
+            slices[i]->images[TO] = virtical_unextend(to, vext);
+            CHECK(slices[i]->images[TO].isContinuous());
+            if (scale != 1.0) {
+                slices[i]->images[TO] *= scale;
+            }
+#pragma omp critical
+            ++progress;
+        }
+#else   // batch processing using GPU
+        unsigned batch = conf.get<int>("adsb2.batch", 32);
+        Detector *det = Detector::get(name);
+        CHECK(det) << " cannot create detector.";
+        unsigned i = 0;
+        while (i < slices.size()) {
+            vector<Mat> input;
+            vector<Mat *> output;
+            while ((i < slices.size()) && (input.size() < batch)) {
+                cv::Mat from = slices[i]->images[FROM];
+                if (from.data) {
+                    input.push_back(virtical_extend(from, vext));
+                    output.push_back(&slices[i]->images[TO]);
+                }
+                ++i;
+            }
+            vector<Mat> tmp;
+            det->apply(input, &tmp);
+            CHECK(tmp.size() == input.size());
+            for (unsigned j = 0; j < input.size(); ++j) {
+                *output[j] = virtical_unextend(tmp[j], vext);
+                CHECK(output[j]->isContinuous());
+                if (scale != 1.0) {
+                    *output[j] *= scale;
+                }
+            }
+            progress += input.size();
+        }
+#endif
     }
 }
 

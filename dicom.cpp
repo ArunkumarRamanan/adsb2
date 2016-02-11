@@ -5,6 +5,7 @@
 
 namespace adsb2 {
 
+    extern fs::path home_dir;
     void dicom_setup (char const *path, Config const &config) {
         fs::path def = home_dir / fs::path("dicom.dic");
         string v = config.get<string>("adsb2.dcmdict", def.native());

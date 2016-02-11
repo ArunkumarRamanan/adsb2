@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -21,6 +22,7 @@
 
 namespace adsb2 {
 
+    using std::array;
     using std::string;
     using std::vector;
     using std::ostringstream;
@@ -62,11 +64,9 @@ namespace adsb2 {
     struct Meta: public MetaBase, public std::array<float, MetaBase::SERIES_FIELDS> {
     };
 
-    extern fs::path home_dir;
     void GlobalInit (char const *path, Config const &config);
-    void dicom_setup (char const *path, Config const &config);
-    cv::Mat load_dicom (fs::path const &, Meta *);
 
+    cv::Mat load_dicom (fs::path const &, Meta *);
     fs::path temp_path (const fs::path& model="%%%%-%%%%-%%%%-%%%%");
 
     class Slice;
@@ -129,17 +129,28 @@ namespace adsb2 {
 
     class Detector;
 
+    enum {
+        IM_RAW = 0, // raw image as loaded from DICOM, U16C1
+        IM_IMAGE,   // cooked
+        IM_EQUAL,   // cooked and color-equalized
+        IM_VAR,     // variance
+        IM_PROB,    // bound probability
+        IM_LABEL,
+        // the above five images should have the same size when exists
+        IM_POLAR,
+        IM_POLAR_PROB,
+        IM_LOCAL,   // localized image
+        IM_LOCAL_PROB,
+        IM_VISUAL,  // CV_8U
+        IM_SIZE
+    };
+
     struct Slice {
         int id;
         fs::path path;          // must always present
         Meta meta;              // available after load_raw
                                 // spacing might be cooked, raw_spacing won't be cooked
-        cv::Mat raw;            // raw image as loaded from DICOM, U16C1
-
-        // size of image,vimage,label and prob must be the same when present
-        cv::Mat image;          // cooked image             CV_32FC1
-        cv::Mat image_eq;       // cooked image with color equalization
-        cv::Mat vimage;         // cooked variance image    CV_32FC1
+        array<cv::Mat, IM_SIZE> images;
 
         bool do_not_cook;
         // the following fields are only available for annotated images
@@ -148,28 +159,24 @@ namespace adsb2 {
                                 // should never be released
         AnnoData anno_data;
 
-        // the following are prediction results
-        cv::Mat prob;           // pixel-level prediction
-        cv::Rect pred_box;      // bounding box prediction
-        float pred_area;        // area prediction
-
-        cv::Point_<float> polar_C;   //
+        cv::Point_<float> polar_C;  //
         float polar_R;              // available after update_polar is called
-        cv::Mat polar;
-        cv::Mat polar_prob;         //
-        cv::Rect polar_box;
         vector<int> polar_contour;
+        cv::Rect polar_box;
 
-        cv::Mat _label;         // temporarily used by import.cpp
-        cv::Point_<float> _import_C;
-        float _import_R;
+        cv::Rect local_box;
+        // the following are prediction results
+        cv::Rect box;      // bounding box prediction
+        float area;        // area prediction
+
+
         cv::Mat _extra;
 
         Slice ()
             : do_not_cook(false),
             anno(nullptr),
-            pred_box(-1,-1,0,0),
-            pred_area(-1) {
+            box(-1,-1,0,0),
+            area(-1) {
         }
 
         Slice (string const &line);
@@ -177,19 +184,20 @@ namespace adsb2 {
         void clone (Slice *s) const; 
 
         void load_raw () {
-            raw = load_dicom(path, &meta);
+            cv::Mat raw = load_dicom(path, &meta);
 #if 1   // Yuanfang's annotation assume images are all in landscape position
             if (raw.rows > raw.cols) {
                 cv::transpose(raw, raw);
             }
 #endif
-            image = raw;
+            images[IM_RAW] = raw;
         }
 
-        void update_polar (cv::Point_<float> const &C, float R, Detector *);
+        void update_polar (cv::Point_<float> const &C, float R);
+        void update_local (cv::Rect const &l);
         /*
         void update_polar (Detector *det) {
-            cv::Rect_<float> r = unround(pred_box);
+            cv::Rect_<float> r = unround(box);
             update_polar(r, det);
         }
         */
@@ -240,7 +248,7 @@ namespace adsb2 {
         void save_dir (fs::path const &dir, fs::path const &ext); 
         void save_gif (fs::path const &path, int delay = 5); 
 
-        void getVImage (cv::Mat *);
+        void getVarImageRaw (cv::Mat *);
     };
 
     class Study: public vector<Series> {
@@ -434,12 +442,19 @@ namespace adsb2 {
     // use variance image (big variance == big motion)
     // to filter out static regions
     // applies to the prob image of each slice
-    void ComputeBoundProb (Study *, Config const &config);
+    void ApplyDetector (string const &name, Study *, int from, int to, Config const &config, float scale = 1, unsigned vext = 0);
+
+    static inline void ComputeBoundProb (Study *study, Config const &conf) {
+        ApplyDetector("bound", study, IM_IMAGE, IM_PROB, conf, 1.0, 0);
+    }
+
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config);
     void MotionFilter (Series *stack, Config const &config); 
     void ProbFilter (Study *study, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
-    void ComputeContourProb (Study *, Config const &config);
+
+    void ComputeContourProb (Study *study, Config const &conf);
+
     void RefinePolarBound (Study *, Config const &config);
     void study_CA1 (Study *, Config const &config, bool);
     void study_CA2 (Study *, Config const &config, bool);
@@ -457,9 +472,9 @@ namespace adsb2 {
     void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config);
 
     static inline void report (std::ostream &os, Slice const &s, cv::Rect const &bound) {
-        float r = std::sqrt(s.pred_area)/2 * s.meta.spacing;
-        cv::Point_<float> raw_pt((bound.x + s.pred_box.x + s.pred_box.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
-                         (bound.y + s.pred_box.y + s.pred_box.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
+        float r = std::sqrt(s.area)/2 * s.meta.spacing;
+        cv::Point_<float> raw_pt((bound.x + s.box.x + s.box.width/2.0) * s.meta.spacing / s.meta.raw_spacing,
+                         (bound.y + s.box.y + s.box.height/2.0) * s.meta.spacing / s.meta.raw_spacing);
         float raw_r = r / s.meta.raw_spacing;
         os << s.path.native() << '\t' << r
              << '\t' << raw_pt.x << '\t' << raw_pt.y << '\t' << raw_r

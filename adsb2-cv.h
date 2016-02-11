@@ -203,22 +203,40 @@ namespace adsb2 {
         }
     }
 
+    static inline void loop_check (cv::Mat &m, uint16_t) {
+        CHECK(m.type() == CV_16U);
+    }
+
+    static inline void loop_check (cv::Mat &m, float) {
+        CHECK(m.type() == CV_32F);
+    }
+
+    static inline void loop_check (cv::Mat &m, uint8_t) {
+        CHECK(m.type() == CV_8U);
+    }
+
     template<typename T, typename F>
-    void foreach (cv::Mat const &m, F f) {
+    static inline void loop (cv::Mat &m, F f) {
+        loop_check(m, T());
         for (int i = 0; i < m.rows; ++i) {
-            T const *p = m.ptr<T const>(i);
+            T *p = m.ptr<T>(i);
             for (int j = 0; j < m.cols; ++j) {
                 f(p[j]);
             }
         }
     }
 
-    template<typename T, typename F>
-    void foreach (cv::Mat *m, F f) {
-        for (int i = 0; i < m->rows; ++i) {
-            T *p = m->ptr<T>(i);
-            for (int j = 0; j < m->cols; ++j) {
-                f(&p[j]);
+    template<typename T1, typename T2, typename F>
+    static inline void loop (cv::Mat &m1, cv::Mat &m2, F f) {
+        loop_check(m1, T1());
+        loop_check(m2, T2());
+        CHECK(m1.rows == m2.rows);
+        CHECK(m1.cols == m2.cols);
+        for (int i = 0; i < m1.rows; ++i) {
+            T1 *p1 = m1.ptr<T1>(i);
+            T2 *p2 = m2.ptr<T2>(i);
+            for (int j = 0; j < m1.cols; ++j) {
+                f(p1[j], p2[j]);
             }
         }
     }

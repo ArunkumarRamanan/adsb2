@@ -220,10 +220,10 @@ int main(int argc, char **argv) {
             }
         }
         CHECK(min_x <= max_x) << "no positive pixels are found.";
-        s._import_C = cv::Point_<float>(0.5 * (min_x + max_x), 0.5 * (min_y + max_y));
+        s.polar_C = cv::Point_<float>(0.5 * (min_x + max_x), 0.5 * (min_y + max_y));
         int dx = max_x - min_x + 1;
         int dy = max_y - min_y + 1;
-        s._import_R = std::sqrt(dx * dx + dy * dy);
+        s.polar_R = std::sqrt(dx * dx + dy * dy);
     }
     sample_count = 0;
 
