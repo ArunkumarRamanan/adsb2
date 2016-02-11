@@ -2,6 +2,11 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/max.hpp>
 #include <boost/program_options.hpp>
 #include <boost/assert.hpp>
 #include <glog/logging.h>
@@ -96,11 +101,6 @@ int main(int argc, char **argv) {
     ComputeBoundProb(&study);
     cerr << "Filtering..." << endl;
     ProbFilter(&study, config);
-    /*
-    for (auto &s: study) {
-        MotionFilter(&s, config);
-    }
-    */
     vector<Slice *> slices;
     study.pool(&slices);
     cerr << "Finding squares..." << endl;
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
              << "</td></tr></table>" << endl;
         html << "<br/><img src=\"radius.png\"></img>" << endl;
         html << "<br/><table border=\"1\">"<< endl;
-        html << "<tr><th>Slice</th><th>Location</th><th>Thickness</th><th>Interval</th><th>image</th></tr>";
+        html << "<tr><th>Slice</th><th>Location</th><th>Interval</th><th>score</th><th>image</th></tr>";
         fs::path gp1(dir/fs::path("plot.gp"));
         fs::ofstream gp(gp1);
         gp << "set xlabel \"time\";" << endl;
@@ -165,18 +165,23 @@ int main(int argc, char **argv) {
             }
         }
         for (unsigned i = 0; i < study.size(); ++i) {
-            html << "<tr>"
-                 << "<td>" << study[i].dir().filename().native() << "</td>"
-                 << "<td>" << study[i].front().meta.slice_location << "</td>"
-                 << "<td>" << study[i].front().meta[Meta::SLICE_THICKNESS] << "</td>"
-                 << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
-                 << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
-            for (auto const &s: study[i]) {
+            auto &ss = study[i];
+            namespace ba = boost::accumulators;
+            typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max>> Acc;
+            Acc acc;
+            for (auto const &s: ss) {
+                acc(s.polar_score);
                 float r = std::sqrt(s.box.area())/2 * s.meta.spacing;
                 gp << s.meta.trigger_time
                    << '\t' << s.meta.slice_location
                    << '\t' << r << endl;
             }
+            html << "<tr>"
+                 << "<td>" << study[i].dir().filename().native() << "</td>"
+                 << "<td>" << study[i].front().meta.slice_location << "</td>"
+                 << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
+                 << "<td>" << ba::min(acc) << "<br/>" << ba::mean(acc) << "<br/>" << ba::max(acc) << "</td>"
+                 << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
         }
         gp << 'e' << endl;
         html << "</table></body></html>" << endl;

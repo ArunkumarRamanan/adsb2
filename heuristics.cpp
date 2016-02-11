@@ -485,22 +485,22 @@ namespace adsb2 {
     void ComputeContourProb (Study *study, Config const &conf)
     {
         for (Series &ss: *study) {
-            cv::Rect_<float> lb = ss.front().box;
-            cv::Rect_<float> ub = lb;
+            /*
+            cv::Rect_<float> ub = ss.front().box;
             for (auto &s: ss) {
                 cv::Rect_<float> r = unround(s.box);
-                lb &= r;
                 ub |= r;
             }
-            cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
-            float R = max_R(C, ub) * 3;
-            if (lb.width == 0) R = 0;
+            */
             for (auto &s: ss) {
-                if (R == 0) {
+                if (s.box.width == 0) {
                     s.area = 0;
                     s.images[IM_POLAR] = cv::Mat();
                 }
                 else {
+                    cv::Rect_<float> lb = unround(s.box);
+                    cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
+                    float R = max_R(C, lb) * 3;
                     s.update_polar(C, R);
                 }
             }
