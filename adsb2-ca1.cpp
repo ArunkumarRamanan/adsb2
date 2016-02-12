@@ -139,9 +139,7 @@ namespace adsb2 {
 
             linearPolar(polar, &slice.images[IM_LABEL], slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
             bound_box(slice.images[IM_LABEL], &slice.polar_box);
-            slice.area = cv::sum(slice.images[IM_LABEL])[0];
-            float in_box = cv::sum(slice.images[IM_LABEL](slice.box))[0];
-            slice.polar_score = in_box / (slice.box.area() + slice.area - in_box);
+            slice.data[SL_PSCORE] = box_score(slice.images[IM_LABEL], slice.polar_box);
 
             if (vis) {
                 cv::Mat vis_cart;

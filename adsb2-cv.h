@@ -240,4 +240,14 @@ namespace adsb2 {
             }
         }
     }
+
+    static inline float box_score (cv::Mat &prob, cv::Rect const &box) {
+        float total = cv::sum(prob)[0];
+        float inside = cv::sum(prob(box))[0];
+        float outside = total - inside;
+        float ba = box.area();
+        return 1.0 * (ba - inside + outside) / ba;
+    }
+
+    void draw_text (cv::Mat &img, string const &text, cv::Point org, int line = 0, cv::Scalar color = cv::Scalar(0xFF));
 }

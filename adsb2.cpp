@@ -61,6 +61,11 @@ namespace adsb2 {
     fs::path temp_dir;
     fs::path model_dir;
     int caffe_batch = 0;
+    int font_height = 0;
+    int font_face = FONT_HERSHEY_SIMPLEX;
+    double font_scale = 0.6;
+    int font_thickness = 1;
+
     void dicom_setup (char const *path, Config const &config);
     void GlobalInit (char const *path, Config const &config) {
 #ifdef CPU_ONLY
@@ -77,6 +82,14 @@ namespace adsb2 {
         dicom_setup(path, config);
         //openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
+        int baseline = 0;
+        cv::Size fsz = getTextSize("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", font_face, font_scale, font_thickness, &baseline);
+        font_height = fsz.height * 1.2;
+    }
+
+    void draw_text (cv::Mat &img, string const &text, cv::Point org, int line, cv::Scalar v) {
+        org.y += (line + 1) * font_height;
+        cv::putText(img, text, org, font_face, font_scale, v, font_thickness);
     }
 
     struct pairhash {
@@ -308,7 +321,9 @@ namespace adsb2 {
             cv::hconcat(image, _extra, image);
         }
         image.convertTo(images[IM_VISUAL], CV_8U);
-        cv::putText(images[IM_VISUAL], fmt::format("{}", data[SL_BSCORE]), cv::Point(images[IM_IMAGE].cols + 20, 20),  FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0xFF));
+        cv::Point org(images[IM_IMAGE].cols + 20, 0);
+        draw_text(images[IM_VISUAL], fmt::format("BS: {:1.2f}", data[SL_BSCORE]), org, 0);
+        draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 1);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
@@ -828,7 +843,7 @@ namespace adsb2 {
     }
 #endif
 
-    void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub) {
+    void getColorBounds (Series &series, int color_bins, float *lb, float *ub) {
         vector<uint16_t> all;
         all.reserve(series.front().images[IM_RAW].total() * series.size());
         for (auto &s: series) {
@@ -871,12 +886,14 @@ namespace adsb2 {
             sz = round(raw_size * scale);
             cv::resize(vimage, vimage, sz);
         }
-        uint16_t lb, ub;
+        float lb, ub;
         /*
         vector<float> cmap;
         getColorMap(*series, &cmap, color_bins, &lb, &ub);
         */
         getColorBounds(*series, color_bins, &lb, &ub);
+        series->data[SR_COLOR_LB] = lb;
+        series->data[SR_COLOR_UB] = ub;
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < series->size(); ++i) {
             auto &s = series->at(i);

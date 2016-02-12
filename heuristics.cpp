@@ -394,11 +394,7 @@ namespace adsb2 {
     void FindBox (Slice *slice, Config const conf) {
         cv::Mat prob = slice->images[IM_PROB];
         FindSquare(prob, &slice->box, conf);
-        float total = cv::sum(prob)[0];
-        float inside = cv::sum(prob(slice->box))[0];
-        float outside = total - inside;
-        float ba = slice->box.area();
-        slice->data[SL_BSCORE] = 1.0 * (ba - inside + outside) / ba;
+        slice->data[SL_BSCORE] = box_score(prob, slice->box);
     }
 
     // if X and Y are independent normal variables
