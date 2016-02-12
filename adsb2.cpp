@@ -1178,36 +1178,33 @@ namespace adsb2 {
             ++progress;
         }
 #else   // batch processing using GPU
-#pragma omp critical
-        {
-            Detector *det = Detector::get(name);
-            CHECK(det) << " cannot create detector.";
-            unsigned i = 0;
-            while (i < slices.size()) {
-                vector<cv::Mat> input;
-                vector<cv::Mat *> output;
-                int seen = 0;
-                while ((i < slices.size()) && (input.size() < caffe_batch)) {
-                    cv::Mat from = slices[i]->images[FROM];
-                    if (from.data) {
-                        input.push_back(virtical_extend(from, vext));
-                        output.push_back(&slices[i]->images[TO]);
-                    }
-                    ++seen;
-                    ++i;
+        Detector *det = Detector::get(name);
+        CHECK(det) << " cannot create detector.";
+        unsigned i = 0;
+        while (i < slices.size()) {
+            vector<cv::Mat> input;
+            vector<cv::Mat *> output;
+            int seen = 0;
+            while ((i < slices.size()) && (input.size() < caffe_batch)) {
+                cv::Mat from = slices[i]->images[FROM];
+                if (from.data) {
+                    input.push_back(virtical_extend(from, vext));
+                    output.push_back(&slices[i]->images[TO]);
                 }
-                vector<cv::Mat> tmp;
-                det->apply(input, &tmp);
-                CHECK(tmp.size() == input.size());
-                for (unsigned j = 0; j < input.size(); ++j) {
-                    *output[j] = virtical_unextend(tmp[j], vext);
-                    CHECK(output[j]->isContinuous());
-                    if (scale != 1.0) {
-                        *output[j] *= scale;
-                    }
-                }
-                progress += seen;
+                ++seen;
+                ++i;
             }
+            vector<cv::Mat> tmp;
+            det->apply(input, &tmp);
+            CHECK(tmp.size() == input.size());
+            for (unsigned j = 0; j < input.size(); ++j) {
+                *output[j] = virtical_unextend(tmp[j], vext);
+                CHECK(output[j]->isContinuous());
+                if (scale != 1.0) {
+                    *output[j] *= scale;
+                }
+            }
+            progress += seen;
         }
 #endif
     }

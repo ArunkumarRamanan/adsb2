@@ -24,15 +24,21 @@ int main(int argc, char **argv) {
     ("help,h", "produce help message.")
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
-    ("list_path", po::value(&list_path), "")
+    ("list", po::value(&list_path), "")
     ;
 
     po::positional_options_description p;
+    p.add("list", 1);
 
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
+
+    if (vm.count("help") || (vm.count("list") == 0)) {
+        cerr << desc;
+        return 1;
+    }
 
     Config config;
     try {
