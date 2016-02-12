@@ -24,12 +24,9 @@ function import {
     convert_imageset --gray --resize_height=256 --resize_width=256 --shuffle ./ $list $db
 }
 
-if false
-then
 rm -rf image0
 rm -rf image1
 ./dump-1245 data/train_pid.txt
-fi
 
 cd caffe/top/
 
