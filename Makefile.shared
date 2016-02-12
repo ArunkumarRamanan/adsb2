@@ -1,7 +1,7 @@
 .PHONY:	all clean caffex
 CXX = g++
-CXXFLAGS = -g -O3 -std=c++11 -fopenmp -I/opt/chain/include -I/opt/caffe-fcn/include -Icaffex-fcn -Wno-unused-result
-LDFLAGS += -fopenmp -L/opt/chain/lib -L/opt/caffe-fcn/lib #-static
+CXXFLAGS = -g -O3 -std=c++11 -I/opt/chain/include -I/opt/caffe-fcn/include -Icaffex-fcn -Wno-unused-result
+LDFLAGS += -pthread -L/opt/chain/lib -L/opt/caffe-fcn/lib #-static
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
 LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lcppformat \
@@ -20,7 +20,7 @@ HEADERS = adsb2.h
 COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o
 
 
-PROGS = submit scc study import detect eval cook import-polar#scale detect import eval stat  stat2
+PROGS = submit dump-1245 study import detect eval cook import-polar#scale detect import eval stat  stat2
 
 all:	$(PROGS)
 
