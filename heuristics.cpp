@@ -391,7 +391,7 @@ namespace adsb2 {
         *rect = seed;
     }
 
-    void FindBox (Slice *slice, Config const conf) {
+    void FindBox (Slice *slice, Config const &conf) {
         cv::Mat prob = slice->images[IM_PROB];
         FindSquare(prob, &slice->box, conf);
         slice->data[SL_BSCORE] = box_score(prob, slice->box);
