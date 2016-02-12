@@ -597,7 +597,6 @@ namespace adsb2 {
 #endif
 
     void RefineTop (Study *study, Config const &conf) {
-#if 0
         float th = conf.get("adsb2.top.th", 0.8);
         //config.put("adsb2.caffe.model", "model2");
         for (unsigned sid = 0; sid < study->size(); ++sid) {
@@ -610,7 +609,7 @@ namespace adsb2 {
                 Detector *det = Detector::get("top");
                 CHECK(det) << " cannot create detector.";
                 vector<float> prob(2);
-                det->apply(slices[i].images[IM_EQUAL], &prob);
+                det->apply(slices[i].images[IM_IMAGE], &prob);
                 float p = prob[1];
                 slices[i].area *= p;
                 if (p < th) {
@@ -622,7 +621,6 @@ namespace adsb2 {
             }
             if (bad == 0) break;
         }
-#endif
     }
 }
 
