@@ -283,6 +283,7 @@ namespace adsb2 {
         s->id = id;
         s->path = path;
         s->meta = meta;
+        s->data = data;
         for (unsigned i = 0; i < IM_SIZE; ++i) {
             s->images[i] = images[i].clone();
         }
@@ -329,6 +330,7 @@ namespace adsb2 {
             draw_text(images[IM_VISUAL], fmt::format("BD: {:1.2f}", data[SL_BSCORE_DELTA]), org, 2);
         }
         draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 3);
+        draw_text(images[IM_VISUAL], fmt::format("CR: {:1.2f}", data[SL_CSCORE]), org, 4);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {

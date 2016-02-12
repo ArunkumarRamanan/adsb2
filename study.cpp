@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     ("no-gif", "")
     ("ca-it", po::value(&ca_it)->default_value(2), "")
     ("decap", po::value(&decap)->default_value(0), "")
-    ("aa", "")
+    ("no-aa", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         FindBox(slices[i], config);
     }
 
-    if (vm.count("aa")) {
+    if (vm.count("no-aa") == 0) {
         PatchBottomBound(&study, config);
     }
     
@@ -128,6 +128,7 @@ int main(int argc, char **argv) {
     else if (decap < 0) {
         RefineTop(&study, config);
     }
+    TrimBottom(&study, config);
     
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);

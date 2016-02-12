@@ -151,6 +151,7 @@ namespace adsb2 {
         SL_BSCORE_DELTA,
         SL_PSCORE,     // polar score
         SL_TSCORE,     // top score
+        SL_CSCORE,
         SL_COLOR_LB,
         SL_COLOR_UB,
         SL_SIZE
@@ -476,6 +477,7 @@ namespace adsb2 {
     void RefineTop (Study *study, Config const &conf);
     void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub);
     void PatchBottomBound(Study *study, Config const &);
+    void TrimBottom (Study *study, Config const &);
 
     struct Volume {
         float mean;

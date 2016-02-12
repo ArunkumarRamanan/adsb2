@@ -688,7 +688,7 @@ namespace adsb2 {
         float th = conf.get<float>("adsb2.patch_bb.th", 0.5);
         // only try to fix the bottom half
         vector<Slice *> todo;
-        for (unsigned sr = study->size()/2;
+        for (unsigned sr = 2 * study->size()/3;
                       sr < study->size(); ++sr) {
             for (Slice &s: study->at(sr)) {
                 if (s.data[SL_BSCORE] > th) {
@@ -704,6 +704,19 @@ namespace adsb2 {
 #pragma omp critical
             ++progress;
         }
+    }
+
+    void TrimBottom(Study *study, Config const &conf) {
+        /*
+        for (unsigned sr = 2 * study->size()/3;
+                      sr < study->size(); ++sr) {
+            for (Slice &s: study->at(sr)) {
+                if (s.data[SL_BSCORE] > th) {
+                    todo.push_back(&s);
+                }
+            }
+        }
+        */
     }
 }
 
