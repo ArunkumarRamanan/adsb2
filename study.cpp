@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     cerr << "Finding squares..." << endl;
 #pragma omp parallel for schedule(dynamic, 1)
     for (unsigned i = 0; i < slices.size(); ++i) {
-        FindSquare(slices[i]->images[IM_PROB], &slices[i]->box, config);
+        FindBox(slices[i], config);
     }
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);

@@ -130,7 +130,7 @@ namespace adsb2 {
 
     class Detector;
 
-    enum {
+    enum {  // images
         IM_RAW = 0, // raw image as loaded from DICOM, U16C1
         IM_IMAGE,   // cooked
         IM_VAR,     // variance
@@ -145,12 +145,20 @@ namespace adsb2 {
         IM_SIZE
     };
 
+    enum {
+        SL_BSCORE = 0, // bound healthness
+        SL_PSCORE,     // polar score
+        SL_TSCORE,     // top score
+        SL_SIZE
+    };
+
     struct Slice {
         int id;
         fs::path path;          // must always present
         Meta meta;              // available after load_raw
                                 // spacing might be cooked, raw_spacing won't be cooked
         array<cv::Mat, IM_SIZE> images;
+        array<float, SL_SIZE> data;
 
         bool do_not_cook;
         // the following fields are only available for annotated images
@@ -223,6 +231,12 @@ namespace adsb2 {
         bool sanity_check (bool fix = false);
         friend class Study;
     public:
+        struct Data {
+            bool concent;
+            float concent_rate;
+        } data;
+
+
         Series (){}
         // load from a directory of DCM files
         Series (fs::path const &, bool load = true, bool check = true, bool fix = false);
@@ -259,6 +273,9 @@ namespace adsb2 {
         void check_regroup ();  // some times its necessary to regroup one series into
                                 // multiple series
     public:
+        struct Data {
+        } data;
+
         static void probe (fs::path const &, Meta *meta);
         Study () {};
         // load from a directory of DCM files
@@ -450,13 +467,13 @@ namespace adsb2 {
         ApplyDetector("bound", study, IM_IMAGE, IM_PROB, 1.0, 0);
     }
     void ProbFilter (Study *study, Config const &config); 
+    void FindBox (Slice *slice, Config const &);
 
     void Bound (Detector *det, Study *study, cv::Rect *box, Config const &config);
     void MotionFilter (Series *stack, Config const &config); 
     void FindSquare (cv::Mat &mat, cv::Rect *bbox, Config const &config);
 
     void ComputeContourProb (Study *study, Config const &conf);
-
     void RefinePolarBound (Study *, Config const &config);
     void study_CA1 (Study *, Config const &config, bool);
     void study_CA2 (Study *, Config const &config, bool);
