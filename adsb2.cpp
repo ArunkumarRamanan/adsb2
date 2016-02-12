@@ -308,7 +308,7 @@ namespace adsb2 {
             cv::hconcat(image, _extra, image);
         }
         image.convertTo(images[IM_VISUAL], CV_8U);
-        cv::putText(images[IM_VISUAL], fmt::format("{}", data[SL_BSCORE]), cv::Point(images[IM_IMAGE].cols + 20, 20),  FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0xFF));
+        cv::putText(images[IM_VISUAL], fmt::format("{}", data[SL_BSCORE]), cv::Point(images[IM_IMAGE].cols + 20, 20),  cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0xFF));
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
