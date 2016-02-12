@@ -611,6 +611,7 @@ namespace adsb2 {
                 vector<float> prob(2);
                 det->apply(slices[i].images[IM_IMAGE], &prob);
                 float p = prob[1];
+                slices[i].top_score = p;
                 slices[i].area *= p;
                 if (p < th) {
                     slices[i].box = cv::Rect();
