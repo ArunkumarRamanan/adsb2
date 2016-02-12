@@ -62,7 +62,7 @@ namespace adsb2 {
     fs::path model_dir;
     int caffe_batch = 0;
     int font_height = 0;
-    int font_face = FONT_HERSHEY_SIMPLEX;
+    int font_face = cv::FONT_HERSHEY_SIMPLEX;
     double font_scale = 0.6;
     int font_thickness = 1;
 
@@ -83,8 +83,8 @@ namespace adsb2 {
         //openblas_set_num_threads(config.get<int>("adsb2.threads.openblas", 1));
         cv::setNumThreads(config.get<int>("adsb2.threads.opencv", 1));
         int baseline = 0;
-        cv::Size fsz = getTextSize("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", font_face, font_scale, font_thickness, &baseline);
-        font_height = fsz.height * 1.2;
+        cv::Size fsz = cv::getTextSize("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", font_face, font_scale, font_thickness, &baseline);
+        font_height = 14 * fsz.height / 10;
     }
 
     void draw_text (cv::Mat &img, string const &text, cv::Point org, int line, cv::Scalar v) {
@@ -249,6 +249,7 @@ namespace adsb2 {
         box(-1,-1,0,0),
         area(0)
     {
+        std::fill(data.begin(), data.end(), 0);
         using namespace boost::algorithm;
         line = txt;
         vector<string> ss;
@@ -322,8 +323,12 @@ namespace adsb2 {
         }
         image.convertTo(images[IM_VISUAL], CV_8U);
         cv::Point org(images[IM_IMAGE].cols + 20, 0);
-        draw_text(images[IM_VISUAL], fmt::format("BS: {:1.2f}", data[SL_BSCORE]), org, 0);
-        draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 1);
+        draw_text(images[IM_VISUAL], fmt::format("AR: {:3.2f}", area), org, 0);
+        draw_text(images[IM_VISUAL], fmt::format("BS: {:1.2f}", data[SL_BSCORE]), org, 1);
+        if (data[SL_BSCORE_DELTA]) {
+            draw_text(images[IM_VISUAL], fmt::format("BD: {:1.2f}", data[SL_BSCORE_DELTA]), org, 2);
+        }
+        draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 3);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
@@ -843,7 +848,7 @@ namespace adsb2 {
     }
 #endif
 
-    void getColorBounds (Series &series, int color_bins, float *lb, float *ub) {
+    void getColorBounds (Series &series, float *lb, float *ub) {
         vector<uint16_t> all;
         all.reserve(series.front().images[IM_RAW].total() * series.size());
         for (auto &s: series) {
@@ -860,8 +865,8 @@ namespace adsb2 {
 
         *lb = std::max(lb1, lb2);
         *ub = std::min(ub1, ub2);
-        if (*lb + color_bins > *ub) {
-            *ub = *lb + color_bins;
+        if (*lb + GRAYS > *ub) {
+            *ub = *lb + GRAYS;
         }
     }
 
@@ -875,7 +880,7 @@ namespace adsb2 {
         series->getVarImageRaw(&vimage);
         cv::Size raw_size = vimage.size();
         // compute var image
-        cv::normalize(vimage, vimage, 0, color_bins-1, cv::NORM_MINMAX, CV_32F);
+        cv::normalize(vimage, vimage, 0, GRAYS-1, cv::NORM_MINMAX, CV_32F);
         float scale = -1;
         float raw_spacing = -1;
         cv::Size sz;
@@ -891,19 +896,15 @@ namespace adsb2 {
         vector<float> cmap;
         getColorMap(*series, &cmap, color_bins, &lb, &ub);
         */
-        getColorBounds(*series, color_bins, &lb, &ub);
-        series->data[SR_COLOR_LB] = lb;
-        series->data[SR_COLOR_UB] = ub;
+        getColorBounds(*series, &lb, &ub);
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned i = 0; i < series->size(); ++i) {
             auto &s = series->at(i);
             if (s.do_not_cook) continue;
+            s.data[SL_COLOR_LB] = lb;
+            s.data[SL_COLOR_UB] = ub;
             s.images[IM_RAW].convertTo(s.images[IM_IMAGE], CV_32F);
-            loop<float>(s.images[IM_IMAGE], [lb, ub, this](float &v) {
-                        v = std::round((v - lb) * color_bins / (ub - lb));
-                        if (v < 0) v = 0;
-                        else if (v >= color_bins) v = color_bins - 1;
-            });
+            scale_color(&s.images[IM_IMAGE], lb, ub);
             /*
             equalize(s.images[IM_RAW], &s.images[IM_EQUAL], cmap);
             */
@@ -1224,5 +1225,23 @@ namespace adsb2 {
         }
 #endif
     }
+
+    cv::Point_<float> weighted_box_center (cv::Mat &prob, cv::Rect box) {
+        cv::Mat roi = prob(box);
+        float sx = 0;
+        float sy = 0;
+        float s = 0;
+        for (int y = 0; y < roi.rows; ++y) {
+            float const *ptr = roi.ptr<float const>(y);
+            for (int x = 0; x < roi.cols; ++x) {
+                float w = ptr[x];
+                sx += x * w;
+                sy += y * w;
+                s += w;
+            }
+        }
+        return cv::Point_<float>(box.x + sx/s, box.y + sy/s);
+    }
+
 }
 

@@ -236,6 +236,7 @@ namespace adsb2 {
         for (unsigned i = 0; i < stack.size(); ++i) {
             auto &s = stack[i];
             cv::Mat prob = s.images[IM_PROB].mul(np);
+            s.images[IM_BFILTER] = np;
             s.images[IM_PROB] = prob;
         }
         // find connected components of p
@@ -282,6 +283,7 @@ namespace adsb2 {
 #pragma omp parallel for
         for (unsigned i = 0; i < slices.size(); ++i) {
             cv::Mat prob = slices[i]->images[IM_PROB].mul(np);
+            slices[i]->images[IM_BFILTER] = np;
             slices[i]->images[IM_PROB] = prob;
         }
         // find connected components of p
@@ -505,7 +507,8 @@ namespace adsb2 {
                 }
                 else {
                     cv::Rect_<float> lb = unround(s.box);
-                    cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
+                    //cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
+                    cv::Point_<float> C = weighted_box_center(s.images[IM_PROB], s.box);
                     float R = max_R(C, lb) * 3;
                     s.update_polar(C, R);
                 }
@@ -627,6 +630,79 @@ namespace adsb2 {
                 ++progress;
             }
             if (bad == 0) break;
+        }
+    }
+
+    void PatchBottomBoundHelper (Slice *s, Config const &conf) {
+        float mag = conf.get<float>("adsb2.patch_bb.mag", 2.0);
+        cv::Mat image;
+        s->images[IM_RAW].convertTo(image, CV_32F);
+        cv::Size sz = s->images[IM_IMAGE].size();
+        cv::Size mag_sz = round(sz * mag);
+        cv::resize(image, image, mag_sz);
+        float lb = s->data[SL_COLOR_LB];
+        float ub = s->data[SL_COLOR_UB];
+        scale_color(&image, lb, ub);
+
+        // center of the box
+        cv::Point C(s->box.x + s->box.width/2,
+                     s->box.y + s->box.height/2);
+        // center of the box in magnified image
+        cv::Point mag_C(C.x * mag, C.y * mag);
+
+        cv::Point roi_shift = mag_C - C;
+
+        cv::Rect bb(roi_shift, sz);
+
+        cv::Mat roi = image(bb).clone();
+        cv::Mat roi_prob;
+        // we only detect a ROI in enlarged image
+        // the ROI has the same size as the slice's image
+        // the offset is picked, such that the enlarged box's center is still at C
+        // relative to the ROI
+        Detector *det = Detector::get("bound");
+        CHECK(det) << " cannot create detector.";
+        det->apply(roi, &roi_prob);
+        cv::Mat prob(image.size(), CV_32F, cv::Scalar(0));
+        roi_prob.copyTo(prob(bb));
+        cv::resize(prob, prob, s->images[IM_PROB].size());
+        {
+            cv::Mat bf = s->images[IM_BFILTER];
+            CHECK(bf.data) << "ProbFilter must be invoked before patching bb";
+            cv::Mat tmp = prob.mul(bf);
+            prob = tmp;
+        }
+        cv::Rect box;
+        FindSquare(prob, &box, conf);
+        float bscore = box_score(prob, box);
+        float orig_bscore = s->data[SL_BSCORE];
+        if (bscore + 0.001 < orig_bscore) { // update new probability
+            s->data[SL_BSCORE] = bscore;
+            s->data[SL_BSCORE_DELTA] = orig_bscore - bscore;
+            s->images[IM_PROB] = prob;
+            s->box = box;
+        }
+    }
+
+    void PatchBottomBound(Study *study, Config const &conf) {
+        float th = conf.get<float>("adsb2.patch_bb.th", 0.5);
+        // only try to fix the bottom half
+        vector<Slice *> todo;
+        for (unsigned sr = study->size()/2;
+                      sr < study->size(); ++sr) {
+            for (Slice &s: study->at(sr)) {
+                if (s.data[SL_BSCORE] > th) {
+                    todo.push_back(&s);
+                }
+            }
+        }
+        LOG(WARNING) << "Patching " << todo.size() << " bottom slices...";
+        boost::progress_display progress(todo.size(), std::cerr);
+#pragma omp parallel for
+        for (unsigned i = 0; i < todo.size(); ++i) {
+            PatchBottomBoundHelper(todo[i], conf);
+#pragma omp critical
+            ++progress;
         }
     }
 }

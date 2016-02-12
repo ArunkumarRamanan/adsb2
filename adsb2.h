@@ -141,14 +141,18 @@ namespace adsb2 {
         IM_POLAR_PROB,
         IM_LOCAL,   // localized image
         IM_LOCAL_PROB,
+        IM_BFILTER,
         IM_VISUAL,  // CV_8U
         IM_SIZE
     };
 
     enum {
         SL_BSCORE = 0, // bound healthness
+        SL_BSCORE_DELTA,
         SL_PSCORE,     // polar score
         SL_TSCORE,     // top score
+        SL_COLOR_LB,
+        SL_COLOR_UB,
         SL_SIZE
     };
 
@@ -187,6 +191,7 @@ namespace adsb2 {
             anno(nullptr),
             box(-1,-1,0,0),
             area(-1) {
+                std::fill(data.begin(), data.end(), 0);
         }
 
         Slice (string const &line);
@@ -231,11 +236,6 @@ namespace adsb2 {
         bool sanity_check (bool fix = false);
         friend class Study;
     public:
-        struct Data {
-            bool concent;
-            float concent_rate;
-        } data;
-
 
         Series (){}
         // load from a directory of DCM files
@@ -273,8 +273,6 @@ namespace adsb2 {
         void check_regroup ();  // some times its necessary to regroup one series into
                                 // multiple series
     public:
-        struct Data {
-        } data;
 
         static void probe (fs::path const &, Meta *meta);
         Study () {};
@@ -303,11 +301,9 @@ namespace adsb2 {
 
     class Cook {
         float spacing;
-        int color_bins;
     public:
         Cook (Config const &config):
-            spacing(config.get<float>("adsb2.cook.spacing", 1.4)),
-            color_bins(config.get<float>("adsb2.cook.colors", 256))
+            spacing(config.get<float>("adsb2.cook.spacing", 1.4))
         {
         }
         void apply (Slice *) const;
@@ -479,6 +475,7 @@ namespace adsb2 {
     void study_CA2 (Study *, Config const &config, bool);
     void RefineTop (Study *study, Config const &conf);
     void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub);
+    void PatchBottomBound(Study *study, Config const &);
 
     struct Volume {
         float mean;

@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
     ("no-gif", "")
     ("ca-it", po::value(&ca_it)->default_value(2), "")
     ("decap", po::value(&decap)->default_value(0), "")
+    ("aa", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -108,6 +109,11 @@ int main(int argc, char **argv) {
     for (unsigned i = 0; i < slices.size(); ++i) {
         FindBox(slices[i], config);
     }
+
+    if (vm.count("aa")) {
+        PatchBottomBound(&study, config);
+    }
+    
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
 

@@ -249,5 +249,16 @@ namespace adsb2 {
         return 1.0 * (ba - inside + outside) / ba;
     }
 
-    void draw_text (cv::Mat &img, string const &text, cv::Point org, int line = 0, cv::Scalar color = cv::Scalar(0xFF));
+    void draw_text (cv::Mat &img, std::string const &text, cv::Point org, int line = 0, cv::Scalar color = cv::Scalar(0xFF));
+
+    static constexpr int GRAYS = 256;
+    static inline void scale_color(cv::Mat *img, float lb, float ub) {
+        loop<float>(*img, [lb, ub](float &v) {
+            v = std::round((v - lb) * GRAYS / (ub - lb));
+            if (v < 0) v = 0;
+            else if (v >= GRAYS) v =  GRAYS - 1;
+        });
+    }
+
+    cv::Point_<float> weighted_box_center (cv::Mat &prob, cv::Rect box);
 }
