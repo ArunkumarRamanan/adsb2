@@ -417,6 +417,7 @@ namespace adsb2 {
         }
         draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 3);
         draw_text(images[IM_VISUAL], fmt::format("CR: {:1.2f}", data[SL_CSCORE]), org, 4);
+        draw_text(images[IM_VISUAL], fmt::format("TS: {:1.2f}", data[SL_TSCORE]), org, 5);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {

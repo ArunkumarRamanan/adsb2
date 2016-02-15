@@ -203,7 +203,6 @@ namespace adsb2 {
         vector<int> polar_contour;
         cv::Rect polar_box;
         float polar_score;  // (polar_box && box) / (polar_box || box)
-        float top_score;
 
         cv::Rect local_box;
         // the following are prediction results

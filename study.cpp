@@ -110,9 +110,11 @@ int main(int argc, char **argv) {
         FindBox(slices[i], config);
     }
 
+    /*
     if (vm.count("no-aa") == 0) {
         PatchBottomBound(&study, config);
     }
+    */
     
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
@@ -154,7 +156,7 @@ int main(int argc, char **argv) {
              << "</td></tr></table>" << endl;
         html << "<br/><img src=\"radius.png\"></img>" << endl;
         html << "<br/><table border=\"1\">"<< endl;
-        html << "<tr><th>Slice</th><th>Location</th><th>Tscore</th><th>Pscore</th><th>image</th></tr>";
+        html << "<tr><th>Slice</th><th>Location</th><th>image</th></tr>";
         fs::path gp1(dir/fs::path("plot.gp"));
         fs::ofstream gp(gp1);
         gp << "set xlabel \"time\";" << endl;
@@ -173,24 +175,10 @@ int main(int argc, char **argv) {
         }
         for (unsigned i = 0; i < study.size(); ++i) {
             auto &ss = study[i];
-            namespace ba = boost::accumulators;
-            typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::min, ba::tag::max>> Acc;
-            Acc acc1;
-            Acc acc2;
-            for (auto const &s: ss) {
-                acc1(s.top_score);
-                acc2(s.polar_score);
-                float r = std::sqrt(s.box.area())/2 * s.meta.spacing;
-                gp << s.meta.trigger_time
-                   << '\t' << s.meta.slice_location
-                   << '\t' << r << endl;
-            }
             html << "<tr>"
                  << "<td>" << study[i].dir().filename().native() << "</td>"
                  << "<td>" << study[i].front().meta.slice_location << "</td>"
             //     << "<td>" << study[i].front().meta[Meta::NOMINAL_INTERVAL] << "</td>"
-                 << "<td>" << ba::min(acc1) << "<br/>" << ba::mean(acc1) << "<br/>" << ba::max(acc1) << "</td>"
-                 << "<td>" << ba::min(acc2) << "<br/>" << ba::mean(acc2) << "<br/>" << ba::max(acc2) << "</td>"
                  << "<td><img src=\"" << i << ".gif\"></img></td></tr>" << endl;
         }
         gp << 'e' << endl;
