@@ -51,8 +51,8 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
     Cook cook(config);
 
-    fs::path root1("image0");
-    fs::path root0("image1");
+    fs::path root0("image0");
+    fs::path root1("image1");   // top slices that need to be removed
     ifstream list(list_path);
     int n;
     while (list >> n) {

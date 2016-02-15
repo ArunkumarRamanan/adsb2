@@ -619,8 +619,8 @@ namespace adsb2 {
                 CHECK(det) << " cannot create detector.";
                 vector<float> prob(2);
                 det->apply(slices[i].images[IM_IMAGE], &prob);
-                float p = prob[1];
-                slices[i].top_score = p;
+                float p = prob[0];
+                slices[i].data[SL_TSCORE] = p;
                 slices[i].area *= p;
                 if (p < th) {
                     slices[i].box = cv::Rect();
