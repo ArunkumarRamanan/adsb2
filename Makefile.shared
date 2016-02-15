@@ -24,7 +24,7 @@ PROGS = submit dump-1245 study import detect eval cook import-polar#scale detect
 
 all:	$(PROGS)
 
-$(PROGS):	%:      %.o caffex $(HEADERS) $(COMMON)
+$(PROGS):	%:      %.o $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
 
 %.o:	%.cpp $(HEADERS)
