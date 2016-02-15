@@ -242,6 +242,7 @@ int main(int argc, char **argv) {
                 cv::morphologyEx(label, label, cv::MORPH_CLOSE, kernel);
                 /*
                 cv::Mat tmp;
+                RPH
                 cv::hconcat(image, label * 255, tmp);
                 fs::path p(dir);
                 p /= fs::path(fmt::format("{}.png", count));

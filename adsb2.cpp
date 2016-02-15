@@ -65,6 +65,7 @@ namespace adsb2 {
     int font_face = cv::FONT_HERSHEY_SIMPLEX;
     double font_scale = 0.6;
     int font_thickness = 1;
+    cv::Mat polar_morph_kernel;
 
     void dicom_setup (char const *path, Config const &config);
     void GlobalInit (char const *path, Config const &config) {
@@ -85,6 +86,7 @@ namespace adsb2 {
         int baseline = 0;
         cv::Size fsz = cv::getTextSize("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", font_face, font_scale, font_thickness, &baseline);
         font_height = 14 * fsz.height / 10;
+        polar_morph_kernel = cv::Mat::ones(3, 3, CV_8U);
     }
 
     void draw_text (cv::Mat &img, string const &text, cv::Point org, int line, cv::Scalar v) {
@@ -142,6 +144,7 @@ namespace adsb2 {
 
     BoxAnnoOps box_anno_ops;
     PolyAnnoOps poly_anno_ops;
+    PredAnnoOps pred_anno_ops;
     
     void BoxAnnoOps::load (Slice *slice, string const *txt) const
     {
@@ -178,6 +181,20 @@ namespace adsb2 {
         // TODO, use rotated rect to draw ellipse 
 #else
         cv::rectangle(*out, round(box), v, CV_FILLED);
+#endif
+    }
+
+    void BoxAnnoOps::contour (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
+    {
+        Data const &box = slice.anno_data.box;
+        *out = cv::Mat(slice.images[IM_IMAGE].size(), CV_32F, cv::Scalar(0));
+#define BOX_AS_CIRCLE 1
+#ifdef BOX_AS_CIRCLE
+        cv::circle(*out, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
+                         std::sqrt(box.width * box.height)/2, v);
+        // TODO, use rotated rect to draw ellipse 
+#else
+        cv::rectangle(*out, round(box), v);
 #endif
     }
 
@@ -243,6 +260,70 @@ namespace adsb2 {
         out.convertTo(*label, CV_8U);
     }
 
+    void PolyAnnoOps::contour (Slice const &slice, cv::Mat *label, cv::Scalar const &v) const {
+        CHECK(0);
+    }
+
+    void PredAnnoOps::load (Slice *slice, string const *txt) const
+    {
+        slice->anno = this;
+        Data &poly = slice->anno_data.pred;
+        poly.R = lexical_cast<float>(txt[0]);
+        poly.C.x = lexical_cast<float>(txt[1]);
+        poly.C.y = lexical_cast<float>(txt[2]);
+        poly.size.width = lexical_cast<int>(txt[3]);
+        poly.size.height = lexical_cast<int>(txt[4]);
+        int off = 5;
+        poly.contour.resize(poly.size.height);
+        for (auto &x: poly.contour) {
+            x = lexical_cast<int>(txt[off++]);
+        }
+    }
+
+    void PredAnnoOps::shift (Slice *slice, cv::Point_<float> const &pt) const {
+        Data &poly = slice->anno_data.pred;
+        poly.C += pt;
+    }
+
+    void PredAnnoOps::scale (Slice *slice, float rate) const {
+        Data &poly = slice->anno_data.pred;
+        poly.C.x *= rate;
+        poly.C.y *= rate;
+        poly.R *= rate;
+    }
+
+    void PredAnnoOps::fill (Slice const &slice, cv::Mat *label, cv::Scalar const &v) const
+    {
+        auto const &anno = slice.anno_data.pred;
+        cv::Mat polar(anno.size, CV_32F, cv::Scalar(0));
+        auto const &cc = anno.contour;
+        CHECK(cc.size() == polar.rows);
+        for (int y = 0; y < polar.rows; ++y) {
+            float *row = polar.ptr<float>(y);
+            for (int x = 0; x < cc[y]; ++x) {
+                row[x] = v[0];
+            }
+        }
+        cv::Mat tmp;
+        linearPolar(polar, &tmp, slice.images[IM_IMAGE].size(), anno.C, anno.R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+        tmp.convertTo(*label, CV_8U);
+        cv::morphologyEx(*label, *label, cv::MORPH_CLOSE, polar_morph_kernel);
+    }
+
+    void PredAnnoOps::contour (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
+    {
+        auto const &anno = slice.anno_data.pred;
+        cv::Mat polar(anno.size, CV_32F, cv::Scalar(0));
+        auto const &cc = anno.contour;
+        CHECK(cc.size() == polar.rows);
+        for (int y = 0; y < polar.rows; ++y) {
+            float *row = polar.ptr<float>(y);
+            row[cc[y]-1] = v[0];
+            row[cc[y]] = v[0];
+            row[cc[y]+1] = v[0];
+        }
+        linearPolar(polar, out, slice.images[IM_IMAGE].size(), anno.C, anno.R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+    }
 
     Slice::Slice (string const &txt)
         : do_not_cook(false),
@@ -271,7 +352,12 @@ namespace adsb2 {
             CHECK(0);
         }
         else if (nf >= 7) {
-            poly_anno_ops.load(this, rest);
+            if (rest[0] == "pred") {
+                pred_anno_ops.load(this, rest + 1);
+            }
+            else {
+                poly_anno_ops.load(this, rest);
+            }
         }
         else {
             LOG(ERROR) << "annotation format not supported.";

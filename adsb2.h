@@ -88,6 +88,7 @@ namespace adsb2 {
         virtual void shift (Slice *slice, cv::Point_<float> const &) const = 0;
         virtual void scale (Slice *slice, float rate) const = 0;
         virtual void fill (Slice const &, cv::Mat *, cv::Scalar const &) const = 0;
+        virtual void contour (Slice const &, cv::Mat *, cv::Scalar const &) const = 0;
     };
 
     class BoxAnnoOps: public AnnoOps {
@@ -100,6 +101,7 @@ namespace adsb2 {
         virtual void shift (Slice *slice, cv::Point_<float> const &) const;
         virtual void scale (Slice *slice, float rate) const;
         virtual void fill (Slice const &, cv::Mat *, cv::Scalar const &) const;
+        virtual void contour (Slice const &, cv::Mat *, cv::Scalar const &) const;
     };
 
     class PolyAnnoOps: public AnnoOps {
@@ -118,15 +120,39 @@ namespace adsb2 {
         virtual void shift (Slice *slice, cv::Point_<float> const &) const;
         virtual void scale (Slice *slice, float rate) const;
         virtual void fill (Slice const &, cv::Mat *, cv::Scalar const &) const;
+        virtual void contour (Slice const &, cv::Mat *, cv::Scalar const &) const;
     };
+
+    class PredAnnoOps: public AnnoOps {
+    public:
+        struct Data {
+            float R;                // polar radius in raw dicom file   
+            cv::Point_<float> C;    // polar center in raw dicom file
+            cv::Size size;          // polar image size
+            vector<int> contour;    // contour as x value of each row
+        };
+        virtual int type () const {
+            return ANNO_POLY;
+        }
+        virtual void load (Slice *, string const *) const;
+        virtual void shift (Slice *slice, cv::Point_<float> const &) const;
+        virtual void scale (Slice *slice, float rate) const;
+        virtual void fill (Slice const &, cv::Mat *, cv::Scalar const &) const;
+        virtual void contour (Slice const &, cv::Mat *, cv::Scalar const &) const;
+    };
+
+    //void PredAnnosDrawContour (Slice const &, cv::Mat *, cv::Scalar const &);
+
 
     struct AnnoData {
         BoxAnnoOps::Data box; 
         PolyAnnoOps::Data poly;
+        PredAnnoOps::Data pred;
     };
 
     extern BoxAnnoOps box_anno_ops;
     extern PolyAnnoOps poly_anno_ops;
+    extern PredAnnoOps pred_anno_ops;
 
     class Detector;
 
@@ -201,7 +227,7 @@ namespace adsb2 {
 
         void load_raw () {
             cv::Mat raw = load_dicom(path, &meta);
-#if 1   // Yuanfang's annotation assume images are all in landscape position
+#if 0       // Yuanfang's annotation assume images are all in landscape position
             if (raw.rows > raw.cols) {
                 cv::transpose(raw, raw);
             }

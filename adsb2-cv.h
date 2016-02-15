@@ -132,6 +132,7 @@ namespace adsb2 {
 
     static inline void linearPolar (cv::Mat from,
                       cv::Mat *out,
+                      cv::Size sz,
                       cv::Point_<float> O, float R, int flags = CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS) {
         cv::Mat image;
         if (from.type() == CV_32F) {
@@ -141,7 +142,7 @@ namespace adsb2 {
             from.convertTo(image, CV_32F);
         }
         IplImage tmp_in = image;
-        IplImage *tmp_out = cvCreateImage(cvSize(image.cols, image.rows), IPL_DEPTH_32F, 1);
+        IplImage *tmp_out = cvCreateImage(cvSize(sz.width, sz.height), IPL_DEPTH_32F, 1);
         CvPoint2D32f center;
         center.x = O.x;
         center.y = O.y;
@@ -159,6 +160,12 @@ namespace adsb2 {
         cv::imwrite("xxx.png", out);
         */
         cvReleaseImage(&tmp_out);
+    }
+
+    static inline void linearPolar (cv::Mat from,
+                      cv::Mat *out,
+                      cv::Point_<float> O, float R, int flags = CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS) {
+        linearPolar(from, out, from.size(), O, R, flags);
     }
 
     static inline void vconcat3 (cv::Mat a, cv::Mat b, cv::Mat c, cv::Mat *out) {

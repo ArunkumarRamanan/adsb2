@@ -5,9 +5,16 @@
 namespace adsb2 {
     class CaffeDetector: public Detector {
         caffex::Caffex impl;
+        bool do_transpose;
     public:
         CaffeDetector (string const &path)
-            : impl(path, caffe_batch) {
+            : impl(path, caffe_batch), do_transpose(false) {
+#if 1
+                if (fs::path(path).filename() == "bound") {
+                    LOG(WARNING) << "using guan's transpose heuristic for model " << path;
+                    do_transpose = true;
+                }
+#endif
         }
         virtual void apply (cv::Mat image, cv::Mat *o) {
             /*
@@ -20,14 +27,23 @@ namespace adsb2 {
             }
             else CHECK(0);
             */
-            std::vector<float> prob;
-            impl.apply(image, &prob);
-            //std::cerr << prob.size() << ' ' << input.total() << std::endl;
-            BOOST_VERIFY(prob.size() == image.total() * 2);
-            cv::Mat m(image.size(), CV_32F, &prob[image.total()]);
-            *o = m.clone();
+            if (do_transpose && (image.rows > image.cols)) {
+                cv::Mat tmp, tmpo;
+                cv::transpose(image, tmp);
+                this->apply(tmp, &tmpo);
+                cv::transpose(tmpo, *o);
+            }
+            else {
+                std::vector<float> prob;
+                impl.apply(image, &prob);
+                //std::cerr << prob.size() << ' ' << input.total() << std::endl;
+                BOOST_VERIFY(prob.size() == image.total() * 2);
+                cv::Mat m(image.size(), CV_32F, &prob[image.total()]);
+                *o = m.clone();
+            }
         }
         virtual void apply (vector<cv::Mat> &images, vector<cv::Mat> *o) {
+            CHECK(0);   // after remove Guan model dependancy, remove this one
             /*
             cv::Mat u8;
             if (image.type() == CV_8U) {
