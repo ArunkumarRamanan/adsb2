@@ -633,7 +633,7 @@ namespace adsb2 {
 
     void RefineTop (Study *study, Config const &conf) {
         vector<float> tops(study->size());
-        float max = 0;
+        float min = 0;
         for (unsigned i = 0; i < tops.size(); ++i) {
             float sum = 0;
             int c = 0;
@@ -642,11 +642,11 @@ namespace adsb2 {
                 ++c;
             }
             sum /= c;
-            if (sum > max) max = sum;
+            if (sum < min) min = sum;
             tops[i] = sum;
         }
         int cut = 0;
-        if (max < 0.8) cut = 1;
+        if (min > 0.2) cut = 1;
         for (unsigned i = 0; i < tops.size(); ++i) {
             if (tops[i] > 0.5) cut = i + 1;
             else break;
