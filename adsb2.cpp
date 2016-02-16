@@ -960,7 +960,7 @@ namespace adsb2 {
     }
 
     void Cook::apply (Slice *slice) const {
-        CHECK(0) << "Unimplemented";   // not supported yet
+        //CHECK(0) << "Unimplemented";   // not supported yet
         string sax = slice->path.parent_path().native();
         auto it = cbounds.find(sax);
         CHECK(it != cbounds.end()) << " color bounds not found.";

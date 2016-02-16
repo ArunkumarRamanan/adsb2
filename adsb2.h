@@ -417,10 +417,14 @@ namespace adsb2 {
                 *to_label = from_label;
                 return;
             }
-            float color = delta_color(e);
-            float angle = linear_angle(e);
-            float scale = std::exp(linear_scale(e));
-            bool flip((e() % 2) == 1);
+            float color, angle, scale, flip;
+#pragma omp critical
+            {
+                color = delta_color(e);
+                angle = linear_angle(e);
+                scale = std::exp(linear_scale(e));
+                flip = ((e() % 2) == 1);
+            }
             cv::Mat image, label;
             if (flip) {
                 cv::flip(from_image, image, 1);
@@ -447,13 +451,16 @@ namespace adsb2 {
             float color = 0;
             bool flip = false;
             if (!no_perturb) {
-                float cr = polar_C(e) * R;  // center perturb
-                float phi = polar_phi(e);
-                C.x += cr * std::cos(phi);
-                C.y += cr * std::sin(phi);
-                R *= polar_R(e);
-                color = delta_color(e);
-                flip = ((e() % 2) == 1);
+#pragma omp critical
+                {
+                    float cr = polar_C(e) * R;  // center perturb
+                    float phi = polar_phi(e);
+                    flip = ((e() % 2) == 1);
+                    R *= polar_R(e);
+                    color = delta_color(e);
+                    C.x += cr * std::cos(phi);
+                    C.y += cr * std::sin(phi);
+                }
             }
             linearPolar(from_image, to_image, C, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
             linearPolar(from_label, to_label, C, R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS);

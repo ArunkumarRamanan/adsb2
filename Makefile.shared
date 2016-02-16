@@ -1,7 +1,7 @@
 .PHONY:	all clean caffex
 CXX = g++
-CXXFLAGS = -g -O3 -std=c++11 -I/opt/chain/include -I/opt/caffe-fcn/include -Icaffex-fcn -Wno-unused-result -DCPU_ONLY=1
-LDFLAGS += -pthread -L/opt/chain/lib -L/opt/caffe-fcn/lib #-static
+CXXFLAGS = -fopenmp -g -O3 -std=c++11 -I/opt/chain/include -I/opt/caffe-fcn/include -Icaffex-fcn -Wno-unused-result -DCPU_ONLY=1
+LDFLAGS += -fopenmp -pthread -L/opt/chain/lib -L/opt/caffe-fcn/lib #-static
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
 LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lcppformat \

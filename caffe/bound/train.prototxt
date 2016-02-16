@@ -10,7 +10,7 @@ layer {
     mean_value: 0
   }
   data_param {
-    source: "f50/train/images"
+    source: "db/train/images"
     batch_size: 1
     backend: LMDB
   }
@@ -20,7 +20,7 @@ layer {
   type: "Data"
   top: "label"
   data_param {
-    source: "f50/train/labels"
+    source: "db/train/labels"
     batch_size: 1
     backend: LMDB
   }

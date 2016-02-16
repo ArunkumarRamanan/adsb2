@@ -9,4 +9,5 @@ then
 fi
 
 rm -rf caffe/contour/db
-./import --list data/contour.list --polar --root train/ --train-list data/train_pid.txt --output caffe/contour/db --replica 100
+export OMP_NUM_THREADS=1
+./import_many --list data/ctrs --polar --train-list data/train_pid.txt --output caffe/contour/db --replica 10

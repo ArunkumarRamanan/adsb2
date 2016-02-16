@@ -26,14 +26,39 @@ using namespace caffe;  // NOLINT(build/namespaces)
 using namespace adsb2;
 
 string backend("lmdb");
+fs::path root;
 fs::path sample_dir;
 int sample_max = 100;
 int sample_count = 0;
+
+void FindBoundingCircle (cv::Mat label, cv::Point_<float> *C, float *R) {
+    int min_x = label.cols;
+    int max_x = -1;
+    int min_y = label.rows;
+    int max_y = -1;
+    for (int y = 0; y < label.rows; ++y) {
+        uint8_t const *row = label.ptr<uint8_t const>(y);
+        for (int x = 0; x < label.cols; ++x) {
+            if (row[x]) {   // positive pixel found
+                min_x = std::min(min_x, x);
+                max_x = std::max(max_x, x);
+                min_y = std::min(min_y, y);
+                max_y = std::max(max_y, y);
+            }
+        }
+    }
+    CHECK(min_x <= max_x) << "no positive pixels are found.";
+    *C = cv::Point_<float>(0.5 * (min_x + max_x), 0.5 * (min_y + max_y));
+    int dx = max_x - min_x + 1;
+    int dy = max_y - min_y + 1;
+    *R = std::sqrt(dx * dx + dy * dy);
+}
 
 void import (Sampler &sampler,
              Cook &cook,
              vector<Slice *> &samples,
              fs::path const &dir,
+             bool polar,
              int replica = 1) {
 
     CHECK(fs::create_directories(dir));
@@ -55,22 +80,38 @@ void import (Sampler &sampler,
         if (rr) {
             random_shuffle(samples.begin(), samples.end());
         }
-        for (Slice *dummy_sample: samples) {
+        cerr << "Loading replicate " << rr << "..." << endl;
+        boost::progress_display progress(samples.size(), std::cerr);
+#pragma omp parallel for
+        for (unsigned id = 0; id < samples.size(); ++id) {
+            Slice *dummy_sample = samples[id];
             Slice real_sample(*dummy_sample);
+            real_sample.path = root / real_sample.path;
             real_sample.load_raw();
+            CHECK(real_sample.images[IM_RAW].data);
+            real_sample.path = dummy_sample->path;
             cook.apply(&real_sample);
             real_sample.anno->fill(real_sample, &real_sample.images[IM_LABEL], cv::Scalar(1));
             Slice *sample = &real_sample;
 
-            Datum datum;
-            string key = lexical_cast<string>(count), value;
             CHECK(sample->images[IM_IMAGE].data);
 
             cv::Mat image, label;
             bool do_not_perturb = (rr == 0);
-            sampler.linear(sample->images[IM_IMAGE], sample->images[IM_LABEL],
-                    &image, &label, do_not_perturb);
+            if (polar) {
+                cv::Point_<float> C;
+                float R;
+                FindBoundingCircle(sample->images[IM_LABEL], &C, &R);
+                sampler.polar(sample->images[IM_IMAGE],
+                              sample->images[IM_LABEL],
+                              C, R,
+                              &image, &label, do_not_perturb);
+            }
+            else {
+                sampler.linear(sample->images[IM_IMAGE], sample->images[IM_LABEL],
+                        &image, &label, do_not_perturb);
 
+            }
             {
                 CHECK(image.type() == CV_32F);
                 cv::Mat u8;
@@ -82,29 +123,35 @@ void import (Sampler &sampler,
             cv::rectangle(image, round(sample->box), cv::Scalar(0xFF));
             imwrite((boost::format("abc/%d.png") % count).str(), image);
             */
-            caffe::CVMatToDatum(image, &datum);
-            datum.set_label(0);
-            CHECK(datum.SerializeToString(&value));
-            image_txn->Put(key, value);
+#pragma omp critical
+            {
+                Datum datum;
+                string key = lexical_cast<string>(count), value;
+                caffe::CVMatToDatum(image, &datum);
+                datum.set_label(0);
+                CHECK(datum.SerializeToString(&value));
+                image_txn->Put(key, value);
 
-            caffe::CVMatToDatum(label, &datum);
-            datum.set_label(0);
-            CHECK(datum.SerializeToString(&value));
-            label_txn->Put(key, value);
+                caffe::CVMatToDatum(label, &datum);
+                datum.set_label(0);
+                CHECK(datum.SerializeToString(&value));
+                label_txn->Put(key, value);
 
-            if (sample_count < sample_max) {
-                fs::path op(sample_dir / fs::path(fmt::format("s{}.jpg", sample_count++)));
-                Mat out;
-                vconcat(image, image + label * 255, out);
-                imwrite(op.native(), out);
-            }
+                if (sample_count < sample_max) {
+                    fs::path op(sample_dir / fs::path(fmt::format("s{}.jpg", sample_count++)));
+                    Mat out;
+                    vconcat(image, image + label * 255, out);
+                    imwrite(op.native(), out);
+                }
 
-            if (++count % 1000 == 0) {
-                // Commit db
-                image_txn->Commit();
-                image_txn.reset(image_db->NewTransaction());
-                label_txn->Commit();
-                label_txn.reset(label_db->NewTransaction());
+                if (++count % 1000 == 0) {
+                    // Commit db
+                    image_txn->Commit();
+                    image_txn.reset(image_db->NewTransaction());
+                    label_txn->Commit();
+                    label_txn.reset(label_db->NewTransaction());
+                }
+                ++progress;
             }
         }
     }
@@ -133,6 +180,7 @@ int main(int argc, char **argv) {
     bool full = false;
     int F;
     int replica;
+    bool polar = false;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -140,14 +188,14 @@ int main(int argc, char **argv) {
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
     ("list", po::value(&list_path), "")
-    ("cbounds", po::value(&cbounds_path), "")
-    ("root", po::value(&root_dir), "")
+    ("cbounds", po::value(&cbounds_path)->default_value("/home/wdong/adsb2/data/color_bounds"), "color bound")
+    ("root", po::value(&root_dir)->default_value("/ssd/wdong/adsb2/raw"), "")
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
-    ("circle", "")
     ("train-list", po::value(&train_list_path), "using ids in this file for training, rest for validation")
     ("output,o", po::value(&output_dir), "")
     ("replica", po::value(&replica)->default_value(1), "")
+    ("polar", "")
     ;
 
     po::positional_options_description p;
@@ -165,7 +213,8 @@ int main(int argc, char **argv) {
     }
     CHECK(F >= 1);
     full = vm.count("full") > 0;
-    //if (vm.count("circle")) do_circle = true;
+    polar = vm.count("polar") != 0;
+    root = fs::path(root_dir);
 
     Config config;
     try {
@@ -186,7 +235,7 @@ int main(int argc, char **argv) {
         while (getline(is, line)) {
             samples.emplace_back(line);
         }
-        cerr << samples.size() << " items loaded.";
+        cerr << samples.size() << " items loaded." << endl;
     }
 
     sample_dir = fs::path(output_dir) / fs::path("samples");
@@ -224,12 +273,13 @@ int main(int argc, char **argv) {
         fs::path fold_path(output_dir);
         fs::create_directories(fold_path);
         CHECK(fs::is_directory(fold_path));
+        cerr << "Loaded " << train.size() << " items for training." << endl;
+        cerr << "Loaded " << val.size() << " items for validation." << endl;
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(sampler, cook, train, fold_path / fs::path("train"), replica);
-        import(sampler, cook, val, fold_path / fs::path("val"), 1);
+        import(sampler, cook, train, fold_path / fs::path("train"), polar, replica);
+        import(sampler, cook, val, fold_path / fs::path("val"), polar, 1);
         return 0;
-
     }
 
     if (F == 1) {
@@ -237,7 +287,7 @@ int main(int argc, char **argv) {
         for (unsigned i = 0; i < ss.size(); ++i) {
             ss[i] = &samples[i];
         }
-        import(sampler, cook, ss, fs::path(output_dir), replica);
+        import(sampler, cook, ss, fs::path(output_dir), polar, replica);
         return 0;
     }
     // N-fold cross validation
@@ -263,8 +313,8 @@ int main(int argc, char **argv) {
         CHECK(fs::is_directory(fold_path));
         save_list(train, fold_path / fs::path("train.list"));
         save_list(val, fold_path / fs::path("val.list"));
-        import(sampler, cook, train, fold_path / fs::path("train"), replica);
-        import(sampler, cook, val, fold_path / fs::path("val"), 1);
+        import(sampler, cook, train, fold_path / fs::path("train"), polar, replica);
+        import(sampler, cook, val, fold_path / fs::path("val"), polar, 1);
         if (!full) break;
     }
 
