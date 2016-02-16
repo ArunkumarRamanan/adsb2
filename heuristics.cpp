@@ -632,33 +632,30 @@ namespace adsb2 {
     }
 
     void RefineTop (Study *study, Config const &conf) {
-#if 0
-        float th = conf.get("adsb2.top.th", 0.8);
-        //config.put("adsb2.caffe.model", "model2");
-        for (unsigned sid = 0; sid < study->size(); ++sid) {
-            auto &slices = study->at(sid);
-            std::cerr << "Computing top probablity of " << slices.size() << "  slices..." << std::endl;
-            boost::progress_display progress(slices.size(), std::cerr);
-            int bad = 0;
-#pragma omp parallel for schedule(dynamic, 1) reduction(+:bad)
-            for (unsigned i = 0; i < slices.size(); ++i) {
-                Detector *det = Detector::get("top");
-                CHECK(det) << " cannot create detector.";
-                vector<float> prob(2);
-                det->apply(slices[i].images[IM_IMAGE], &prob);
-                float p = prob[0];
-                slices[i].data[SL_TSCORE] = p;
-                slices[i].area *= p;
-                if (p < th) {
-                    slices[i].box = cv::Rect();
-                    ++bad;
-                }
-#pragma omp critical
-                ++progress;
+        vector<float> tops(study->size());
+        float max = 0;
+        for (unsigned i = 0; i < tops.size(); ++i) {
+            float sum = 0;
+            int c = 0;
+            for (auto &s: study->at(i)) {
+                sum += s.data[SL_TSCORE];
+                ++c;
             }
-            if (bad == 0) break;
+            sum /= c;
+            if (sum > max) max = sum;
+            tops[i] = sum;
         }
-#endif
+        int cut = 0;
+        if (max < 0.8) cut = 1;
+        for (unsigned i = 0; i < tops.size(); ++i) {
+            if (tops[i] > 0.5) cut = i + 1;
+            else break;
+        }
+        for (unsigned i = 0; i < cut; ++i) {
+            for (auto &s: study->at(i)) {
+                s.area = 0;
+            }
+        }
     }
 
     void PatchBottomBoundHelper (Slice *s, Config const &conf) {
