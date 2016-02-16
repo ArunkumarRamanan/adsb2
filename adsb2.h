@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <random>
+#include <unordered_map>
 #include <opencv2/opencv.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -327,10 +328,20 @@ namespace adsb2 {
 
     class Cook {
         float spacing;
+        unordered_map<string, pair<float, float>> cbounds;
     public:
         Cook (Config const &config):
             spacing(config.get<float>("adsb2.cook.spacing", 1.4))
         {
+            string cbounds_path = config.get<string>("adsb2.cook.cbounds", "");
+            if (cbounds_path.size()) {
+                ifstream is(cbounds_path.c_str());
+                pair<string, pair<float, float>> e;
+                while (is >> e.first >> e.second.first >> e.second.second) {
+                    cbounds.insert(e);
+                }
+                LOG(WARNING) << cbounds.size() << " color bounds loaded.";
+            }
         }
         void apply (Slice *) const;
         void apply (Series *) const;

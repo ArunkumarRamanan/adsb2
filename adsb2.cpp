@@ -961,6 +961,28 @@ namespace adsb2 {
 
     void Cook::apply (Slice *slice) const {
         CHECK(0) << "Unimplemented";   // not supported yet
+        string sax = slice->path.parent_name().native();
+        auto it = cbounds.find(sax);
+        CHECK(it != cbounds.end()) << " color bounds not found.";
+        float lb = it->second.first;
+        float ub = it->second.second;
+        slice->data[SL_COLOR_LB] = lb;
+        slice->data[SL_COLOR_UB] = ub;
+        slice->images[IM_RAW].convertTo(s.images[IM_IMAGE], CV_32F);
+        scale_color(&s->images[IM_IMAGE], lb, ub);
+
+        if (spacing > 0) {
+            float raw_spacing = slice->meta.raw_spacing;
+            float scale = raw_spacing / spacing;
+            sz = round(slice->images[IM_RAW].size() * scale);
+            slice->meta.spacing = spacing;
+            //float scale = s.meta.raw_spacing / s.meta.spacing;
+            cv::resize(s.images[IM_IMAGE], s.images[IM_IMAGE], sz);
+            //cv::resize(s.images[IM_EQUAL], s.images[IM_EQUAL], sz);
+            if (s.anno) {
+                s.anno->scale(&s, scale);
+            }
+        }
     }
 
     void Cook::apply (Series *series) const {
