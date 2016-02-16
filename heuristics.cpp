@@ -605,7 +605,34 @@ namespace adsb2 {
     }
 #endif
 
+    void ComputeTop (Study *study, Config const &conf) {
+        float th = conf.get("adsb2.top.th", 0.2);
+        //config.put("adsb2.caffe.model", "model2");
+        for (unsigned sid = 0; sid < study->size(); ++sid) {
+            auto &slices = study->at(sid);
+            std::cerr << "Computing top probablity of " << slices.size() << "  slices..." << std::endl;
+            boost::progress_display progress(slices.size(), std::cerr);
+            int bad = 0;
+#pragma omp parallel for schedule(dynamic, 1) reduction(+:bad)
+            for (unsigned i = 0; i < slices.size(); ++i) {
+                Detector *det = Detector::get("top");
+                CHECK(det) << " cannot create detector.";
+                vector<float> prob(2);
+                det->apply(slices[i].images[IM_IMAGE], &prob);
+                float p = prob[1];
+                slices[i].data[SL_TSCORE] = p;
+                if (p > th) {
+                    ++bad;
+                }
+#pragma omp critical
+                ++progress;
+            }
+            if (bad == 0) break;
+        }
+    }
+
     void RefineTop (Study *study, Config const &conf) {
+#if 0
         float th = conf.get("adsb2.top.th", 0.8);
         //config.put("adsb2.caffe.model", "model2");
         for (unsigned sid = 0; sid < study->size(); ++sid) {
@@ -631,6 +658,7 @@ namespace adsb2 {
             }
             if (bad == 0) break;
         }
+#endif
     }
 
     void PatchBottomBoundHelper (Slice *s, Config const &conf) {

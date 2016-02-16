@@ -98,7 +98,6 @@ int main(int argc, char **argv) {
         delete bb_det;
     }
     */
-
     ComputeBoundProb(&study);
     cerr << "Filtering..." << endl;
     ProbFilter(&study, config);
@@ -118,6 +117,7 @@ int main(int argc, char **argv) {
     
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
+    ComputeTop(&study, config);
 
     if (decap > 0) {
         CHECK(decap < 5);

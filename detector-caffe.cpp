@@ -5,11 +5,11 @@
 namespace adsb2 {
     class CaffeDetector: public Detector {
         caffex::Caffex impl;
-        bool do_transpose;
+        //bool do_transpose;
     public:
         CaffeDetector (string const &path)
-            : impl(path, caffe_batch), do_transpose(false) {
-#if 1
+            : impl(path, caffe_batch)  { //, do_transpose(false) {
+#if 0
                 if (fs::path(path).filename() == "bound") {
                     LOG(WARNING) << "using guan's transpose heuristic for model " << path;
                     do_transpose = true;
@@ -27,6 +27,7 @@ namespace adsb2 {
             }
             else CHECK(0);
             */
+            /*
             if (do_transpose && (image.rows > image.cols)) {
                 cv::Mat tmp, tmpo;
                 cv::transpose(image, tmp);
@@ -34,16 +35,17 @@ namespace adsb2 {
                 cv::transpose(tmpo, *o);
             }
             else {
+            */
                 std::vector<float> prob;
                 impl.apply(image, &prob);
                 //std::cerr << prob.size() << ' ' << input.total() << std::endl;
                 BOOST_VERIFY(prob.size() == image.total() * 2);
                 cv::Mat m(image.size(), CV_32F, &prob[image.total()]);
                 *o = m.clone();
-            }
+            //}
         }
         virtual void apply (vector<cv::Mat> &images, vector<cv::Mat> *o) {
-            CHECK(0);   // after remove Guan model dependancy, remove this one
+            //CHECK(0);   // after remove Guan model dependancy, remove this one
             /*
             cv::Mat u8;
             if (image.type() == CV_8U) {

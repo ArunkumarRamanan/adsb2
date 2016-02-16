@@ -499,6 +499,7 @@ namespace adsb2 {
     void RefinePolarBound (Study *, Config const &config);
     void study_CA1 (Study *, Config const &config, bool);
     void study_CA2 (Study *, Config const &config, bool);
+    void ComputeTop (Study *study, Config const &conf);
     void RefineTop (Study *study, Config const &conf);
     void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub);
     void PatchBottomBound(Study *study, Config const &);
