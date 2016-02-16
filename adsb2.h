@@ -29,6 +29,7 @@ namespace adsb2 {
     using std::ostringstream;
     using std::istringstream;
     using std::ifstream;
+    using std::unordered_map;
     using boost::lexical_cast;
     namespace fs = boost::filesystem;
 
@@ -328,7 +329,7 @@ namespace adsb2 {
 
     class Cook {
         float spacing;
-        unordered_map<string, pair<float, float>> cbounds;
+        unordered_map<string, std::pair<float, float>> cbounds;
     public:
         Cook (Config const &config):
             spacing(config.get<float>("adsb2.cook.spacing", 1.4))
@@ -336,7 +337,7 @@ namespace adsb2 {
             string cbounds_path = config.get<string>("adsb2.cook.cbounds", "");
             if (cbounds_path.size()) {
                 ifstream is(cbounds_path.c_str());
-                pair<string, pair<float, float>> e;
+                std::pair<string, std::pair<float, float>> e;
                 while (is >> e.first >> e.second.first >> e.second.second) {
                     cbounds.insert(e);
                 }

@@ -179,14 +179,14 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
 
     Cook cook(config);
-    vector<Slice> slices;
+    vector<Slice> samples;
     {
         ifstream is(list_path.c_str());
         string line;
         while (getline(is, line)) {
-            slices.emplace_back(line);
+            samples.emplace_back(line);
         }
-        cerr << slices.size() << " items loaded.";
+        cerr << samples.size() << " items loaded.";
     }
 
     sample_dir = fs::path(output_dir) / fs::path("samples");
