@@ -11,12 +11,12 @@ then
     exit
 fi
 
-cd caffe/bound
+cd caffe/bound_train
 
 CAFFE=caffe
 
-#mkdir -p snapshots
-#rm -rf snapshots/*
+mkdir -p snapshots
+rm -rf snapshots/*
 
 $CAFFE train --solver solver.prototxt $* 2>&1 | tee log
 
