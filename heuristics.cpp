@@ -732,9 +732,11 @@ namespace adsb2 {
     }
 
     void TrimBottom(Study *study, Config const &conf) {
+        /*
         for (auto &s: study->back()) {
             s.area = 0;
         }
+        */
         /*
         for (unsigned sr = 2 * study->size()/3;
                       sr < study->size(); ++sr) {

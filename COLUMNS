@@ -1,0 +1,31 @@
+0	DCM path
+1	sax ID
+2	image ID within the same sax
+3	area
+4	box1 x		-- box1 is the bounding box of probability
+5	box1 y
+6	box1 width
+7	box1 height
+8	box2 x		-- box2 is the bounding box of contour
+9	box2 y
+10	box2 width
+11	box2 height
+12	slice location
+13	trigger time
+14	spacing where our program works at
+15	raw spacing of DCM file
+16	sex
+17	age in years
+18	slice thickness
+19	nominal interval
+20	--
+21	--
+22	--
+23	bounding box score (bscore)
+24	--
+25	contour score (not good yet)
+26	top score (0-1, 1 for top, 0 for bottom)
+27	--
+28	--
+29	--
+

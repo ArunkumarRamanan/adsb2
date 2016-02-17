@@ -119,7 +119,6 @@ namespace adsb2 {
             Slice &slice = *tasks[i];
             if (!slice.images[IM_POLAR_PROB].data) {
                 slice.polar_box = cv::Rect();
-                slice.polar_score = 0;
                 continue;
             }
             ca1.apply_slice(&slice);

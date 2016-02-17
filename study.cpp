@@ -26,8 +26,6 @@ int main(int argc, char **argv) {
     string input_dir;
     string output_dir;
     int ca;
-    int ca_it;
-    int decap;
     /*
     string output_dir;
     string gif;
@@ -45,8 +43,6 @@ int main(int argc, char **argv) {
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
     ("no-gif", "")
-    ("ca-it", po::value(&ca_it)->default_value(2), "")
-    ("decap", po::value(&decap)->default_value(0), "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -112,6 +108,7 @@ int main(int argc, char **argv) {
     study_CA1(&study, config, true);
     ComputeTop(&study, config);
 
+#if 0
     if (decap > 0) {
         CHECK(decap < 5);
         for (int i = 0; i < decap; ++i) {
@@ -124,6 +121,7 @@ int main(int argc, char **argv) {
         RefineTop(&study, config);
     }
     TrimBottom(&study, config);
+#endif
     
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
@@ -177,9 +175,33 @@ int main(int argc, char **argv) {
         gp << 'e' << endl;
         html << "</table></body></html>" << endl;
         fs::ofstream os(dir/fs::path("report.txt"));
-        for (auto const &series: study) {
-            for (auto const &s: series) {
-                report(os, s, bound);
+        for (unsigned i = 0; i < study.size(); ++i) {
+            auto const &series = study[i];
+            for (unsigned j = 0; j < series.size(); ++j) {
+                auto const &s = series[j];
+                os << s.path.native()
+                    << '\t' << i
+                    << '\t' << j
+                    << '\t' << s.area
+                    << '\t' << s.box.x
+                    << '\t' << s.box.y
+                    << '\t' << s.box.width
+                    << '\t' << s.box.height
+                    << '\t' << s.polar_box.x
+                    << '\t' << s.polar_box.y
+                    << '\t' << s.polar_box.width
+                    << '\t' << s.polar_box.height
+                    << '\t' << s.meta.slice_location
+                    << '\t' << s.meta.trigger_time
+                    << '\t' << s.meta.spacing
+                    << '\t' << s.meta.raw_spacing;
+                for (auto const &v: s.meta) {
+                    os << '\t' << v;
+                }
+                for (auto const &v: s.data) {
+                    os << '\t' << v;
+                }
+                os << std::endl;
             }
         }
         {
