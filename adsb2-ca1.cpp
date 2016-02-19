@@ -35,6 +35,8 @@ namespace adsb2 {
                 th = left_mean + (right_mean - left_mean) * thr;
             }
 
+            // thr big => th small => tight
+
             WorkSpace ws(image.rows, image.cols);
             int best_cc = 0;
             for (int y = 0; y < image.rows; ++y) {

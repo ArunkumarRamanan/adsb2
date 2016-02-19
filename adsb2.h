@@ -395,7 +395,7 @@ namespace adsb2 {
             : max_color(config.get<float>("adsb2.aug.color", 20)),
             delta_color(-max_color, max_color),
             max_linear_angle(config.get<float>("adsb2.aug.angle", 10.0 * M_PI / 180)),
-            max_linear_scale(config.get<float>("adsb2.aug.scale", 1.2)),
+            max_linear_scale(config.get<float>("adsb2.aug.scale", 0.25)),
             linear_angle(-max_linear_angle, max_linear_angle),
             linear_scale(-max_linear_scale, max_linear_scale),
             polar_R(config.get<float>("adsb2.aug.min_polar_R", 0.75),
