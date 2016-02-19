@@ -1,3 +1,4 @@
+#include <fstream>
 #include <boost/program_options.hpp>
 #include "em.h"
 
@@ -9,39 +10,85 @@ extern char const *HEADER;
 
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
-    string input_path;
+    string train_path;
+    string test_path;
+    string output_path;
+    string load_path;
+    string save_path;
+    string val_path;
+    double eta;
+    double lambda;
+    int loop;
 
     po::options_description desc("Allowed options");
     desc.add_options()
     ("help,h", "produce help message.")
-    ("input", po::value(&input_path), "")
+    ("train,t", po::value(&train_path), "")
+    ("test,T", po::value(&test_path), "")
+    ("val,v", po::value(&val_path), "")
+    ("output,o", po::value(&output_path), "")
+    ("eta,E", po::value(&eta)->default_value(0.0001), "")
+    ("lambda,L", po::value(&lambda)->default_value(1), "")
+    ("loop,n", po::value(&loop)->default_value(100), "")
+    ("load,l", po::value(&load_path), "")
+    ("save,s", po::value(&save_path), "")
     ;
 
 
     po::positional_options_description p;
-    p.add("input", 1);
 
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
-    if (vm.count("help") || input_path.empty()) {
+    if (vm.count("help") || train_path.empty()) {
         cerr << desc;
         return 1;
     }
 
-    vector<EM::Sample> samples;
-    EM::load(input_path, &samples);
-    EM em;
-    em.predict(&samples);
-    cout << HEADER << endl;
-    for (auto const &s: samples) {
-        cout << s.sid;
-        for (auto const &v: s.cdf) {
-            cout << ',' << v;
+    EM em(eta, lambda);
+    if (load_path.size()) {
+        em.load(load_path);
+    }
+
+    if (train_path.size()) {
+        vector<EM::Sample> samples;
+        vector<EM::Sample> V;
+        EM::load(train_path, &samples);
+        if (val_path.size()) {
+            EM::load(val_path, &V);
         }
-        cout << endl;
+        for (unsigned i = 0; i < loop; ++i) {
+            random_shuffle(samples.begin(), samples.end());
+            double e = em.train(samples);
+            cerr << i << ": " << e;
+            if (V.size()) {
+                double e = em.predict(&V);
+                cerr << " " << e;
+            }
+            cerr << endl;
+        }
+    }
+    if (save_path.size()) {
+        em.save(save_path);
+    }
+    if (test_path.size()) {
+        vector<EM::Sample> samples;
+        EM::load(test_path, &samples);
+        double e = em.predict(&samples);
+        cerr << "Test error: " << e << endl;
+        if (output_path.size()) {
+            ofstream os(output_path.c_str());
+            os << HEADER << endl;
+            for (auto const &s: samples) {
+                os << s.sid;
+                for (auto const &v: s.cdf) {
+                    os << ',' << v;
+                }
+                os << endl;
+            }
+        }
     }
 
     return 0;
