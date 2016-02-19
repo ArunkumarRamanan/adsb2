@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
     ("no-gif", "")
+    ("no-top", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -106,7 +107,9 @@ int main(int argc, char **argv) {
 
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
-    ComputeTop(&study, config);
+    if (vm.count("no-top") == 0) {
+        ComputeTop(&study, config);
+    }
 
 #if 0
     if (decap > 0) {
