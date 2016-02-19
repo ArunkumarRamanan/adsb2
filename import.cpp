@@ -151,7 +151,6 @@ int main(int argc, char **argv) {
     ("root", po::value(&root_dir), "")
     ("fold,f", po::value(&F)->default_value(1), "")
     ("full", "")
-    ("circle", "")
     ("train-list", po::value(&train_list_path), "using ids in this file for training, rest for validation")
     ("output,o", po::value(&output_dir), "")
     ("replica", po::value(&replica)->default_value(1), "")
@@ -174,7 +173,6 @@ int main(int argc, char **argv) {
     CHECK(F >= 1);
     full = vm.count("full") > 0;
     polar = vm.count("polar") != 0;
-    //if (vm.count("circle")) do_circle = true;
 
     Config config;
     try {
