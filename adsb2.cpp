@@ -145,6 +145,8 @@ namespace adsb2 {
     BoxAnnoOps box_anno_ops;
     PolyAnnoOps poly_anno_ops;
     PredAnnoOps pred_anno_ops;
+
+#define BOX_IS_RATIO    1
     
     void BoxAnnoOps::load (Slice *slice, string const *txt) const
     {
@@ -154,27 +156,52 @@ namespace adsb2 {
         box.y = lexical_cast<float>(txt[1]);
         box.width = lexical_cast<float>(txt[2]);
         box.height = lexical_cast<float>(txt[3]);
+#ifdef BOX_IS_RATIO
+        CHECK(box.x <= 1);
+        CHECK(box.x + box.width <= 1);
+        CHECK(box.y <= 1);
+        CHECK(box.y + box.height <= 1);
+#else
+        CHECK(box.width >= 1);
+        CHECK(box.height >= 1);
+        CHECK(box.x + box.width > 1);
+        CHECK(box.y + box.height > 1);
+#endif
     }
 
     void BoxAnnoOps::shift (Slice *slice, cv::Point_<float> const &pt) const {
+#ifdef BOX_IS_RATIO
+        CHECK(0);
+#else
         Data &box = slice->anno_data.box;
         box.x -= pt.x;
         box.y -= pt.y;
+#endif
     }
 
     void BoxAnnoOps::scale (Slice *slice, float rate) const {
+#ifdef BOX_IS_RATIO
+#else
         Data &box = slice->anno_data.box;
         box.x *= rate;
         box.y *= rate;
         box.width *= rate;
         box.height *= rate;
+#endif
     }
 
     void BoxAnnoOps::fill (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
     {
-        Data const &box = slice.anno_data.box;
+        cv::Rect_<float> box = slice.anno_data.box;
+#ifdef BOX_IS_RATIO
+        cv::Size sz = slice.images[IM_IMAGE].size();
+        box.x *= sz.width;
+        box.width *= sz.width;
+        box.y *= sz.height;
+        box.height *= sz.height;
+#endif
         *out = cv::Mat(slice.images[IM_IMAGE].size(), CV_8U, cv::Scalar(0));
-#define BOX_AS_CIRCLE 1
+//#define BOX_AS_CIRCLE 1
 #ifdef BOX_AS_CIRCLE
         cv::circle(*out, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
                          std::sqrt(box.width * box.height)/2, v, CV_FILLED);
@@ -186,9 +213,9 @@ namespace adsb2 {
 
     void BoxAnnoOps::contour (Slice const &slice, cv::Mat *out, cv::Scalar const &v) const
     {
+        CHECK(0);
         Data const &box = slice.anno_data.box;
         *out = cv::Mat(slice.images[IM_IMAGE].size(), CV_32F, cv::Scalar(0));
-#define BOX_AS_CIRCLE 1
 #ifdef BOX_AS_CIRCLE
         cv::circle(*out, round(cv::Point_<float>(box.x + box.width/2, box.y + box.height/2)),
                          std::sqrt(box.width * box.height)/2, v);

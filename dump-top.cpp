@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
     GlobalInit(argv[0], config);
     Cook cook(config);
 
-    fs::path root("image");
-    fs::ofstream meta("image.list");
+    fs::path root("/ssd/wdong/owl-top/images");
+    fs::ofstream meta("/ssd/wdong/owl-top/images.list");
     ifstream list(list_path);
     int n;
     while (list >> n) {
@@ -56,21 +56,21 @@ int main(int argc, char **argv) {
         Study study(study_path, true, true, true);
         cook.apply(&study);
         int cnt = 0;
-        for (int i = study.size() - 3; i < study.size(); ++i) {
+        for (int i = 0; i < 3; ++i) {
             auto const &ss = study[i];
             int mid = ss.size() / 2;
             cerr << mid << endl;
-            cv::Mat gif1 = ss[0].image;
-            cv::Mat gif2 = ss[mid].image;
+            cv::Mat gif1 = ss[0].images[IM_IMAGE];
+            cv::Mat gif2 = ss[mid].images[IM_IMAGE];
             for (auto &slice: ss) {
                 fs::path img_path(out_dir/fs::path(fmt::format("{}.gif", cnt++)));
                 Series sr;
                 sr.resize(2);
-                cv::hconcat(slice.image, gif1, sr[0].image);
-                cv::hconcat(slice.image, gif2, sr[1].image);
-                type_convert(&sr[0].image, CV_8U);
-                type_convert(&sr[1].image, CV_8U);
-                sr.save_gif(img_path.native(), 40);
+                cv::hconcat(slice.images[IM_IMAGE], gif1, sr[0].images[IM_VISUAL]);
+                cv::hconcat(slice.images[IM_IMAGE], gif2, sr[1].images[IM_VISUAL]);
+                type_convert(&sr[0].images[IM_VISUAL], CV_8U);
+                type_convert(&sr[1].images[IM_VISUAL], CV_8U);
+                sr.save_gif(img_path.native());
                 meta << img_path.native() << '\t' << slice.path.native() << endl;
             }
         }

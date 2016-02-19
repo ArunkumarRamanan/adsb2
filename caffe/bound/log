@@ -1,5 +1,5 @@
-I0216 17:25:39.025787 29927 caffe.cpp:183] Using GPUs 0
-I0216 17:25:39.626803 29927 solver.cpp:54] Initializing solver from parameters: 
+I0217 12:01:42.820006 22888 caffe.cpp:183] Using GPUs 0
+I0217 12:01:47.117516 22888 solver.cpp:54] Initializing solver from parameters: 
 train_net: "train.prototxt"
 test_net: "val.prototxt"
 test_iter: 0
@@ -19,8 +19,8 @@ random_seed: 5
 test_initialization: true
 average_loss: 200
 stepvalue: 10000
-I0216 17:25:39.626852 29927 solver.cpp:86] Creating training net from train_net file: train.prototxt
-I0216 17:25:39.627358 29927 net.cpp:50] Initializing net from parameters: 
+I0217 12:01:47.117563 22888 solver.cpp:86] Creating training net from train_net file: train.prototxt
+I0217 12:01:47.144467 22888 net.cpp:50] Initializing net from parameters: 
 name: "FCN"
 force_backward: true
 state {
@@ -301,145 +301,145 @@ layer {
     normalize: true
   }
 }
-I0216 17:25:39.627486 29927 layer_factory.hpp:76] Creating layer data
-I0216 17:25:39.627601 29927 net.cpp:111] Creating Layer data
-I0216 17:25:39.627614 29927 net.cpp:434] data -> data
-I0216 17:25:39.628212 29934 db_lmdb.cpp:22] Opened lmdb db/train/images
-I0216 17:25:39.628294 29927 data_layer.cpp:44] output data size: 1,1,178,237
-I0216 17:25:39.633180 29927 net.cpp:156] Setting up data
-I0216 17:25:39.633203 29927 net.cpp:164] Top shape: 1 1 178 237 (42186)
-I0216 17:25:39.633214 29927 layer_factory.hpp:76] Creating layer data_data_0_split
-I0216 17:25:39.633256 29927 net.cpp:111] Creating Layer data_data_0_split
-I0216 17:25:39.633268 29927 net.cpp:478] data_data_0_split <- data
-I0216 17:25:39.633282 29927 net.cpp:434] data_data_0_split -> data_data_0_split_0
-I0216 17:25:39.633297 29927 net.cpp:434] data_data_0_split -> data_data_0_split_1
-I0216 17:25:39.633316 29927 net.cpp:156] Setting up data_data_0_split
-I0216 17:25:39.633327 29927 net.cpp:164] Top shape: 1 1 178 237 (42186)
-I0216 17:25:39.633334 29927 net.cpp:164] Top shape: 1 1 178 237 (42186)
-I0216 17:25:39.633342 29927 layer_factory.hpp:76] Creating layer label
-I0216 17:25:39.633389 29927 net.cpp:111] Creating Layer label
-I0216 17:25:39.633399 29927 net.cpp:434] label -> label
-I0216 17:25:39.634680 29936 db_lmdb.cpp:22] Opened lmdb db/train/labels
-I0216 17:25:39.634829 29927 data_layer.cpp:44] output data size: 1,1,178,237
-I0216 17:25:39.635686 29927 net.cpp:156] Setting up label
-I0216 17:25:39.635701 29927 net.cpp:164] Top shape: 1 1 178 237 (42186)
-I0216 17:25:39.635709 29927 layer_factory.hpp:76] Creating layer conv1
-I0216 17:25:39.635723 29927 net.cpp:111] Creating Layer conv1
-I0216 17:25:39.635730 29927 net.cpp:478] conv1 <- data_data_0_split_0
-I0216 17:25:39.635746 29927 net.cpp:434] conv1 -> conv1
-I0216 17:25:39.736707 29927 net.cpp:156] Setting up conv1
-I0216 17:25:39.736747 29927 net.cpp:164] Top shape: 1 100 137 167 (2287900)
-I0216 17:25:39.736773 29927 layer_factory.hpp:76] Creating layer relu1
-I0216 17:25:39.736788 29927 net.cpp:111] Creating Layer relu1
-I0216 17:25:39.736796 29927 net.cpp:478] relu1 <- conv1
-I0216 17:25:39.736805 29927 net.cpp:420] relu1 -> conv1 (in-place)
-I0216 17:25:39.737013 29927 net.cpp:156] Setting up relu1
-I0216 17:25:39.737025 29927 net.cpp:164] Top shape: 1 100 137 167 (2287900)
-I0216 17:25:39.737032 29927 layer_factory.hpp:76] Creating layer pool1
-I0216 17:25:39.737046 29927 net.cpp:111] Creating Layer pool1
-I0216 17:25:39.737053 29927 net.cpp:478] pool1 <- conv1
-I0216 17:25:39.737061 29927 net.cpp:434] pool1 -> pool1
-I0216 17:25:39.737190 29927 net.cpp:156] Setting up pool1
-I0216 17:25:39.737200 29927 net.cpp:164] Top shape: 1 100 69 84 (579600)
-I0216 17:25:39.737207 29927 layer_factory.hpp:76] Creating layer conv2
-I0216 17:25:39.737221 29927 net.cpp:111] Creating Layer conv2
-I0216 17:25:39.737229 29927 net.cpp:478] conv2 <- pool1
-I0216 17:25:39.737239 29927 net.cpp:434] conv2 -> conv2
-I0216 17:25:39.743178 29927 net.cpp:156] Setting up conv2
-I0216 17:25:39.743192 29927 net.cpp:164] Top shape: 1 200 33 40 (264000)
-I0216 17:25:39.743207 29927 layer_factory.hpp:76] Creating layer relu2
-I0216 17:25:39.743216 29927 net.cpp:111] Creating Layer relu2
-I0216 17:25:39.743222 29927 net.cpp:478] relu2 <- conv2
-I0216 17:25:39.743232 29927 net.cpp:420] relu2 -> conv2 (in-place)
-I0216 17:25:39.743427 29927 net.cpp:156] Setting up relu2
-I0216 17:25:39.743438 29927 net.cpp:164] Top shape: 1 200 33 40 (264000)
-I0216 17:25:39.743445 29927 layer_factory.hpp:76] Creating layer pool2
-I0216 17:25:39.743456 29927 net.cpp:111] Creating Layer pool2
-I0216 17:25:39.743463 29927 net.cpp:478] pool2 <- conv2
-I0216 17:25:39.743471 29927 net.cpp:434] pool2 -> pool2
-I0216 17:25:39.743602 29927 net.cpp:156] Setting up pool2
-I0216 17:25:39.743613 29927 net.cpp:164] Top shape: 1 200 17 20 (68000)
-I0216 17:25:39.743620 29927 layer_factory.hpp:76] Creating layer conv3
-I0216 17:25:39.743630 29927 net.cpp:111] Creating Layer conv3
-I0216 17:25:39.743636 29927 net.cpp:478] conv3 <- pool2
-I0216 17:25:39.743648 29927 net.cpp:434] conv3 -> conv3
-I0216 17:25:39.750267 29927 net.cpp:156] Setting up conv3
-I0216 17:25:39.750285 29927 net.cpp:164] Top shape: 1 300 15 18 (81000)
-I0216 17:25:39.750300 29927 layer_factory.hpp:76] Creating layer relu3
-I0216 17:25:39.750313 29927 net.cpp:111] Creating Layer relu3
-I0216 17:25:39.750319 29927 net.cpp:478] relu3 <- conv3
-I0216 17:25:39.750327 29927 net.cpp:420] relu3 -> conv3 (in-place)
-I0216 17:25:39.750455 29927 net.cpp:156] Setting up relu3
-I0216 17:25:39.750466 29927 net.cpp:164] Top shape: 1 300 15 18 (81000)
-I0216 17:25:39.750473 29927 layer_factory.hpp:76] Creating layer conv4
-I0216 17:25:39.750486 29927 net.cpp:111] Creating Layer conv4
-I0216 17:25:39.750496 29927 net.cpp:478] conv4 <- conv3
-I0216 17:25:39.750506 29927 net.cpp:434] conv4 -> conv4
-I0216 17:25:39.759747 29927 net.cpp:156] Setting up conv4
-I0216 17:25:39.759762 29927 net.cpp:164] Top shape: 1 300 13 16 (62400)
-I0216 17:25:39.759773 29927 layer_factory.hpp:76] Creating layer relu4
-I0216 17:25:39.759784 29927 net.cpp:111] Creating Layer relu4
-I0216 17:25:39.759791 29927 net.cpp:478] relu4 <- conv4
-I0216 17:25:39.759799 29927 net.cpp:420] relu4 -> conv4 (in-place)
-I0216 17:25:39.760006 29927 net.cpp:156] Setting up relu4
-I0216 17:25:39.760018 29927 net.cpp:164] Top shape: 1 300 13 16 (62400)
-I0216 17:25:39.760025 29927 layer_factory.hpp:76] Creating layer drop
-I0216 17:25:39.760036 29927 net.cpp:111] Creating Layer drop
-I0216 17:25:39.760043 29927 net.cpp:478] drop <- conv4
-I0216 17:25:39.760051 29927 net.cpp:420] drop -> conv4 (in-place)
-I0216 17:25:39.760066 29927 net.cpp:156] Setting up drop
-I0216 17:25:39.760076 29927 net.cpp:164] Top shape: 1 300 13 16 (62400)
-I0216 17:25:39.760082 29927 layer_factory.hpp:76] Creating layer score_classes
-I0216 17:25:39.760094 29927 net.cpp:111] Creating Layer score_classes
-I0216 17:25:39.760100 29927 net.cpp:478] score_classes <- conv4
-I0216 17:25:39.760112 29927 net.cpp:434] score_classes -> score_classes
-I0216 17:25:39.760704 29927 net.cpp:156] Setting up score_classes
-I0216 17:25:39.760715 29927 net.cpp:164] Top shape: 1 2 13 16 (416)
-I0216 17:25:39.760730 29927 layer_factory.hpp:76] Creating layer upscore
-I0216 17:25:39.760742 29927 net.cpp:111] Creating Layer upscore
-I0216 17:25:39.760751 29927 net.cpp:478] upscore <- score_classes
-I0216 17:25:39.760761 29927 net.cpp:434] upscore -> upscore
-I0216 17:25:39.760957 29927 net.cpp:156] Setting up upscore
-I0216 17:25:39.760967 29927 net.cpp:164] Top shape: 1 2 207 255 (105570)
-I0216 17:25:39.760977 29927 layer_factory.hpp:76] Creating layer score
-I0216 17:25:39.760998 29927 net.cpp:111] Creating Layer score
-I0216 17:25:39.761005 29927 net.cpp:478] score <- upscore
-I0216 17:25:39.761013 29927 net.cpp:478] score <- data_data_0_split_1
-I0216 17:25:39.761021 29927 net.cpp:434] score -> score
-I0216 17:25:39.761065 29927 net.cpp:156] Setting up score
-I0216 17:25:39.761073 29927 net.cpp:164] Top shape: 1 2 178 237 (84372)
-I0216 17:25:39.761080 29927 layer_factory.hpp:76] Creating layer loss
-I0216 17:25:39.761092 29927 net.cpp:111] Creating Layer loss
-I0216 17:25:39.761099 29927 net.cpp:478] loss <- score
-I0216 17:25:39.761106 29927 net.cpp:478] loss <- label
-I0216 17:25:39.761114 29927 net.cpp:434] loss -> loss
-I0216 17:25:39.761134 29927 layer_factory.hpp:76] Creating layer loss
-I0216 17:25:39.761353 29927 net.cpp:156] Setting up loss
-I0216 17:25:39.761363 29927 net.cpp:164] Top shape: (1)
-I0216 17:25:39.761369 29927 net.cpp:169]     with loss weight 1
-I0216 17:25:39.761394 29927 net.cpp:237] loss needs backward computation.
-I0216 17:25:39.761400 29927 net.cpp:237] score needs backward computation.
-I0216 17:25:39.761406 29927 net.cpp:237] upscore needs backward computation.
-I0216 17:25:39.761412 29927 net.cpp:237] score_classes needs backward computation.
-I0216 17:25:39.761418 29927 net.cpp:237] drop needs backward computation.
-I0216 17:25:39.761423 29927 net.cpp:237] relu4 needs backward computation.
-I0216 17:25:39.761428 29927 net.cpp:237] conv4 needs backward computation.
-I0216 17:25:39.761433 29927 net.cpp:237] relu3 needs backward computation.
-I0216 17:25:39.761438 29927 net.cpp:237] conv3 needs backward computation.
-I0216 17:25:39.761445 29927 net.cpp:237] pool2 needs backward computation.
-I0216 17:25:39.761452 29927 net.cpp:237] relu2 needs backward computation.
-I0216 17:25:39.761457 29927 net.cpp:237] conv2 needs backward computation.
-I0216 17:25:39.761463 29927 net.cpp:237] pool1 needs backward computation.
-I0216 17:25:39.761468 29927 net.cpp:237] relu1 needs backward computation.
-I0216 17:25:39.761474 29927 net.cpp:237] conv1 needs backward computation.
-I0216 17:25:39.761481 29927 net.cpp:241] label does not need backward computation.
-I0216 17:25:39.761487 29927 net.cpp:241] data_data_0_split does not need backward computation.
-I0216 17:25:39.761492 29927 net.cpp:241] data does not need backward computation.
-I0216 17:25:39.761498 29927 net.cpp:284] This network produces output loss
-I0216 17:25:39.761513 29927 net.cpp:298] Network initialization done.
-I0216 17:25:39.761519 29927 net.cpp:299] Memory required for data: 25838812
-I0216 17:25:39.761869 29927 solver.cpp:186] Creating test net (#0) specified by test_net file: val.prototxt
-I0216 17:25:39.762034 29927 net.cpp:50] Initializing net from parameters: 
+I0217 12:01:47.144606 22888 layer_factory.hpp:76] Creating layer data
+I0217 12:01:47.144696 22888 net.cpp:111] Creating Layer data
+I0217 12:01:47.144706 22888 net.cpp:434] data -> data
+I0217 12:01:47.145481 22895 db_lmdb.cpp:22] Opened lmdb db/train/images
+I0217 12:01:47.150248 22888 data_layer.cpp:44] output data size: 1,1,193,257
+I0217 12:01:47.263667 22888 net.cpp:156] Setting up data
+I0217 12:01:47.268367 22888 net.cpp:164] Top shape: 1 1 193 257 (49601)
+I0217 12:01:47.268393 22888 layer_factory.hpp:76] Creating layer data_data_0_split
+I0217 12:01:47.295233 22888 net.cpp:111] Creating Layer data_data_0_split
+I0217 12:01:47.295260 22888 net.cpp:478] data_data_0_split <- data
+I0217 12:01:47.295275 22888 net.cpp:434] data_data_0_split -> data_data_0_split_0
+I0217 12:01:47.295289 22888 net.cpp:434] data_data_0_split -> data_data_0_split_1
+I0217 12:01:47.295306 22888 net.cpp:156] Setting up data_data_0_split
+I0217 12:01:47.295315 22888 net.cpp:164] Top shape: 1 1 193 257 (49601)
+I0217 12:01:47.295322 22888 net.cpp:164] Top shape: 1 1 193 257 (49601)
+I0217 12:01:47.295327 22888 layer_factory.hpp:76] Creating layer label
+I0217 12:01:47.295414 22888 net.cpp:111] Creating Layer label
+I0217 12:01:47.295434 22888 net.cpp:434] label -> label
+I0217 12:01:47.296090 22897 db_lmdb.cpp:22] Opened lmdb db/train/labels
+I0217 12:01:47.296175 22888 data_layer.cpp:44] output data size: 1,1,193,257
+I0217 12:01:47.297128 22888 net.cpp:156] Setting up label
+I0217 12:01:47.297149 22888 net.cpp:164] Top shape: 1 1 193 257 (49601)
+I0217 12:01:47.297158 22888 layer_factory.hpp:76] Creating layer conv1
+I0217 12:01:47.297173 22888 net.cpp:111] Creating Layer conv1
+I0217 12:01:47.297178 22888 net.cpp:478] conv1 <- data_data_0_split_0
+I0217 12:01:47.297200 22888 net.cpp:434] conv1 -> conv1
+I0217 12:01:48.426892 22888 net.cpp:156] Setting up conv1
+I0217 12:01:48.426924 22888 net.cpp:164] Top shape: 1 100 145 177 (2566500)
+I0217 12:01:48.426952 22888 layer_factory.hpp:76] Creating layer relu1
+I0217 12:01:48.426964 22888 net.cpp:111] Creating Layer relu1
+I0217 12:01:48.426969 22888 net.cpp:478] relu1 <- conv1
+I0217 12:01:48.426975 22888 net.cpp:420] relu1 -> conv1 (in-place)
+I0217 12:01:48.427193 22888 net.cpp:156] Setting up relu1
+I0217 12:01:48.427203 22888 net.cpp:164] Top shape: 1 100 145 177 (2566500)
+I0217 12:01:48.427207 22888 layer_factory.hpp:76] Creating layer pool1
+I0217 12:01:48.427217 22888 net.cpp:111] Creating Layer pool1
+I0217 12:01:48.427219 22888 net.cpp:478] pool1 <- conv1
+I0217 12:01:48.427224 22888 net.cpp:434] pool1 -> pool1
+I0217 12:01:48.439435 22888 net.cpp:156] Setting up pool1
+I0217 12:01:48.439465 22888 net.cpp:164] Top shape: 1 100 73 89 (649700)
+I0217 12:01:48.439471 22888 layer_factory.hpp:76] Creating layer conv2
+I0217 12:01:48.439491 22888 net.cpp:111] Creating Layer conv2
+I0217 12:01:48.439496 22888 net.cpp:478] conv2 <- pool1
+I0217 12:01:48.439502 22888 net.cpp:434] conv2 -> conv2
+I0217 12:01:48.445962 22888 net.cpp:156] Setting up conv2
+I0217 12:01:48.445991 22888 net.cpp:164] Top shape: 1 200 35 43 (301000)
+I0217 12:01:48.446005 22888 layer_factory.hpp:76] Creating layer relu2
+I0217 12:01:48.446023 22888 net.cpp:111] Creating Layer relu2
+I0217 12:01:48.446027 22888 net.cpp:478] relu2 <- conv2
+I0217 12:01:48.446034 22888 net.cpp:420] relu2 -> conv2 (in-place)
+I0217 12:01:48.446259 22888 net.cpp:156] Setting up relu2
+I0217 12:01:48.446269 22888 net.cpp:164] Top shape: 1 200 35 43 (301000)
+I0217 12:01:48.446274 22888 layer_factory.hpp:76] Creating layer pool2
+I0217 12:01:48.446281 22888 net.cpp:111] Creating Layer pool2
+I0217 12:01:48.446285 22888 net.cpp:478] pool2 <- conv2
+I0217 12:01:48.446290 22888 net.cpp:434] pool2 -> pool2
+I0217 12:01:48.446440 22888 net.cpp:156] Setting up pool2
+I0217 12:01:48.446457 22888 net.cpp:164] Top shape: 1 200 18 22 (79200)
+I0217 12:01:48.446462 22888 layer_factory.hpp:76] Creating layer conv3
+I0217 12:01:48.446470 22888 net.cpp:111] Creating Layer conv3
+I0217 12:01:48.446472 22888 net.cpp:478] conv3 <- pool2
+I0217 12:01:48.446478 22888 net.cpp:434] conv3 -> conv3
+I0217 12:01:48.453586 22888 net.cpp:156] Setting up conv3
+I0217 12:01:48.453615 22888 net.cpp:164] Top shape: 1 300 16 20 (96000)
+I0217 12:01:48.453632 22888 layer_factory.hpp:76] Creating layer relu3
+I0217 12:01:48.453650 22888 net.cpp:111] Creating Layer relu3
+I0217 12:01:48.453655 22888 net.cpp:478] relu3 <- conv3
+I0217 12:01:48.453662 22888 net.cpp:420] relu3 -> conv3 (in-place)
+I0217 12:01:48.453816 22888 net.cpp:156] Setting up relu3
+I0217 12:01:48.453824 22888 net.cpp:164] Top shape: 1 300 16 20 (96000)
+I0217 12:01:48.453829 22888 layer_factory.hpp:76] Creating layer conv4
+I0217 12:01:48.453836 22888 net.cpp:111] Creating Layer conv4
+I0217 12:01:48.453840 22888 net.cpp:478] conv4 <- conv3
+I0217 12:01:48.453845 22888 net.cpp:434] conv4 -> conv4
+I0217 12:01:48.463594 22888 net.cpp:156] Setting up conv4
+I0217 12:01:48.463623 22888 net.cpp:164] Top shape: 1 300 14 18 (75600)
+I0217 12:01:48.463632 22888 layer_factory.hpp:76] Creating layer relu4
+I0217 12:01:48.463651 22888 net.cpp:111] Creating Layer relu4
+I0217 12:01:48.463656 22888 net.cpp:478] relu4 <- conv4
+I0217 12:01:48.463667 22888 net.cpp:420] relu4 -> conv4 (in-place)
+I0217 12:01:48.463897 22888 net.cpp:156] Setting up relu4
+I0217 12:01:48.463907 22888 net.cpp:164] Top shape: 1 300 14 18 (75600)
+I0217 12:01:48.463910 22888 layer_factory.hpp:76] Creating layer drop
+I0217 12:01:48.463917 22888 net.cpp:111] Creating Layer drop
+I0217 12:01:48.463918 22888 net.cpp:478] drop <- conv4
+I0217 12:01:48.463924 22888 net.cpp:420] drop -> conv4 (in-place)
+I0217 12:01:48.463943 22888 net.cpp:156] Setting up drop
+I0217 12:01:48.463948 22888 net.cpp:164] Top shape: 1 300 14 18 (75600)
+I0217 12:01:48.463951 22888 layer_factory.hpp:76] Creating layer score_classes
+I0217 12:01:48.463958 22888 net.cpp:111] Creating Layer score_classes
+I0217 12:01:48.463961 22888 net.cpp:478] score_classes <- conv4
+I0217 12:01:48.463968 22888 net.cpp:434] score_classes -> score_classes
+I0217 12:01:48.464591 22888 net.cpp:156] Setting up score_classes
+I0217 12:01:48.464601 22888 net.cpp:164] Top shape: 1 2 14 18 (504)
+I0217 12:01:48.464612 22888 layer_factory.hpp:76] Creating layer upscore
+I0217 12:01:48.464618 22888 net.cpp:111] Creating Layer upscore
+I0217 12:01:48.464622 22888 net.cpp:478] upscore <- score_classes
+I0217 12:01:48.464627 22888 net.cpp:434] upscore -> upscore
+I0217 12:01:48.464844 22888 net.cpp:156] Setting up upscore
+I0217 12:01:48.464854 22888 net.cpp:164] Top shape: 1 2 223 287 (128002)
+I0217 12:01:48.464859 22888 layer_factory.hpp:76] Creating layer score
+I0217 12:01:48.465335 22888 net.cpp:111] Creating Layer score
+I0217 12:01:48.465348 22888 net.cpp:478] score <- upscore
+I0217 12:01:48.465355 22888 net.cpp:478] score <- data_data_0_split_1
+I0217 12:01:48.465364 22888 net.cpp:434] score -> score
+I0217 12:01:48.465409 22888 net.cpp:156] Setting up score
+I0217 12:01:48.465415 22888 net.cpp:164] Top shape: 1 2 193 257 (99202)
+I0217 12:01:48.465420 22888 layer_factory.hpp:76] Creating layer loss
+I0217 12:01:48.465427 22888 net.cpp:111] Creating Layer loss
+I0217 12:01:48.465431 22888 net.cpp:478] loss <- score
+I0217 12:01:48.465435 22888 net.cpp:478] loss <- label
+I0217 12:01:48.465440 22888 net.cpp:434] loss -> loss
+I0217 12:01:48.465452 22888 layer_factory.hpp:76] Creating layer loss
+I0217 12:01:48.466034 22888 net.cpp:156] Setting up loss
+I0217 12:01:48.466045 22888 net.cpp:164] Top shape: (1)
+I0217 12:01:48.466048 22888 net.cpp:169]     with loss weight 1
+I0217 12:01:48.466065 22888 net.cpp:237] loss needs backward computation.
+I0217 12:01:48.466069 22888 net.cpp:237] score needs backward computation.
+I0217 12:01:48.466073 22888 net.cpp:237] upscore needs backward computation.
+I0217 12:01:48.466075 22888 net.cpp:237] score_classes needs backward computation.
+I0217 12:01:48.466078 22888 net.cpp:237] drop needs backward computation.
+I0217 12:01:48.466080 22888 net.cpp:237] relu4 needs backward computation.
+I0217 12:01:48.466084 22888 net.cpp:237] conv4 needs backward computation.
+I0217 12:01:48.466086 22888 net.cpp:237] relu3 needs backward computation.
+I0217 12:01:48.466089 22888 net.cpp:237] conv3 needs backward computation.
+I0217 12:01:48.466101 22888 net.cpp:237] pool2 needs backward computation.
+I0217 12:01:48.466104 22888 net.cpp:237] relu2 needs backward computation.
+I0217 12:01:48.466107 22888 net.cpp:237] conv2 needs backward computation.
+I0217 12:01:48.466110 22888 net.cpp:237] pool1 needs backward computation.
+I0217 12:01:48.466114 22888 net.cpp:237] relu1 needs backward computation.
+I0217 12:01:48.466115 22888 net.cpp:237] conv1 needs backward computation.
+I0217 12:01:48.466119 22888 net.cpp:241] label does not need backward computation.
+I0217 12:01:48.466122 22888 net.cpp:241] data_data_0_split does not need backward computation.
+I0217 12:01:48.466126 22888 net.cpp:241] data does not need backward computation.
+I0217 12:01:48.466130 22888 net.cpp:284] This network produces output loss
+I0217 12:01:48.466141 22888 net.cpp:298] Network initialization done.
+I0217 12:01:48.466145 22888 net.cpp:299] Memory required for data: 29235252
+I0217 12:01:48.479800 22888 solver.cpp:186] Creating test net (#0) specified by test_net file: val.prototxt
+I0217 12:01:48.479996 22888 net.cpp:50] Initializing net from parameters: 
 name: "FCN"
 force_backward: true
 state {
@@ -727,426 +727,1351 @@ layer {
   bottom: "label"
   top: "accuracy"
 }
-I0216 17:25:39.762152 29927 layer_factory.hpp:76] Creating layer data
-I0216 17:25:39.762342 29927 net.cpp:111] Creating Layer data
-I0216 17:25:39.762352 29927 net.cpp:434] data -> data
-I0216 17:25:39.762992 29938 db_lmdb.cpp:22] Opened lmdb db/val/images
-I0216 17:25:39.763092 29927 data_layer.cpp:44] output data size: 1,1,286,286
-I0216 17:25:39.763746 29927 net.cpp:156] Setting up data
-I0216 17:25:39.763758 29927 net.cpp:164] Top shape: 1 1 286 286 (81796)
-I0216 17:25:39.763767 29927 layer_factory.hpp:76] Creating layer data_data_0_split
-I0216 17:25:39.763777 29927 net.cpp:111] Creating Layer data_data_0_split
-I0216 17:25:39.763783 29927 net.cpp:478] data_data_0_split <- data
-I0216 17:25:39.763794 29927 net.cpp:434] data_data_0_split -> data_data_0_split_0
-I0216 17:25:39.763804 29927 net.cpp:434] data_data_0_split -> data_data_0_split_1
-I0216 17:25:39.763816 29927 net.cpp:156] Setting up data_data_0_split
-I0216 17:25:39.763828 29927 net.cpp:164] Top shape: 1 1 286 286 (81796)
-I0216 17:25:39.763835 29927 net.cpp:164] Top shape: 1 1 286 286 (81796)
-I0216 17:25:39.763841 29927 layer_factory.hpp:76] Creating layer label
-I0216 17:25:39.763882 29927 net.cpp:111] Creating Layer label
-I0216 17:25:39.763891 29927 net.cpp:434] label -> label
-I0216 17:25:39.764870 29940 db_lmdb.cpp:22] Opened lmdb db/val/labels
-I0216 17:25:39.765036 29927 data_layer.cpp:44] output data size: 1,1,286,286
-I0216 17:25:39.765789 29927 net.cpp:156] Setting up label
-I0216 17:25:39.765802 29927 net.cpp:164] Top shape: 1 1 286 286 (81796)
-I0216 17:25:39.765810 29927 layer_factory.hpp:76] Creating layer label_label_0_split
-I0216 17:25:39.765820 29927 net.cpp:111] Creating Layer label_label_0_split
-I0216 17:25:39.765827 29927 net.cpp:478] label_label_0_split <- label
-I0216 17:25:39.765836 29927 net.cpp:434] label_label_0_split -> label_label_0_split_0
-I0216 17:25:39.765847 29927 net.cpp:434] label_label_0_split -> label_label_0_split_1
-I0216 17:25:39.765858 29927 net.cpp:156] Setting up label_label_0_split
-I0216 17:25:39.765869 29927 net.cpp:164] Top shape: 1 1 286 286 (81796)
-I0216 17:25:39.765877 29927 net.cpp:164] Top shape: 1 1 286 286 (81796)
-I0216 17:25:39.765883 29927 layer_factory.hpp:76] Creating layer conv1
-I0216 17:25:39.765895 29927 net.cpp:111] Creating Layer conv1
-I0216 17:25:39.765902 29927 net.cpp:478] conv1 <- data_data_0_split_0
-I0216 17:25:39.765913 29927 net.cpp:434] conv1 -> conv1
-I0216 17:25:39.766940 29927 net.cpp:156] Setting up conv1
-I0216 17:25:39.766953 29927 net.cpp:164] Top shape: 1 100 191 191 (3648100)
-I0216 17:25:39.766969 29927 layer_factory.hpp:76] Creating layer relu1
-I0216 17:25:39.766981 29927 net.cpp:111] Creating Layer relu1
-I0216 17:25:39.766988 29927 net.cpp:478] relu1 <- conv1
-I0216 17:25:39.766998 29927 net.cpp:420] relu1 -> conv1 (in-place)
-I0216 17:25:39.767233 29927 net.cpp:156] Setting up relu1
-I0216 17:25:39.767244 29927 net.cpp:164] Top shape: 1 100 191 191 (3648100)
-I0216 17:25:39.767252 29927 layer_factory.hpp:76] Creating layer pool1
-I0216 17:25:39.767264 29927 net.cpp:111] Creating Layer pool1
-I0216 17:25:39.767271 29927 net.cpp:478] pool1 <- conv1
-I0216 17:25:39.767279 29927 net.cpp:434] pool1 -> pool1
-I0216 17:25:39.767418 29927 net.cpp:156] Setting up pool1
-I0216 17:25:39.767431 29927 net.cpp:164] Top shape: 1 100 96 96 (921600)
-I0216 17:25:39.767437 29927 layer_factory.hpp:76] Creating layer conv2
-I0216 17:25:39.767449 29927 net.cpp:111] Creating Layer conv2
-I0216 17:25:39.767457 29927 net.cpp:478] conv2 <- pool1
-I0216 17:25:39.767468 29927 net.cpp:434] conv2 -> conv2
-I0216 17:25:39.773707 29927 net.cpp:156] Setting up conv2
-I0216 17:25:39.773722 29927 net.cpp:164] Top shape: 1 200 46 46 (423200)
-I0216 17:25:39.773738 29927 layer_factory.hpp:76] Creating layer relu2
-I0216 17:25:39.773749 29927 net.cpp:111] Creating Layer relu2
-I0216 17:25:39.773756 29927 net.cpp:478] relu2 <- conv2
-I0216 17:25:39.773766 29927 net.cpp:420] relu2 -> conv2 (in-place)
-I0216 17:25:39.773905 29927 net.cpp:156] Setting up relu2
-I0216 17:25:39.773916 29927 net.cpp:164] Top shape: 1 200 46 46 (423200)
-I0216 17:25:39.773923 29927 layer_factory.hpp:76] Creating layer pool2
-I0216 17:25:39.773933 29927 net.cpp:111] Creating Layer pool2
-I0216 17:25:39.773939 29927 net.cpp:478] pool2 <- conv2
-I0216 17:25:39.773957 29927 net.cpp:434] pool2 -> pool2
-I0216 17:25:39.774235 29927 net.cpp:156] Setting up pool2
-I0216 17:25:39.774255 29927 net.cpp:164] Top shape: 1 200 23 23 (105800)
-I0216 17:25:39.774262 29927 layer_factory.hpp:76] Creating layer conv3
-I0216 17:25:39.774274 29927 net.cpp:111] Creating Layer conv3
-I0216 17:25:39.774281 29927 net.cpp:478] conv3 <- pool2
-I0216 17:25:39.774291 29927 net.cpp:434] conv3 -> conv3
-I0216 17:25:39.780855 29927 net.cpp:156] Setting up conv3
-I0216 17:25:39.780869 29927 net.cpp:164] Top shape: 1 300 21 21 (132300)
-I0216 17:25:39.780882 29927 layer_factory.hpp:76] Creating layer relu3
-I0216 17:25:39.780891 29927 net.cpp:111] Creating Layer relu3
-I0216 17:25:39.780899 29927 net.cpp:478] relu3 <- conv3
-I0216 17:25:39.780917 29927 net.cpp:420] relu3 -> conv3 (in-place)
-I0216 17:25:39.781054 29927 net.cpp:156] Setting up relu3
-I0216 17:25:39.781064 29927 net.cpp:164] Top shape: 1 300 21 21 (132300)
-I0216 17:25:39.781071 29927 layer_factory.hpp:76] Creating layer conv4
-I0216 17:25:39.781083 29927 net.cpp:111] Creating Layer conv4
-I0216 17:25:39.781090 29927 net.cpp:478] conv4 <- conv3
-I0216 17:25:39.781101 29927 net.cpp:434] conv4 -> conv4
-I0216 17:25:39.790397 29927 net.cpp:156] Setting up conv4
-I0216 17:25:39.790412 29927 net.cpp:164] Top shape: 1 300 19 19 (108300)
-I0216 17:25:39.790423 29927 layer_factory.hpp:76] Creating layer relu4
-I0216 17:25:39.790432 29927 net.cpp:111] Creating Layer relu4
-I0216 17:25:39.790439 29927 net.cpp:478] relu4 <- conv4
-I0216 17:25:39.790458 29927 net.cpp:420] relu4 -> conv4 (in-place)
-I0216 17:25:39.790678 29927 net.cpp:156] Setting up relu4
-I0216 17:25:39.790698 29927 net.cpp:164] Top shape: 1 300 19 19 (108300)
-I0216 17:25:39.790704 29927 layer_factory.hpp:76] Creating layer drop
-I0216 17:25:39.790714 29927 net.cpp:111] Creating Layer drop
-I0216 17:25:39.790720 29927 net.cpp:478] drop <- conv4
-I0216 17:25:39.790730 29927 net.cpp:420] drop -> conv4 (in-place)
-I0216 17:25:39.790742 29927 net.cpp:156] Setting up drop
-I0216 17:25:39.790750 29927 net.cpp:164] Top shape: 1 300 19 19 (108300)
-I0216 17:25:39.790756 29927 layer_factory.hpp:76] Creating layer score_classes
-I0216 17:25:39.790766 29927 net.cpp:111] Creating Layer score_classes
-I0216 17:25:39.790771 29927 net.cpp:478] score_classes <- conv4
-I0216 17:25:39.790782 29927 net.cpp:434] score_classes -> score_classes
-I0216 17:25:39.791380 29927 net.cpp:156] Setting up score_classes
-I0216 17:25:39.791393 29927 net.cpp:164] Top shape: 1 2 19 19 (722)
-I0216 17:25:39.791407 29927 layer_factory.hpp:76] Creating layer upscore
-I0216 17:25:39.791422 29927 net.cpp:111] Creating Layer upscore
-I0216 17:25:39.791437 29927 net.cpp:478] upscore <- score_classes
-I0216 17:25:39.791447 29927 net.cpp:434] upscore -> upscore
-I0216 17:25:39.791926 29927 net.cpp:156] Setting up upscore
-I0216 17:25:39.791939 29927 net.cpp:164] Top shape: 1 2 303 303 (183618)
-I0216 17:25:39.791950 29927 layer_factory.hpp:76] Creating layer score
-I0216 17:25:39.791960 29927 net.cpp:111] Creating Layer score
-I0216 17:25:39.791966 29927 net.cpp:478] score <- upscore
-I0216 17:25:39.791973 29927 net.cpp:478] score <- data_data_0_split_1
-I0216 17:25:39.791985 29927 net.cpp:434] score -> score
-I0216 17:25:39.792017 29927 net.cpp:156] Setting up score
-I0216 17:25:39.792026 29927 net.cpp:164] Top shape: 1 2 286 286 (163592)
-I0216 17:25:39.792033 29927 layer_factory.hpp:76] Creating layer score_score_0_split
-I0216 17:25:39.792044 29927 net.cpp:111] Creating Layer score_score_0_split
-I0216 17:25:39.792052 29927 net.cpp:478] score_score_0_split <- score
-I0216 17:25:39.792059 29927 net.cpp:434] score_score_0_split -> score_score_0_split_0
-I0216 17:25:39.792069 29927 net.cpp:434] score_score_0_split -> score_score_0_split_1
-I0216 17:25:39.792083 29927 net.cpp:156] Setting up score_score_0_split
-I0216 17:25:39.792090 29927 net.cpp:164] Top shape: 1 2 286 286 (163592)
-I0216 17:25:39.792099 29927 net.cpp:164] Top shape: 1 2 286 286 (163592)
-I0216 17:25:39.792105 29927 layer_factory.hpp:76] Creating layer loss
-I0216 17:25:39.792114 29927 net.cpp:111] Creating Layer loss
-I0216 17:25:39.792120 29927 net.cpp:478] loss <- score_score_0_split_0
-I0216 17:25:39.792127 29927 net.cpp:478] loss <- label_label_0_split_0
-I0216 17:25:39.792137 29927 net.cpp:434] loss -> loss
-I0216 17:25:39.792150 29927 layer_factory.hpp:76] Creating layer loss
-I0216 17:25:39.792461 29927 net.cpp:156] Setting up loss
-I0216 17:25:39.792472 29927 net.cpp:164] Top shape: (1)
-I0216 17:25:39.792479 29927 net.cpp:169]     with loss weight 1
-I0216 17:25:39.792500 29927 layer_factory.hpp:76] Creating layer accuracy
-I0216 17:25:39.792510 29927 net.cpp:111] Creating Layer accuracy
-I0216 17:25:39.792516 29927 net.cpp:478] accuracy <- score_score_0_split_1
-I0216 17:25:39.792523 29927 net.cpp:478] accuracy <- label_label_0_split_1
-I0216 17:25:39.792531 29927 net.cpp:434] accuracy -> accuracy
-I0216 17:25:39.792542 29927 net.cpp:156] Setting up accuracy
-I0216 17:25:39.792551 29927 net.cpp:164] Top shape: (1)
-I0216 17:25:39.792557 29927 net.cpp:241] accuracy does not need backward computation.
-I0216 17:25:39.792563 29927 net.cpp:237] loss needs backward computation.
-I0216 17:25:39.792572 29927 net.cpp:237] score_score_0_split needs backward computation.
-I0216 17:25:39.792578 29927 net.cpp:237] score needs backward computation.
-I0216 17:25:39.792585 29927 net.cpp:237] upscore needs backward computation.
-I0216 17:25:39.792592 29927 net.cpp:237] score_classes needs backward computation.
-I0216 17:25:39.792598 29927 net.cpp:237] drop needs backward computation.
-I0216 17:25:39.792603 29927 net.cpp:237] relu4 needs backward computation.
-I0216 17:25:39.792608 29927 net.cpp:237] conv4 needs backward computation.
-I0216 17:25:39.792613 29927 net.cpp:237] relu3 needs backward computation.
-I0216 17:25:39.792619 29927 net.cpp:237] conv3 needs backward computation.
-I0216 17:25:39.792625 29927 net.cpp:237] pool2 needs backward computation.
-I0216 17:25:39.792631 29927 net.cpp:237] relu2 needs backward computation.
-I0216 17:25:39.792636 29927 net.cpp:237] conv2 needs backward computation.
-I0216 17:25:39.792642 29927 net.cpp:237] pool1 needs backward computation.
-I0216 17:25:39.792649 29927 net.cpp:237] relu1 needs backward computation.
-I0216 17:25:39.792654 29927 net.cpp:237] conv1 needs backward computation.
-I0216 17:25:39.792660 29927 net.cpp:241] label_label_0_split does not need backward computation.
-I0216 17:25:39.792667 29927 net.cpp:241] label does not need backward computation.
-I0216 17:25:39.792673 29927 net.cpp:241] data_data_0_split does not need backward computation.
-I0216 17:25:39.792680 29927 net.cpp:241] data does not need backward computation.
-I0216 17:25:39.792685 29927 net.cpp:284] This network produces output accuracy
-I0216 17:25:39.792692 29927 net.cpp:284] This network produces output loss
-I0216 17:25:39.792711 29927 net.cpp:298] Network initialization done.
-I0216 17:25:39.792716 29927 net.cpp:299] Memory required for data: 43701576
-I0216 17:25:39.792774 29927 solver.cpp:65] Solver scaffolding done.
-I0216 17:25:39.792807 29927 caffe.cpp:201] Resuming from snapshots/fcn_iter_200000.solverstate
-I0216 17:25:39.812690 29927 solver.cpp:779] SGDSolver: restoring history
-I0216 17:25:39.816781 29927 caffe.cpp:211] Starting Optimization
-I0216 17:25:39.816812 29927 solver.cpp:293] Solving FCN
-I0216 17:25:39.816818 29927 solver.cpp:294] Learning Rate Policy: multistep
-I0216 17:25:39.830487 29927 solver.cpp:242] Iteration 200000, loss = 0.00751544
-I0216 17:25:39.830518 29927 solver.cpp:258]     Train net output #0: loss = 0.00751544 (* 1 = 0.00751544 loss)
-I0216 17:25:39.830536 29927 solver.cpp:571] Iteration 200000, lr = 0.001
-I0216 17:26:12.541620 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_202000.caffemodel
-I0216 17:26:12.569658 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_202000.solverstate
-I0216 17:26:12.585815 29927 solver.cpp:242] Iteration 202000, loss = 0.0130282
-I0216 17:26:12.585852 29927 solver.cpp:258]     Train net output #0: loss = 0.00321655 (* 1 = 0.00321655 loss)
-I0216 17:26:12.585860 29927 solver.cpp:571] Iteration 202000, lr = 0.001
-I0216 17:26:45.138370 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_204000.caffemodel
-I0216 17:26:45.166149 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_204000.solverstate
-I0216 17:26:45.182477 29927 solver.cpp:242] Iteration 204000, loss = 0.01004
-I0216 17:26:45.182514 29927 solver.cpp:258]     Train net output #0: loss = 0.00632551 (* 1 = 0.00632551 loss)
-I0216 17:26:45.182523 29927 solver.cpp:571] Iteration 204000, lr = 0.001
-I0216 17:27:17.636239 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_206000.caffemodel
-I0216 17:27:17.662708 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_206000.solverstate
-I0216 17:27:17.678076 29927 solver.cpp:242] Iteration 206000, loss = 0.0119894
-I0216 17:27:17.678112 29927 solver.cpp:258]     Train net output #0: loss = 0.00959371 (* 1 = 0.00959371 loss)
-I0216 17:27:17.678120 29927 solver.cpp:571] Iteration 206000, lr = 0.001
-I0216 17:27:50.799080 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_208000.caffemodel
-I0216 17:27:50.826457 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_208000.solverstate
-I0216 17:27:50.843057 29927 solver.cpp:242] Iteration 208000, loss = 0.0109835
-I0216 17:27:50.843094 29927 solver.cpp:258]     Train net output #0: loss = 0.0109918 (* 1 = 0.0109918 loss)
-I0216 17:27:50.843101 29927 solver.cpp:571] Iteration 208000, lr = 0.001
-I0216 17:28:23.685220 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_210000.caffemodel
-I0216 17:28:23.712836 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_210000.solverstate
-I0216 17:28:23.729857 29927 solver.cpp:242] Iteration 210000, loss = 0.0122993
-I0216 17:28:23.729903 29927 solver.cpp:258]     Train net output #0: loss = 0.00688017 (* 1 = 0.00688017 loss)
-I0216 17:28:23.729912 29927 solver.cpp:571] Iteration 210000, lr = 0.001
-I0216 17:28:56.645867 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_212000.caffemodel
-I0216 17:28:56.675603 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_212000.solverstate
-I0216 17:28:56.690620 29927 solver.cpp:242] Iteration 212000, loss = 0.0138596
-I0216 17:28:56.690665 29927 solver.cpp:258]     Train net output #0: loss = 0.0218714 (* 1 = 0.0218714 loss)
-I0216 17:28:56.690673 29927 solver.cpp:571] Iteration 212000, lr = 0.001
-I0216 17:29:29.826483 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_214000.caffemodel
-I0216 17:29:29.855931 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_214000.solverstate
-I0216 17:29:29.871121 29927 solver.cpp:242] Iteration 214000, loss = 0.0113044
-I0216 17:29:29.871165 29927 solver.cpp:258]     Train net output #0: loss = 0.00200459 (* 1 = 0.00200459 loss)
-I0216 17:29:29.871175 29927 solver.cpp:571] Iteration 214000, lr = 0.001
-I0216 17:30:02.837270 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_216000.caffemodel
-I0216 17:30:02.863507 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_216000.solverstate
-I0216 17:30:02.879178 29927 solver.cpp:242] Iteration 216000, loss = 0.0118999
-I0216 17:30:02.879215 29927 solver.cpp:258]     Train net output #0: loss = 0.0163926 (* 1 = 0.0163926 loss)
-I0216 17:30:02.879223 29927 solver.cpp:571] Iteration 216000, lr = 0.001
-I0216 17:30:35.743993 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_218000.caffemodel
-I0216 17:30:35.774410 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_218000.solverstate
-I0216 17:30:35.791095 29927 solver.cpp:242] Iteration 218000, loss = 0.0133291
-I0216 17:30:35.791131 29927 solver.cpp:258]     Train net output #0: loss = 0.0179216 (* 1 = 0.0179216 loss)
-I0216 17:30:35.791138 29927 solver.cpp:571] Iteration 218000, lr = 0.001
-I0216 17:31:08.723628 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_220000.caffemodel
-I0216 17:31:08.753506 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_220000.solverstate
-I0216 17:31:08.773119 29927 solver.cpp:242] Iteration 220000, loss = 0.0119767
-I0216 17:31:08.773155 29927 solver.cpp:258]     Train net output #0: loss = 0.0069449 (* 1 = 0.0069449 loss)
-I0216 17:31:08.773164 29927 solver.cpp:571] Iteration 220000, lr = 0.001
-I0216 17:31:41.699463 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_222000.caffemodel
-I0216 17:31:41.729689 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_222000.solverstate
-I0216 17:31:41.745797 29927 solver.cpp:242] Iteration 222000, loss = 0.011409
-I0216 17:31:41.745833 29927 solver.cpp:258]     Train net output #0: loss = 0.00461706 (* 1 = 0.00461706 loss)
-I0216 17:31:41.745841 29927 solver.cpp:571] Iteration 222000, lr = 0.001
-I0216 17:32:14.628384 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_224000.caffemodel
-I0216 17:32:14.660432 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_224000.solverstate
-I0216 17:32:14.679684 29927 solver.cpp:242] Iteration 224000, loss = 0.0113757
-I0216 17:32:14.679720 29927 solver.cpp:258]     Train net output #0: loss = 0.0152414 (* 1 = 0.0152414 loss)
-I0216 17:32:14.679728 29927 solver.cpp:571] Iteration 224000, lr = 0.001
-I0216 17:32:47.651268 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_226000.caffemodel
-I0216 17:32:47.683202 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_226000.solverstate
-I0216 17:32:47.697758 29927 solver.cpp:242] Iteration 226000, loss = 0.00959374
-I0216 17:32:47.697794 29927 solver.cpp:258]     Train net output #0: loss = 0.046259 (* 1 = 0.046259 loss)
-I0216 17:32:47.697803 29927 solver.cpp:571] Iteration 226000, lr = 0.001
-I0216 17:33:20.784147 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_228000.caffemodel
-I0216 17:33:20.812939 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_228000.solverstate
-I0216 17:33:20.830549 29927 solver.cpp:242] Iteration 228000, loss = 0.0108712
-I0216 17:33:20.830595 29927 solver.cpp:258]     Train net output #0: loss = 0.00757477 (* 1 = 0.00757477 loss)
-I0216 17:33:20.830602 29927 solver.cpp:571] Iteration 228000, lr = 0.001
-I0216 17:33:53.600481 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_230000.caffemodel
-I0216 17:33:53.630475 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_230000.solverstate
-I0216 17:33:53.647145 29927 solver.cpp:242] Iteration 230000, loss = 0.0139445
-I0216 17:33:53.647181 29927 solver.cpp:258]     Train net output #0: loss = 0.00361488 (* 1 = 0.00361488 loss)
-I0216 17:33:53.647189 29927 solver.cpp:571] Iteration 230000, lr = 0.001
-I0216 17:34:26.615129 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_232000.caffemodel
-I0216 17:34:26.643208 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_232000.solverstate
-I0216 17:34:26.658077 29927 solver.cpp:242] Iteration 232000, loss = 0.0108133
-I0216 17:34:26.658113 29927 solver.cpp:258]     Train net output #0: loss = 0.00227878 (* 1 = 0.00227878 loss)
-I0216 17:34:26.658120 29927 solver.cpp:571] Iteration 232000, lr = 0.001
-I0216 17:34:59.535037 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_234000.caffemodel
-I0216 17:34:59.566460 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_234000.solverstate
-I0216 17:34:59.584568 29927 solver.cpp:242] Iteration 234000, loss = 0.0100775
-I0216 17:34:59.584604 29927 solver.cpp:258]     Train net output #0: loss = 0.00475562 (* 1 = 0.00475562 loss)
-I0216 17:34:59.584612 29927 solver.cpp:571] Iteration 234000, lr = 0.001
-I0216 17:35:32.590184 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_236000.caffemodel
-I0216 17:35:32.618187 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_236000.solverstate
-I0216 17:35:32.632441 29927 solver.cpp:242] Iteration 236000, loss = 0.00932712
-I0216 17:35:32.632478 29927 solver.cpp:258]     Train net output #0: loss = 0.00420506 (* 1 = 0.00420506 loss)
-I0216 17:35:32.632485 29927 solver.cpp:571] Iteration 236000, lr = 0.001
-I0216 17:36:05.570673 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_238000.caffemodel
-I0216 17:36:05.598850 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_238000.solverstate
-I0216 17:36:05.613931 29927 solver.cpp:242] Iteration 238000, loss = 0.0109002
-I0216 17:36:05.613968 29927 solver.cpp:258]     Train net output #0: loss = 0.00535657 (* 1 = 0.00535657 loss)
-I0216 17:36:05.613976 29927 solver.cpp:571] Iteration 238000, lr = 0.001
-I0216 17:36:38.467466 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_240000.caffemodel
-I0216 17:36:38.495435 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_240000.solverstate
-I0216 17:36:38.510419 29927 solver.cpp:242] Iteration 240000, loss = 0.0109779
-I0216 17:36:38.510457 29927 solver.cpp:258]     Train net output #0: loss = 0.0172572 (* 1 = 0.0172572 loss)
-I0216 17:36:38.510464 29927 solver.cpp:571] Iteration 240000, lr = 0.001
-I0216 17:37:11.580951 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_242000.caffemodel
-I0216 17:37:11.609190 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_242000.solverstate
-I0216 17:37:11.625741 29927 solver.cpp:242] Iteration 242000, loss = 0.0124669
-I0216 17:37:11.625777 29927 solver.cpp:258]     Train net output #0: loss = 0.00885128 (* 1 = 0.00885128 loss)
-I0216 17:37:11.625785 29927 solver.cpp:571] Iteration 242000, lr = 0.001
-I0216 17:37:44.576671 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_244000.caffemodel
-I0216 17:37:44.606008 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_244000.solverstate
-I0216 17:37:44.621040 29927 solver.cpp:242] Iteration 244000, loss = 0.0121745
-I0216 17:37:44.621076 29927 solver.cpp:258]     Train net output #0: loss = 0.00940041 (* 1 = 0.00940041 loss)
-I0216 17:37:44.621084 29927 solver.cpp:571] Iteration 244000, lr = 0.001
-I0216 17:38:17.351982 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_246000.caffemodel
-I0216 17:38:17.380290 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_246000.solverstate
-I0216 17:38:17.397634 29927 solver.cpp:242] Iteration 246000, loss = 0.0115706
-I0216 17:38:17.397680 29927 solver.cpp:258]     Train net output #0: loss = 0.00316307 (* 1 = 0.00316307 loss)
-I0216 17:38:17.397687 29927 solver.cpp:571] Iteration 246000, lr = 0.001
-I0216 17:38:50.220661 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_248000.caffemodel
-I0216 17:38:50.251991 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_248000.solverstate
-I0216 17:38:50.267061 29927 solver.cpp:242] Iteration 248000, loss = 0.0103218
-I0216 17:38:50.267109 29927 solver.cpp:258]     Train net output #0: loss = 0.00623573 (* 1 = 0.00623573 loss)
-I0216 17:38:50.267118 29927 solver.cpp:571] Iteration 248000, lr = 0.001
-I0216 17:39:22.965303 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_250000.caffemodel
-I0216 17:39:22.993568 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_250000.solverstate
-I0216 17:39:23.011389 29927 solver.cpp:242] Iteration 250000, loss = 0.0119022
-I0216 17:39:23.011425 29927 solver.cpp:258]     Train net output #0: loss = 0.0164524 (* 1 = 0.0164524 loss)
-I0216 17:39:23.011433 29927 solver.cpp:571] Iteration 250000, lr = 0.001
-I0216 17:39:55.952853 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_252000.caffemodel
-I0216 17:39:55.984097 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_252000.solverstate
-I0216 17:39:55.998229 29927 solver.cpp:242] Iteration 252000, loss = 0.0112653
-I0216 17:39:55.998265 29927 solver.cpp:258]     Train net output #0: loss = 0.00355233 (* 1 = 0.00355233 loss)
-I0216 17:39:55.998273 29927 solver.cpp:571] Iteration 252000, lr = 0.001
-I0216 17:40:29.043197 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_254000.caffemodel
-I0216 17:40:29.071221 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_254000.solverstate
-I0216 17:40:29.087054 29927 solver.cpp:242] Iteration 254000, loss = 0.0119928
-I0216 17:40:29.087090 29927 solver.cpp:258]     Train net output #0: loss = 0.00860662 (* 1 = 0.00860662 loss)
-I0216 17:40:29.087098 29927 solver.cpp:571] Iteration 254000, lr = 0.001
-I0216 17:41:02.076350 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_256000.caffemodel
-I0216 17:41:02.104694 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_256000.solverstate
-I0216 17:41:02.122297 29927 solver.cpp:242] Iteration 256000, loss = 0.00967225
-I0216 17:41:02.122336 29927 solver.cpp:258]     Train net output #0: loss = 0.00539636 (* 1 = 0.00539636 loss)
-I0216 17:41:02.122356 29927 solver.cpp:571] Iteration 256000, lr = 0.001
-I0216 17:41:34.985221 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_258000.caffemodel
-I0216 17:41:35.013140 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_258000.solverstate
-I0216 17:41:35.028267 29927 solver.cpp:242] Iteration 258000, loss = 0.00909821
-I0216 17:41:35.028308 29927 solver.cpp:258]     Train net output #0: loss = 0.00485025 (* 1 = 0.00485025 loss)
-I0216 17:41:35.028321 29927 solver.cpp:571] Iteration 258000, lr = 0.001
-I0216 17:42:08.002660 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_260000.caffemodel
-I0216 17:42:08.030907 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_260000.solverstate
-I0216 17:42:08.047514 29927 solver.cpp:242] Iteration 260000, loss = 0.00939477
-I0216 17:42:08.047552 29927 solver.cpp:258]     Train net output #0: loss = 0.0410139 (* 1 = 0.0410139 loss)
-I0216 17:42:08.047561 29927 solver.cpp:571] Iteration 260000, lr = 0.001
-I0216 17:42:41.050355 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_262000.caffemodel
-I0216 17:42:41.080291 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_262000.solverstate
-I0216 17:42:41.095479 29927 solver.cpp:242] Iteration 262000, loss = 0.0115095
-I0216 17:42:41.095525 29927 solver.cpp:258]     Train net output #0: loss = 0.041687 (* 1 = 0.041687 loss)
-I0216 17:42:41.095533 29927 solver.cpp:571] Iteration 262000, lr = 0.001
-I0216 17:43:13.953632 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_264000.caffemodel
-I0216 17:43:13.983579 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_264000.solverstate
-I0216 17:43:14.000140 29927 solver.cpp:242] Iteration 264000, loss = 0.010578
-I0216 17:43:14.000177 29927 solver.cpp:258]     Train net output #0: loss = 0.00410049 (* 1 = 0.00410049 loss)
-I0216 17:43:14.000186 29927 solver.cpp:571] Iteration 264000, lr = 0.001
-I0216 17:43:46.733381 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_266000.caffemodel
-I0216 17:43:46.762022 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_266000.solverstate
-I0216 17:43:46.778676 29927 solver.cpp:242] Iteration 266000, loss = 0.00939053
-I0216 17:43:46.778723 29927 solver.cpp:258]     Train net output #0: loss = 0.0059857 (* 1 = 0.0059857 loss)
-I0216 17:43:46.778730 29927 solver.cpp:571] Iteration 266000, lr = 0.001
-I0216 17:44:19.857125 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_268000.caffemodel
-I0216 17:44:19.884863 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_268000.solverstate
-I0216 17:44:19.901484 29927 solver.cpp:242] Iteration 268000, loss = 0.0108155
-I0216 17:44:19.901518 29927 solver.cpp:258]     Train net output #0: loss = 0.0038397 (* 1 = 0.0038397 loss)
-I0216 17:44:19.901527 29927 solver.cpp:571] Iteration 268000, lr = 0.001
-I0216 17:44:52.861663 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_270000.caffemodel
-I0216 17:44:52.890283 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_270000.solverstate
-I0216 17:44:52.907780 29927 solver.cpp:242] Iteration 270000, loss = 0.0130971
-I0216 17:44:52.907816 29927 solver.cpp:258]     Train net output #0: loss = 0.00914984 (* 1 = 0.00914984 loss)
-I0216 17:44:52.907825 29927 solver.cpp:571] Iteration 270000, lr = 0.001
-I0216 17:45:25.534649 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_272000.caffemodel
-I0216 17:45:25.563347 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_272000.solverstate
-I0216 17:45:25.579394 29927 solver.cpp:242] Iteration 272000, loss = 0.00977905
-I0216 17:45:25.579440 29927 solver.cpp:258]     Train net output #0: loss = 0.00377065 (* 1 = 0.00377065 loss)
-I0216 17:45:25.579448 29927 solver.cpp:571] Iteration 272000, lr = 0.001
-I0216 17:45:58.388679 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_274000.caffemodel
-I0216 17:45:58.421248 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_274000.solverstate
-I0216 17:45:58.435940 29927 solver.cpp:242] Iteration 274000, loss = 0.0104714
-I0216 17:45:58.435977 29927 solver.cpp:258]     Train net output #0: loss = 0.00230947 (* 1 = 0.00230947 loss)
-I0216 17:45:58.435986 29927 solver.cpp:571] Iteration 274000, lr = 0.001
-I0216 17:46:31.450443 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_276000.caffemodel
-I0216 17:46:31.478814 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_276000.solverstate
-I0216 17:46:31.493651 29927 solver.cpp:242] Iteration 276000, loss = 0.0110637
-I0216 17:46:31.493688 29927 solver.cpp:258]     Train net output #0: loss = 0.0146768 (* 1 = 0.0146768 loss)
-I0216 17:46:31.493697 29927 solver.cpp:571] Iteration 276000, lr = 0.001
-I0216 17:47:04.363575 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_278000.caffemodel
-I0216 17:47:04.391327 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_278000.solverstate
-I0216 17:47:04.406529 29927 solver.cpp:242] Iteration 278000, loss = 0.00872085
-I0216 17:47:04.406566 29927 solver.cpp:258]     Train net output #0: loss = 0.0050456 (* 1 = 0.0050456 loss)
-I0216 17:47:04.406574 29927 solver.cpp:571] Iteration 278000, lr = 0.001
-I0216 17:47:37.273497 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_280000.caffemodel
-I0216 17:47:37.302076 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_280000.solverstate
-I0216 17:47:37.318725 29927 solver.cpp:242] Iteration 280000, loss = 0.012392
-I0216 17:47:37.318773 29927 solver.cpp:258]     Train net output #0: loss = 0.00239943 (* 1 = 0.00239943 loss)
-I0216 17:47:37.318780 29927 solver.cpp:571] Iteration 280000, lr = 0.001
-I0216 17:48:10.386142 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_282000.caffemodel
-I0216 17:48:10.415756 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_282000.solverstate
-I0216 17:48:10.430106 29927 solver.cpp:242] Iteration 282000, loss = 0.012324
-I0216 17:48:10.430142 29927 solver.cpp:258]     Train net output #0: loss = 0.0129659 (* 1 = 0.0129659 loss)
-I0216 17:48:10.430150 29927 solver.cpp:571] Iteration 282000, lr = 0.001
-I0216 17:48:43.285310 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_284000.caffemodel
-I0216 17:48:43.311902 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_284000.solverstate
-I0216 17:48:43.331485 29927 solver.cpp:242] Iteration 284000, loss = 0.0119984
-I0216 17:48:43.331524 29927 solver.cpp:258]     Train net output #0: loss = 0.0329465 (* 1 = 0.0329465 loss)
-I0216 17:48:43.331532 29927 solver.cpp:571] Iteration 284000, lr = 0.001
-I0216 17:49:16.351830 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_286000.caffemodel
-I0216 17:49:16.381669 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_286000.solverstate
-I0216 17:49:16.397464 29927 solver.cpp:242] Iteration 286000, loss = 0.0108875
-I0216 17:49:16.397511 29927 solver.cpp:258]     Train net output #0: loss = 0.00267476 (* 1 = 0.00267476 loss)
-I0216 17:49:16.397518 29927 solver.cpp:571] Iteration 286000, lr = 0.001
-I0216 17:49:49.263568 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_288000.caffemodel
-I0216 17:49:49.293879 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_288000.solverstate
-I0216 17:49:49.309013 29927 solver.cpp:242] Iteration 288000, loss = 0.0126055
-I0216 17:49:49.309061 29927 solver.cpp:258]     Train net output #0: loss = 0.00603741 (* 1 = 0.00603741 loss)
-I0216 17:49:49.309068 29927 solver.cpp:571] Iteration 288000, lr = 0.001
-I0216 17:50:22.150621 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_290000.caffemodel
-I0216 17:50:22.179100 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_290000.solverstate
-I0216 17:50:22.194031 29927 solver.cpp:242] Iteration 290000, loss = 0.0141924
-I0216 17:50:22.194078 29927 solver.cpp:258]     Train net output #0: loss = 0.0103447 (* 1 = 0.0103447 loss)
-I0216 17:50:22.194087 29927 solver.cpp:571] Iteration 290000, lr = 0.001
-I0216 17:50:55.210147 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_292000.caffemodel
-I0216 17:50:55.238669 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_292000.solverstate
-I0216 17:50:55.253801 29927 solver.cpp:242] Iteration 292000, loss = 0.0113434
-I0216 17:50:55.253839 29927 solver.cpp:258]     Train net output #0: loss = 0.00745139 (* 1 = 0.00745139 loss)
-I0216 17:50:55.253846 29927 solver.cpp:571] Iteration 292000, lr = 0.001
-I0216 17:51:28.154639 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_294000.caffemodel
-I0216 17:51:28.181821 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_294000.solverstate
-I0216 17:51:28.196797 29927 solver.cpp:242] Iteration 294000, loss = 0.0108271
-I0216 17:51:28.196835 29927 solver.cpp:258]     Train net output #0: loss = 0.00361779 (* 1 = 0.00361779 loss)
-I0216 17:51:28.196843 29927 solver.cpp:571] Iteration 294000, lr = 0.001
-I0216 17:52:01.066668 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_296000.caffemodel
-I0216 17:52:01.095288 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_296000.solverstate
-I0216 17:52:01.111160 29927 solver.cpp:242] Iteration 296000, loss = 0.0123462
-I0216 17:52:01.111196 29927 solver.cpp:258]     Train net output #0: loss = 0.0129021 (* 1 = 0.0129021 loss)
-I0216 17:52:01.111203 29927 solver.cpp:571] Iteration 296000, lr = 0.001
-I0216 17:52:34.067108 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_298000.caffemodel
-I0216 17:52:34.099943 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_298000.solverstate
-I0216 17:52:34.117496 29927 solver.cpp:242] Iteration 298000, loss = 0.0121319
-I0216 17:52:34.117533 29927 solver.cpp:258]     Train net output #0: loss = 0.00317984 (* 1 = 0.00317984 loss)
-I0216 17:52:34.117542 29927 solver.cpp:571] Iteration 298000, lr = 0.001
-I0216 17:53:07.062659 29927 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_300000.caffemodel
-I0216 17:53:07.091238 29927 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_300000.solverstate
-I0216 17:53:07.106230 29927 solver.cpp:242] Iteration 300000, loss = 0.0130829
-I0216 17:53:07.106267 29927 solver.cpp:258]     Train net output #0: loss = 0.00357383 (* 1 = 0.00357383 loss)
-I0216 17:53:07.106276 29927 solver.cpp:571] Iteration 300000, lr = 0.001
+I0217 12:01:48.480095 22888 layer_factory.hpp:76] Creating layer data
+I0217 12:01:48.480160 22888 net.cpp:111] Creating Layer data
+I0217 12:01:48.480168 22888 net.cpp:434] data -> data
+I0217 12:01:48.480911 22901 db_lmdb.cpp:22] Opened lmdb db/val/images
+I0217 12:01:48.481024 22888 data_layer.cpp:44] output data size: 1,1,182,243
+I0217 12:01:48.481675 22888 net.cpp:156] Setting up data
+I0217 12:01:48.481688 22888 net.cpp:164] Top shape: 1 1 182 243 (44226)
+I0217 12:01:48.481693 22888 layer_factory.hpp:76] Creating layer data_data_0_split
+I0217 12:01:48.481711 22888 net.cpp:111] Creating Layer data_data_0_split
+I0217 12:01:48.481715 22888 net.cpp:478] data_data_0_split <- data
+I0217 12:01:48.481721 22888 net.cpp:434] data_data_0_split -> data_data_0_split_0
+I0217 12:01:48.481729 22888 net.cpp:434] data_data_0_split -> data_data_0_split_1
+I0217 12:01:48.481735 22888 net.cpp:156] Setting up data_data_0_split
+I0217 12:01:48.481740 22888 net.cpp:164] Top shape: 1 1 182 243 (44226)
+I0217 12:01:48.481745 22888 net.cpp:164] Top shape: 1 1 182 243 (44226)
+I0217 12:01:48.481747 22888 layer_factory.hpp:76] Creating layer label
+I0217 12:01:48.481778 22888 net.cpp:111] Creating Layer label
+I0217 12:01:48.481787 22888 net.cpp:434] label -> label
+I0217 12:01:48.483158 22903 db_lmdb.cpp:22] Opened lmdb db/val/labels
+I0217 12:01:48.483269 22888 data_layer.cpp:44] output data size: 1,1,182,243
+I0217 12:01:48.483697 22888 net.cpp:156] Setting up label
+I0217 12:01:48.483711 22888 net.cpp:164] Top shape: 1 1 182 243 (44226)
+I0217 12:01:48.483721 22888 layer_factory.hpp:76] Creating layer label_label_0_split
+I0217 12:01:48.483736 22888 net.cpp:111] Creating Layer label_label_0_split
+I0217 12:01:48.483747 22888 net.cpp:478] label_label_0_split <- label
+I0217 12:01:48.483759 22888 net.cpp:434] label_label_0_split -> label_label_0_split_0
+I0217 12:01:48.483777 22888 net.cpp:434] label_label_0_split -> label_label_0_split_1
+I0217 12:01:48.483791 22888 net.cpp:156] Setting up label_label_0_split
+I0217 12:01:48.483801 22888 net.cpp:164] Top shape: 1 1 182 243 (44226)
+I0217 12:01:48.483810 22888 net.cpp:164] Top shape: 1 1 182 243 (44226)
+I0217 12:01:48.483816 22888 layer_factory.hpp:76] Creating layer conv1
+I0217 12:01:48.483831 22888 net.cpp:111] Creating Layer conv1
+I0217 12:01:48.483839 22888 net.cpp:478] conv1 <- data_data_0_split_0
+I0217 12:01:48.483852 22888 net.cpp:434] conv1 -> conv1
+I0217 12:01:48.485332 22888 net.cpp:156] Setting up conv1
+I0217 12:01:48.485354 22888 net.cpp:164] Top shape: 1 100 139 170 (2363000)
+I0217 12:01:48.485376 22888 layer_factory.hpp:76] Creating layer relu1
+I0217 12:01:48.485389 22888 net.cpp:111] Creating Layer relu1
+I0217 12:01:48.485396 22888 net.cpp:478] relu1 <- conv1
+I0217 12:01:48.485405 22888 net.cpp:420] relu1 -> conv1 (in-place)
+I0217 12:01:48.485684 22888 net.cpp:156] Setting up relu1
+I0217 12:01:48.485699 22888 net.cpp:164] Top shape: 1 100 139 170 (2363000)
+I0217 12:01:48.485707 22888 layer_factory.hpp:76] Creating layer pool1
+I0217 12:01:48.485720 22888 net.cpp:111] Creating Layer pool1
+I0217 12:01:48.485728 22888 net.cpp:478] pool1 <- conv1
+I0217 12:01:48.485736 22888 net.cpp:434] pool1 -> pool1
+I0217 12:01:48.485921 22888 net.cpp:156] Setting up pool1
+I0217 12:01:48.485932 22888 net.cpp:164] Top shape: 1 100 70 85 (595000)
+I0217 12:01:48.485940 22888 layer_factory.hpp:76] Creating layer conv2
+I0217 12:01:48.485954 22888 net.cpp:111] Creating Layer conv2
+I0217 12:01:48.485961 22888 net.cpp:478] conv2 <- pool1
+I0217 12:01:48.485973 22888 net.cpp:434] conv2 -> conv2
+I0217 12:01:48.492491 22888 net.cpp:156] Setting up conv2
+I0217 12:01:48.492519 22888 net.cpp:164] Top shape: 1 200 33 41 (270600)
+I0217 12:01:48.492538 22888 layer_factory.hpp:76] Creating layer relu2
+I0217 12:01:48.492555 22888 net.cpp:111] Creating Layer relu2
+I0217 12:01:48.492563 22888 net.cpp:478] relu2 <- conv2
+I0217 12:01:48.492574 22888 net.cpp:420] relu2 -> conv2 (in-place)
+I0217 12:01:48.492718 22888 net.cpp:156] Setting up relu2
+I0217 12:01:48.492729 22888 net.cpp:164] Top shape: 1 200 33 41 (270600)
+I0217 12:01:48.492736 22888 layer_factory.hpp:76] Creating layer pool2
+I0217 12:01:48.492749 22888 net.cpp:111] Creating Layer pool2
+I0217 12:01:48.492758 22888 net.cpp:478] pool2 <- conv2
+I0217 12:01:48.492769 22888 net.cpp:434] pool2 -> pool2
+I0217 12:01:48.492995 22888 net.cpp:156] Setting up pool2
+I0217 12:01:48.493006 22888 net.cpp:164] Top shape: 1 200 17 21 (71400)
+I0217 12:01:48.493015 22888 layer_factory.hpp:76] Creating layer conv3
+I0217 12:01:48.493028 22888 net.cpp:111] Creating Layer conv3
+I0217 12:01:48.493036 22888 net.cpp:478] conv3 <- pool2
+I0217 12:01:48.493048 22888 net.cpp:434] conv3 -> conv3
+I0217 12:01:48.500078 22888 net.cpp:156] Setting up conv3
+I0217 12:01:48.500109 22888 net.cpp:164] Top shape: 1 300 15 19 (85500)
+I0217 12:01:48.500128 22888 layer_factory.hpp:76] Creating layer relu3
+I0217 12:01:48.500145 22888 net.cpp:111] Creating Layer relu3
+I0217 12:01:48.500152 22888 net.cpp:478] relu3 <- conv3
+I0217 12:01:48.500164 22888 net.cpp:420] relu3 -> conv3 (in-place)
+I0217 12:01:48.500308 22888 net.cpp:156] Setting up relu3
+I0217 12:01:48.500319 22888 net.cpp:164] Top shape: 1 300 15 19 (85500)
+I0217 12:01:48.500326 22888 layer_factory.hpp:76] Creating layer conv4
+I0217 12:01:48.500342 22888 net.cpp:111] Creating Layer conv4
+I0217 12:01:48.500350 22888 net.cpp:478] conv4 <- conv3
+I0217 12:01:48.500361 22888 net.cpp:434] conv4 -> conv4
+I0217 12:01:48.510537 22888 net.cpp:156] Setting up conv4
+I0217 12:01:48.510570 22888 net.cpp:164] Top shape: 1 300 13 17 (66300)
+I0217 12:01:48.510586 22888 layer_factory.hpp:76] Creating layer relu4
+I0217 12:01:48.510601 22888 net.cpp:111] Creating Layer relu4
+I0217 12:01:48.510609 22888 net.cpp:478] relu4 <- conv4
+I0217 12:01:48.510620 22888 net.cpp:420] relu4 -> conv4 (in-place)
+I0217 12:01:48.510848 22888 net.cpp:156] Setting up relu4
+I0217 12:01:48.510860 22888 net.cpp:164] Top shape: 1 300 13 17 (66300)
+I0217 12:01:48.510867 22888 layer_factory.hpp:76] Creating layer drop
+I0217 12:01:48.510881 22888 net.cpp:111] Creating Layer drop
+I0217 12:01:48.510888 22888 net.cpp:478] drop <- conv4
+I0217 12:01:48.510897 22888 net.cpp:420] drop -> conv4 (in-place)
+I0217 12:01:48.510908 22888 net.cpp:156] Setting up drop
+I0217 12:01:48.510917 22888 net.cpp:164] Top shape: 1 300 13 17 (66300)
+I0217 12:01:48.510924 22888 layer_factory.hpp:76] Creating layer score_classes
+I0217 12:01:48.510937 22888 net.cpp:111] Creating Layer score_classes
+I0217 12:01:48.510944 22888 net.cpp:478] score_classes <- conv4
+I0217 12:01:48.510957 22888 net.cpp:434] score_classes -> score_classes
+I0217 12:01:48.511499 22888 net.cpp:156] Setting up score_classes
+I0217 12:01:48.511512 22888 net.cpp:164] Top shape: 1 2 13 17 (442)
+I0217 12:01:48.511528 22888 layer_factory.hpp:76] Creating layer upscore
+I0217 12:01:48.511543 22888 net.cpp:111] Creating Layer upscore
+I0217 12:01:48.511551 22888 net.cpp:478] upscore <- score_classes
+I0217 12:01:48.511564 22888 net.cpp:434] upscore -> upscore
+I0217 12:01:48.511773 22888 net.cpp:156] Setting up upscore
+I0217 12:01:48.511785 22888 net.cpp:164] Top shape: 1 2 207 271 (112194)
+I0217 12:01:48.511796 22888 layer_factory.hpp:76] Creating layer score
+I0217 12:01:48.511806 22888 net.cpp:111] Creating Layer score
+I0217 12:01:48.511812 22888 net.cpp:478] score <- upscore
+I0217 12:01:48.511821 22888 net.cpp:478] score <- data_data_0_split_1
+I0217 12:01:48.511829 22888 net.cpp:434] score -> score
+I0217 12:01:48.511862 22888 net.cpp:156] Setting up score
+I0217 12:01:48.511872 22888 net.cpp:164] Top shape: 1 2 182 243 (88452)
+I0217 12:01:48.511878 22888 layer_factory.hpp:76] Creating layer score_score_0_split
+I0217 12:01:48.511891 22888 net.cpp:111] Creating Layer score_score_0_split
+I0217 12:01:48.511898 22888 net.cpp:478] score_score_0_split <- score
+I0217 12:01:48.511907 22888 net.cpp:434] score_score_0_split -> score_score_0_split_0
+I0217 12:01:48.511917 22888 net.cpp:434] score_score_0_split -> score_score_0_split_1
+I0217 12:01:48.511931 22888 net.cpp:156] Setting up score_score_0_split
+I0217 12:01:48.511945 22888 net.cpp:164] Top shape: 1 2 182 243 (88452)
+I0217 12:01:48.511955 22888 net.cpp:164] Top shape: 1 2 182 243 (88452)
+I0217 12:01:48.511961 22888 layer_factory.hpp:76] Creating layer loss
+I0217 12:01:48.511971 22888 net.cpp:111] Creating Layer loss
+I0217 12:01:48.511977 22888 net.cpp:478] loss <- score_score_0_split_0
+I0217 12:01:48.511984 22888 net.cpp:478] loss <- label_label_0_split_0
+I0217 12:01:48.511993 22888 net.cpp:434] loss -> loss
+I0217 12:01:48.512006 22888 layer_factory.hpp:76] Creating layer loss
+I0217 12:01:48.512316 22888 net.cpp:156] Setting up loss
+I0217 12:01:48.512328 22888 net.cpp:164] Top shape: (1)
+I0217 12:01:48.512336 22888 net.cpp:169]     with loss weight 1
+I0217 12:01:48.512351 22888 layer_factory.hpp:76] Creating layer accuracy
+I0217 12:01:48.527084 22888 net.cpp:111] Creating Layer accuracy
+I0217 12:01:48.527107 22888 net.cpp:478] accuracy <- score_score_0_split_1
+I0217 12:01:48.527117 22888 net.cpp:478] accuracy <- label_label_0_split_1
+I0217 12:01:48.527125 22888 net.cpp:434] accuracy -> accuracy
+I0217 12:01:48.527142 22888 net.cpp:156] Setting up accuracy
+I0217 12:01:48.527153 22888 net.cpp:164] Top shape: (1)
+I0217 12:01:48.527160 22888 net.cpp:241] accuracy does not need backward computation.
+I0217 12:01:48.527168 22888 net.cpp:237] loss needs backward computation.
+I0217 12:01:48.527174 22888 net.cpp:237] score_score_0_split needs backward computation.
+I0217 12:01:48.527180 22888 net.cpp:237] score needs backward computation.
+I0217 12:01:48.527189 22888 net.cpp:237] upscore needs backward computation.
+I0217 12:01:48.527194 22888 net.cpp:237] score_classes needs backward computation.
+I0217 12:01:48.527201 22888 net.cpp:237] drop needs backward computation.
+I0217 12:01:48.527207 22888 net.cpp:237] relu4 needs backward computation.
+I0217 12:01:48.527214 22888 net.cpp:237] conv4 needs backward computation.
+I0217 12:01:48.527220 22888 net.cpp:237] relu3 needs backward computation.
+I0217 12:01:48.527225 22888 net.cpp:237] conv3 needs backward computation.
+I0217 12:01:48.527231 22888 net.cpp:237] pool2 needs backward computation.
+I0217 12:01:48.527238 22888 net.cpp:237] relu2 needs backward computation.
+I0217 12:01:48.527245 22888 net.cpp:237] conv2 needs backward computation.
+I0217 12:01:48.527251 22888 net.cpp:237] pool1 needs backward computation.
+I0217 12:01:48.527257 22888 net.cpp:237] relu1 needs backward computation.
+I0217 12:01:48.527263 22888 net.cpp:237] conv1 needs backward computation.
+I0217 12:01:48.527271 22888 net.cpp:241] label_label_0_split does not need backward computation.
+I0217 12:01:48.527277 22888 net.cpp:241] label does not need backward computation.
+I0217 12:01:48.527283 22888 net.cpp:241] data_data_0_split does not need backward computation.
+I0217 12:01:48.527290 22888 net.cpp:241] data does not need backward computation.
+I0217 12:01:48.527298 22888 net.cpp:284] This network produces output accuracy
+I0217 12:01:48.527304 22888 net.cpp:284] This network produces output loss
+I0217 12:01:48.527329 22888 net.cpp:298] Network initialization done.
+I0217 12:01:48.527335 22888 net.cpp:299] Memory required for data: 27787400
+I0217 12:01:48.527403 22888 solver.cpp:65] Solver scaffolding done.
+I0217 12:01:48.527438 22888 caffe.cpp:211] Starting Optimization
+I0217 12:01:48.527448 22888 solver.cpp:293] Solving FCN
+I0217 12:01:48.527454 22888 solver.cpp:294] Learning Rate Policy: multistep
+I0217 12:01:48.528180 22888 solver.cpp:346] Iteration 0, Testing net (#0)
+I0217 12:01:48.566098 22888 solver.cpp:242] Iteration 0, loss = 0.693147
+I0217 12:01:48.566143 22888 solver.cpp:258]     Train net output #0: loss = 0.693147 (* 1 = 0.693147 loss)
+I0217 12:01:48.566190 22888 solver.cpp:571] Iteration 0, lr = 0.01
+I0217 12:01:49.231711 22888 blocking_queue.cpp:50] Data layer prefetch queue empty
+I0217 12:02:31.973124 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_2000.caffemodel
+I0217 12:02:32.029613 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_2000.solverstate
+I0217 12:02:32.052358 22888 solver.cpp:242] Iteration 2000, loss = 0.133891
+I0217 12:02:32.052409 22888 solver.cpp:258]     Train net output #0: loss = 0.132295 (* 1 = 0.132295 loss)
+I0217 12:02:32.052420 22888 solver.cpp:571] Iteration 2000, lr = 0.01
+I0217 12:03:13.008318 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_4000.caffemodel
+I0217 12:03:13.040174 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_4000.solverstate
+I0217 12:03:13.056054 22888 solver.cpp:242] Iteration 4000, loss = 0.120944
+I0217 12:03:13.056099 22888 solver.cpp:258]     Train net output #0: loss = 0.2049 (* 1 = 0.2049 loss)
+I0217 12:03:13.056109 22888 solver.cpp:571] Iteration 4000, lr = 0.01
+I0217 12:03:54.390358 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_6000.caffemodel
+I0217 12:03:54.427546 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_6000.solverstate
+I0217 12:03:54.443773 22888 solver.cpp:242] Iteration 6000, loss = 0.122697
+I0217 12:03:54.443814 22888 solver.cpp:258]     Train net output #0: loss = 0.044622 (* 1 = 0.044622 loss)
+I0217 12:03:54.443840 22888 solver.cpp:571] Iteration 6000, lr = 0.01
+I0217 12:04:33.640136 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_8000.caffemodel
+I0217 12:04:33.672202 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_8000.solverstate
+I0217 12:04:33.688379 22888 solver.cpp:242] Iteration 8000, loss = 0.117349
+I0217 12:04:33.688418 22888 solver.cpp:258]     Train net output #0: loss = 0.0302396 (* 1 = 0.0302396 loss)
+I0217 12:04:33.688441 22888 solver.cpp:571] Iteration 8000, lr = 0.01
+I0217 12:05:10.661810 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_10000.caffemodel
+I0217 12:05:10.691289 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_10000.solverstate
+I0217 12:05:10.707121 22888 solver.cpp:242] Iteration 10000, loss = 0.104663
+I0217 12:05:10.707160 22888 solver.cpp:258]     Train net output #0: loss = 0.0228835 (* 1 = 0.0228835 loss)
+I0217 12:05:10.707180 22888 solver.cpp:511] MultiStep Status: Iteration 10000, step = 1
+I0217 12:05:10.707187 22888 solver.cpp:571] Iteration 10000, lr = 0.001
+I0217 12:05:47.570463 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_12000.caffemodel
+I0217 12:05:47.609794 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_12000.solverstate
+I0217 12:05:47.632182 22888 solver.cpp:242] Iteration 12000, loss = 0.0913111
+I0217 12:05:47.632241 22888 solver.cpp:258]     Train net output #0: loss = 0.0363971 (* 1 = 0.0363971 loss)
+I0217 12:05:47.632252 22888 solver.cpp:571] Iteration 12000, lr = 0.001
+I0217 12:06:24.767985 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_14000.caffemodel
+I0217 12:06:24.798707 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_14000.solverstate
+I0217 12:06:24.913033 22888 solver.cpp:242] Iteration 14000, loss = 0.0939128
+I0217 12:06:24.913074 22888 solver.cpp:258]     Train net output #0: loss = 0.0261382 (* 1 = 0.0261382 loss)
+I0217 12:06:24.913086 22888 solver.cpp:571] Iteration 14000, lr = 0.001
+I0217 12:07:01.660904 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_16000.caffemodel
+I0217 12:07:01.701362 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_16000.solverstate
+I0217 12:07:01.723184 22888 solver.cpp:242] Iteration 16000, loss = 0.0803567
+I0217 12:07:01.723227 22888 solver.cpp:258]     Train net output #0: loss = 0.0466869 (* 1 = 0.0466869 loss)
+I0217 12:07:01.723238 22888 solver.cpp:571] Iteration 16000, lr = 0.001
+I0217 12:07:38.397037 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_18000.caffemodel
+I0217 12:07:38.438043 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_18000.solverstate
+I0217 12:07:38.580476 22888 solver.cpp:242] Iteration 18000, loss = 0.0754362
+I0217 12:07:38.580543 22888 solver.cpp:258]     Train net output #0: loss = 0.0691132 (* 1 = 0.0691132 loss)
+I0217 12:07:38.580561 22888 solver.cpp:571] Iteration 18000, lr = 0.001
+I0217 12:08:16.196187 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_20000.caffemodel
+I0217 12:08:16.225884 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_20000.solverstate
+I0217 12:08:16.244853 22888 solver.cpp:242] Iteration 20000, loss = 0.0671447
+I0217 12:08:16.244897 22888 solver.cpp:258]     Train net output #0: loss = 0.0403782 (* 1 = 0.0403782 loss)
+I0217 12:08:16.244906 22888 solver.cpp:571] Iteration 20000, lr = 0.001
+I0217 12:08:52.708082 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_22000.caffemodel
+I0217 12:08:52.737988 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_22000.solverstate
+I0217 12:08:52.753870 22888 solver.cpp:242] Iteration 22000, loss = 0.0534844
+I0217 12:08:52.753907 22888 solver.cpp:258]     Train net output #0: loss = 0.0522719 (* 1 = 0.0522719 loss)
+I0217 12:08:52.753916 22888 solver.cpp:571] Iteration 22000, lr = 0.001
+I0217 12:09:26.437728 22888 blocking_queue.cpp:50] Data layer prefetch queue empty
+I0217 12:09:30.041534 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_24000.caffemodel
+I0217 12:09:30.072350 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_24000.solverstate
+I0217 12:09:30.089210 22888 solver.cpp:242] Iteration 24000, loss = 0.0459411
+I0217 12:09:30.089257 22888 solver.cpp:258]     Train net output #0: loss = 0.0823473 (* 1 = 0.0823473 loss)
+I0217 12:09:30.089265 22888 solver.cpp:571] Iteration 24000, lr = 0.001
+I0217 12:10:07.605798 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_26000.caffemodel
+I0217 12:10:07.652365 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_26000.solverstate
+I0217 12:10:07.673637 22888 solver.cpp:242] Iteration 26000, loss = 0.0466908
+I0217 12:10:07.673682 22888 solver.cpp:258]     Train net output #0: loss = 0.0367716 (* 1 = 0.0367716 loss)
+I0217 12:10:07.673693 22888 solver.cpp:571] Iteration 26000, lr = 0.001
+I0217 12:10:43.488297 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_28000.caffemodel
+I0217 12:10:43.517707 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_28000.solverstate
+I0217 12:10:43.533421 22888 solver.cpp:242] Iteration 28000, loss = 0.0504267
+I0217 12:10:43.533457 22888 solver.cpp:258]     Train net output #0: loss = 0.0178812 (* 1 = 0.0178812 loss)
+I0217 12:10:43.533465 22888 solver.cpp:571] Iteration 28000, lr = 0.001
+I0217 12:11:21.186815 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_30000.caffemodel
+I0217 12:11:21.288630 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_30000.solverstate
+I0217 12:11:21.307221 22888 solver.cpp:242] Iteration 30000, loss = 0.0443414
+I0217 12:11:21.307266 22888 solver.cpp:258]     Train net output #0: loss = 0.058029 (* 1 = 0.058029 loss)
+I0217 12:11:21.307276 22888 solver.cpp:571] Iteration 30000, lr = 0.001
+I0217 12:11:58.498867 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_32000.caffemodel
+I0217 12:11:58.528491 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_32000.solverstate
+I0217 12:11:58.544589 22888 solver.cpp:242] Iteration 32000, loss = 0.0322266
+I0217 12:11:58.544628 22888 solver.cpp:258]     Train net output #0: loss = 0.0179722 (* 1 = 0.0179722 loss)
+I0217 12:11:58.544639 22888 solver.cpp:571] Iteration 32000, lr = 0.001
+I0217 12:12:35.542621 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_34000.caffemodel
+I0217 12:12:35.570832 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_34000.solverstate
+I0217 12:12:35.585093 22888 solver.cpp:242] Iteration 34000, loss = 0.0361602
+I0217 12:12:35.585129 22888 solver.cpp:258]     Train net output #0: loss = 0.00968705 (* 1 = 0.00968705 loss)
+I0217 12:12:35.585139 22888 solver.cpp:571] Iteration 34000, lr = 0.001
+I0217 12:13:12.565747 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_36000.caffemodel
+I0217 12:13:12.596674 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_36000.solverstate
+I0217 12:13:12.615610 22888 solver.cpp:242] Iteration 36000, loss = 0.037445
+I0217 12:13:12.615654 22888 solver.cpp:258]     Train net output #0: loss = 0.0162859 (* 1 = 0.0162859 loss)
+I0217 12:13:12.615664 22888 solver.cpp:571] Iteration 36000, lr = 0.001
+I0217 12:13:48.638757 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_38000.caffemodel
+I0217 12:13:48.677047 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_38000.solverstate
+I0217 12:13:48.697124 22888 solver.cpp:242] Iteration 38000, loss = 0.0363017
+I0217 12:13:48.697167 22888 solver.cpp:258]     Train net output #0: loss = 0.0187263 (* 1 = 0.0187263 loss)
+I0217 12:13:48.697178 22888 solver.cpp:571] Iteration 38000, lr = 0.001
+I0217 12:14:25.727095 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_40000.caffemodel
+I0217 12:14:25.756603 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_40000.solverstate
+I0217 12:14:25.772281 22888 solver.cpp:242] Iteration 40000, loss = 0.0288679
+I0217 12:14:25.772333 22888 solver.cpp:258]     Train net output #0: loss = 0.0124856 (* 1 = 0.0124856 loss)
+I0217 12:14:25.772344 22888 solver.cpp:571] Iteration 40000, lr = 0.001
+I0217 12:15:03.131234 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_42000.caffemodel
+I0217 12:15:03.163004 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_42000.solverstate
+I0217 12:15:03.180685 22888 solver.cpp:242] Iteration 42000, loss = 0.0345999
+I0217 12:15:03.180729 22888 solver.cpp:258]     Train net output #0: loss = 0.0113669 (* 1 = 0.0113669 loss)
+I0217 12:15:03.180738 22888 solver.cpp:571] Iteration 42000, lr = 0.001
+I0217 12:15:40.706743 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_44000.caffemodel
+I0217 12:15:40.733739 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_44000.solverstate
+I0217 12:15:40.749825 22888 solver.cpp:242] Iteration 44000, loss = 0.0328254
+I0217 12:15:40.749869 22888 solver.cpp:258]     Train net output #0: loss = 0.0324189 (* 1 = 0.0324189 loss)
+I0217 12:15:40.749878 22888 solver.cpp:571] Iteration 44000, lr = 0.001
+I0217 12:16:17.416725 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_46000.caffemodel
+I0217 12:16:17.454762 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_46000.solverstate
+I0217 12:16:17.566395 22888 solver.cpp:242] Iteration 46000, loss = 0.0293619
+I0217 12:16:17.566438 22888 solver.cpp:258]     Train net output #0: loss = 0.0368219 (* 1 = 0.0368219 loss)
+I0217 12:16:17.566447 22888 solver.cpp:571] Iteration 46000, lr = 0.001
+I0217 12:16:55.295573 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_48000.caffemodel
+I0217 12:16:55.327940 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_48000.solverstate
+I0217 12:16:55.343957 22888 solver.cpp:242] Iteration 48000, loss = 0.0295075
+I0217 12:16:55.344003 22888 solver.cpp:258]     Train net output #0: loss = 0.0307606 (* 1 = 0.0307606 loss)
+I0217 12:16:55.344012 22888 solver.cpp:571] Iteration 48000, lr = 0.001
+I0217 12:17:32.692345 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_50000.caffemodel
+I0217 12:17:32.723328 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_50000.solverstate
+I0217 12:17:32.739892 22888 solver.cpp:242] Iteration 50000, loss = 0.0280026
+I0217 12:17:32.739933 22888 solver.cpp:258]     Train net output #0: loss = 0.0650761 (* 1 = 0.0650761 loss)
+I0217 12:17:32.739956 22888 solver.cpp:571] Iteration 50000, lr = 0.001
+I0217 12:17:38.157812 22888 blocking_queue.cpp:50] Data layer prefetch queue empty
+I0217 12:18:10.155169 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_52000.caffemodel
+I0217 12:18:10.186592 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_52000.solverstate
+I0217 12:18:10.286716 22888 solver.cpp:242] Iteration 52000, loss = 0.0306441
+I0217 12:18:10.286764 22888 solver.cpp:258]     Train net output #0: loss = 0.0108444 (* 1 = 0.0108444 loss)
+I0217 12:18:10.286777 22888 solver.cpp:571] Iteration 52000, lr = 0.001
+I0217 12:18:47.927798 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_54000.caffemodel
+I0217 12:18:47.957811 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_54000.solverstate
+I0217 12:18:47.975641 22888 solver.cpp:242] Iteration 54000, loss = 0.0251149
+I0217 12:18:47.975687 22888 solver.cpp:258]     Train net output #0: loss = 0.00863596 (* 1 = 0.00863596 loss)
+I0217 12:18:47.975695 22888 solver.cpp:571] Iteration 54000, lr = 0.001
+I0217 12:19:24.421685 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_56000.caffemodel
+I0217 12:19:24.453251 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_56000.solverstate
+I0217 12:19:24.469465 22888 solver.cpp:242] Iteration 56000, loss = 0.0291062
+I0217 12:19:24.469511 22888 solver.cpp:258]     Train net output #0: loss = 0.00852575 (* 1 = 0.00852575 loss)
+I0217 12:19:24.469519 22888 solver.cpp:571] Iteration 56000, lr = 0.001
+I0217 12:20:02.094445 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_58000.caffemodel
+I0217 12:20:02.123842 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_58000.solverstate
+I0217 12:20:02.140081 22888 solver.cpp:242] Iteration 58000, loss = 0.0260555
+I0217 12:20:02.140122 22888 solver.cpp:258]     Train net output #0: loss = 0.0116473 (* 1 = 0.0116473 loss)
+I0217 12:20:02.140136 22888 solver.cpp:571] Iteration 58000, lr = 0.001
+I0217 12:20:39.629240 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_60000.caffemodel
+I0217 12:20:39.659039 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_60000.solverstate
+I0217 12:20:39.675230 22888 solver.cpp:242] Iteration 60000, loss = 0.0252407
+I0217 12:20:39.675276 22888 solver.cpp:258]     Train net output #0: loss = 0.00857634 (* 1 = 0.00857634 loss)
+I0217 12:20:39.675284 22888 solver.cpp:571] Iteration 60000, lr = 0.001
+I0217 12:21:17.239779 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_62000.caffemodel
+I0217 12:21:17.267940 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_62000.solverstate
+I0217 12:21:17.283767 22888 solver.cpp:242] Iteration 62000, loss = 0.0298939
+I0217 12:21:17.283807 22888 solver.cpp:258]     Train net output #0: loss = 0.0146077 (* 1 = 0.0146077 loss)
+I0217 12:21:17.283819 22888 solver.cpp:571] Iteration 62000, lr = 0.001
+I0217 12:21:54.888824 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_64000.caffemodel
+I0217 12:21:54.938518 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_64000.solverstate
+I0217 12:21:54.959914 22888 solver.cpp:242] Iteration 64000, loss = 0.0214959
+I0217 12:21:54.959954 22888 solver.cpp:258]     Train net output #0: loss = 0.0135316 (* 1 = 0.0135316 loss)
+I0217 12:21:54.959965 22888 solver.cpp:571] Iteration 64000, lr = 0.001
+I0217 12:22:32.081552 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_66000.caffemodel
+I0217 12:22:32.120473 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_66000.solverstate
+I0217 12:22:32.145153 22888 solver.cpp:242] Iteration 66000, loss = 0.0242597
+I0217 12:22:32.145193 22888 solver.cpp:258]     Train net output #0: loss = 0.0282413 (* 1 = 0.0282413 loss)
+I0217 12:22:32.145206 22888 solver.cpp:571] Iteration 66000, lr = 0.001
+I0217 12:23:09.553647 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_68000.caffemodel
+I0217 12:23:09.595245 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_68000.solverstate
+I0217 12:23:09.618793 22888 solver.cpp:242] Iteration 68000, loss = 0.0267327
+I0217 12:23:09.618834 22888 solver.cpp:258]     Train net output #0: loss = 0.0112279 (* 1 = 0.0112279 loss)
+I0217 12:23:09.618846 22888 solver.cpp:571] Iteration 68000, lr = 0.001
+I0217 12:23:45.600350 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_70000.caffemodel
+I0217 12:23:45.632256 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_70000.solverstate
+I0217 12:23:45.649153 22888 solver.cpp:242] Iteration 70000, loss = 0.0273753
+I0217 12:23:45.649194 22888 solver.cpp:258]     Train net output #0: loss = 0.013054 (* 1 = 0.013054 loss)
+I0217 12:23:45.649201 22888 solver.cpp:571] Iteration 70000, lr = 0.001
+I0217 12:24:22.643045 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_72000.caffemodel
+I0217 12:24:22.678359 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_72000.solverstate
+I0217 12:24:22.698474 22888 solver.cpp:242] Iteration 72000, loss = 0.0204135
+I0217 12:24:22.698514 22888 solver.cpp:258]     Train net output #0: loss = 0.0130267 (* 1 = 0.0130267 loss)
+I0217 12:24:22.698534 22888 solver.cpp:571] Iteration 72000, lr = 0.001
+I0217 12:25:00.186440 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_74000.caffemodel
+I0217 12:25:00.216060 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_74000.solverstate
+I0217 12:25:00.233434 22888 solver.cpp:242] Iteration 74000, loss = 0.0245927
+I0217 12:25:00.233480 22888 solver.cpp:258]     Train net output #0: loss = 0.0104236 (* 1 = 0.0104236 loss)
+I0217 12:25:00.233489 22888 solver.cpp:571] Iteration 74000, lr = 0.001
+I0217 12:25:37.552373 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_76000.caffemodel
+I0217 12:25:37.580056 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_76000.solverstate
+I0217 12:25:37.596007 22888 solver.cpp:242] Iteration 76000, loss = 0.0302865
+I0217 12:25:37.596053 22888 solver.cpp:258]     Train net output #0: loss = 0.0143199 (* 1 = 0.0143199 loss)
+I0217 12:25:37.596062 22888 solver.cpp:571] Iteration 76000, lr = 0.001
+I0217 12:26:04.970688 22888 blocking_queue.cpp:50] Data layer prefetch queue empty
+I0217 12:26:16.074669 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_78000.caffemodel
+I0217 12:26:16.105494 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_78000.solverstate
+I0217 12:26:16.123075 22888 solver.cpp:242] Iteration 78000, loss = 0.0231117
+I0217 12:26:16.123121 22888 solver.cpp:258]     Train net output #0: loss = 0.0360485 (* 1 = 0.0360485 loss)
+I0217 12:26:16.123131 22888 solver.cpp:571] Iteration 78000, lr = 0.001
+I0217 12:26:53.866848 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_80000.caffemodel
+I0217 12:26:53.905992 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_80000.solverstate
+I0217 12:26:54.020478 22888 solver.cpp:242] Iteration 80000, loss = 0.0214928
+I0217 12:26:54.020522 22888 solver.cpp:258]     Train net output #0: loss = 0.0122059 (* 1 = 0.0122059 loss)
+I0217 12:26:54.020536 22888 solver.cpp:571] Iteration 80000, lr = 0.001
+I0217 12:27:31.048691 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_82000.caffemodel
+I0217 12:27:31.081521 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_82000.solverstate
+I0217 12:27:31.097769 22888 solver.cpp:242] Iteration 82000, loss = 0.0235036
+I0217 12:27:31.097815 22888 solver.cpp:258]     Train net output #0: loss = 0.174041 (* 1 = 0.174041 loss)
+I0217 12:27:31.097825 22888 solver.cpp:571] Iteration 82000, lr = 0.001
+I0217 12:28:08.488497 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_84000.caffemodel
+I0217 12:28:08.518378 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_84000.solverstate
+I0217 12:28:08.534525 22888 solver.cpp:242] Iteration 84000, loss = 0.0256294
+I0217 12:28:08.534572 22888 solver.cpp:258]     Train net output #0: loss = 0.0137273 (* 1 = 0.0137273 loss)
+I0217 12:28:08.534581 22888 solver.cpp:571] Iteration 84000, lr = 0.001
+I0217 12:28:46.652204 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_86000.caffemodel
+I0217 12:28:46.700278 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_86000.solverstate
+I0217 12:28:46.722163 22888 solver.cpp:242] Iteration 86000, loss = 0.0243854
+I0217 12:28:46.722204 22888 solver.cpp:258]     Train net output #0: loss = 0.0102252 (* 1 = 0.0102252 loss)
+I0217 12:28:46.722215 22888 solver.cpp:571] Iteration 86000, lr = 0.001
+I0217 12:29:23.546927 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_88000.caffemodel
+I0217 12:29:23.578502 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_88000.solverstate
+I0217 12:29:23.597436 22888 solver.cpp:242] Iteration 88000, loss = 0.0275534
+I0217 12:29:23.597483 22888 solver.cpp:258]     Train net output #0: loss = 0.00930505 (* 1 = 0.00930505 loss)
+I0217 12:29:23.597492 22888 solver.cpp:571] Iteration 88000, lr = 0.001
+I0217 12:30:01.242350 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_90000.caffemodel
+I0217 12:30:01.271673 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_90000.solverstate
+I0217 12:30:01.289299 22888 solver.cpp:242] Iteration 90000, loss = 0.0261179
+I0217 12:30:01.289336 22888 solver.cpp:258]     Train net output #0: loss = 0.0125857 (* 1 = 0.0125857 loss)
+I0217 12:30:01.289345 22888 solver.cpp:571] Iteration 90000, lr = 0.001
+I0217 12:30:39.328063 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_92000.caffemodel
+I0217 12:30:39.371615 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_92000.solverstate
+I0217 12:30:39.395066 22888 solver.cpp:242] Iteration 92000, loss = 0.0245924
+I0217 12:30:39.395110 22888 solver.cpp:258]     Train net output #0: loss = 0.0510546 (* 1 = 0.0510546 loss)
+I0217 12:30:39.395128 22888 solver.cpp:571] Iteration 92000, lr = 0.001
+I0217 12:31:16.706254 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_94000.caffemodel
+I0217 12:31:16.735390 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_94000.solverstate
+I0217 12:31:16.754597 22888 solver.cpp:242] Iteration 94000, loss = 0.0199548
+I0217 12:31:16.754636 22888 solver.cpp:258]     Train net output #0: loss = 0.082553 (* 1 = 0.082553 loss)
+I0217 12:31:16.754647 22888 solver.cpp:571] Iteration 94000, lr = 0.001
+I0217 12:31:54.240365 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_96000.caffemodel
+I0217 12:31:54.269395 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_96000.solverstate
+I0217 12:31:54.287741 22888 solver.cpp:242] Iteration 96000, loss = 0.0221709
+I0217 12:31:54.287778 22888 solver.cpp:258]     Train net output #0: loss = 0.0692594 (* 1 = 0.0692594 loss)
+I0217 12:31:54.287787 22888 solver.cpp:571] Iteration 96000, lr = 0.001
+I0217 12:32:31.707880 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_98000.caffemodel
+I0217 12:32:31.766641 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_98000.solverstate
+I0217 12:32:31.789983 22888 solver.cpp:242] Iteration 98000, loss = 0.0194704
+I0217 12:32:31.790027 22888 solver.cpp:258]     Train net output #0: loss = 0.152164 (* 1 = 0.152164 loss)
+I0217 12:32:31.790040 22888 solver.cpp:571] Iteration 98000, lr = 0.001
+I0217 12:33:08.183010 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_100000.caffemodel
+I0217 12:33:08.299141 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_100000.solverstate
+I0217 12:33:08.326081 22888 solver.cpp:242] Iteration 100000, loss = 0.0179194
+I0217 12:33:08.326134 22888 solver.cpp:258]     Train net output #0: loss = 0.0285762 (* 1 = 0.0285762 loss)
+I0217 12:33:08.326153 22888 solver.cpp:571] Iteration 100000, lr = 0.001
+I0217 12:33:46.201098 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_102000.caffemodel
+I0217 12:33:46.232025 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_102000.solverstate
+I0217 12:33:46.248435 22888 solver.cpp:242] Iteration 102000, loss = 0.0163384
+I0217 12:33:46.248476 22888 solver.cpp:258]     Train net output #0: loss = 0.00603159 (* 1 = 0.00603159 loss)
+I0217 12:33:46.248497 22888 solver.cpp:571] Iteration 102000, lr = 0.001
+I0217 12:34:23.729337 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_104000.caffemodel
+I0217 12:34:23.758198 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_104000.solverstate
+I0217 12:34:23.776867 22888 solver.cpp:242] Iteration 104000, loss = 0.0206929
+I0217 12:34:23.776911 22888 solver.cpp:258]     Train net output #0: loss = 0.0734416 (* 1 = 0.0734416 loss)
+I0217 12:34:23.776919 22888 solver.cpp:571] Iteration 104000, lr = 0.001
+I0217 12:34:35.823061 22888 blocking_queue.cpp:50] Data layer prefetch queue empty
+I0217 12:35:01.364619 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_106000.caffemodel
+I0217 12:35:01.392269 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_106000.solverstate
+I0217 12:35:01.408318 22888 solver.cpp:242] Iteration 106000, loss = 0.0188566
+I0217 12:35:01.408362 22888 solver.cpp:258]     Train net output #0: loss = 0.0074619 (* 1 = 0.0074619 loss)
+I0217 12:35:01.408370 22888 solver.cpp:571] Iteration 106000, lr = 0.001
+I0217 12:35:38.579026 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_108000.caffemodel
+I0217 12:35:38.607245 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_108000.solverstate
+I0217 12:35:38.624631 22888 solver.cpp:242] Iteration 108000, loss = 0.0176983
+I0217 12:35:38.624670 22888 solver.cpp:258]     Train net output #0: loss = 0.00849229 (* 1 = 0.00849229 loss)
+I0217 12:35:38.624677 22888 solver.cpp:571] Iteration 108000, lr = 0.001
+I0217 12:36:11.333876 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_110000.caffemodel
+I0217 12:36:11.377888 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_110000.solverstate
+I0217 12:36:11.392210 22888 solver.cpp:242] Iteration 110000, loss = 0.019907
+I0217 12:36:11.392248 22888 solver.cpp:258]     Train net output #0: loss = 0.0372011 (* 1 = 0.0372011 loss)
+I0217 12:36:11.392266 22888 solver.cpp:571] Iteration 110000, lr = 0.001
+I0217 12:36:43.937736 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_112000.caffemodel
+I0217 12:36:43.966552 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_112000.solverstate
+I0217 12:36:44.086062 22888 solver.cpp:242] Iteration 112000, loss = 0.0176286
+I0217 12:36:44.086113 22888 solver.cpp:258]     Train net output #0: loss = 0.00413967 (* 1 = 0.00413967 loss)
+I0217 12:36:44.086127 22888 solver.cpp:571] Iteration 112000, lr = 0.001
+I0217 12:37:16.706769 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_114000.caffemodel
+I0217 12:37:16.735572 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_114000.solverstate
+I0217 12:37:16.751500 22888 solver.cpp:242] Iteration 114000, loss = 0.0190049
+I0217 12:37:16.751538 22888 solver.cpp:258]     Train net output #0: loss = 0.0232387 (* 1 = 0.0232387 loss)
+I0217 12:37:16.751546 22888 solver.cpp:571] Iteration 114000, lr = 0.001
+I0217 12:37:49.215965 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_116000.caffemodel
+I0217 12:37:49.246013 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_116000.solverstate
+I0217 12:37:49.346617 22888 solver.cpp:242] Iteration 116000, loss = 0.013933
+I0217 12:37:49.346668 22888 solver.cpp:258]     Train net output #0: loss = 0.00640613 (* 1 = 0.00640613 loss)
+I0217 12:37:49.346681 22888 solver.cpp:571] Iteration 116000, lr = 0.001
+I0217 12:38:21.829185 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_118000.caffemodel
+I0217 12:38:21.856885 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_118000.solverstate
+I0217 12:38:21.872869 22888 solver.cpp:242] Iteration 118000, loss = 0.0194452
+I0217 12:38:21.872903 22888 solver.cpp:258]     Train net output #0: loss = 0.0755138 (* 1 = 0.0755138 loss)
+I0217 12:38:21.872912 22888 solver.cpp:571] Iteration 118000, lr = 0.001
+I0217 12:38:54.434674 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_120000.caffemodel
+I0217 12:38:54.465653 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_120000.solverstate
+I0217 12:38:54.481653 22888 solver.cpp:242] Iteration 120000, loss = 0.0222925
+I0217 12:38:54.481689 22888 solver.cpp:258]     Train net output #0: loss = 0.0199589 (* 1 = 0.0199589 loss)
+I0217 12:38:54.481699 22888 solver.cpp:571] Iteration 120000, lr = 0.001
+I0217 12:39:27.019629 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_122000.caffemodel
+I0217 12:39:27.047235 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_122000.solverstate
+I0217 12:39:27.065259 22888 solver.cpp:242] Iteration 122000, loss = 0.0135554
+I0217 12:39:27.065296 22888 solver.cpp:258]     Train net output #0: loss = 0.0163835 (* 1 = 0.0163835 loss)
+I0217 12:39:27.065304 22888 solver.cpp:571] Iteration 122000, lr = 0.001
+I0217 12:39:59.567836 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_124000.caffemodel
+I0217 12:39:59.596580 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_124000.solverstate
+I0217 12:39:59.612519 22888 solver.cpp:242] Iteration 124000, loss = 0.0204913
+I0217 12:39:59.612565 22888 solver.cpp:258]     Train net output #0: loss = 0.0104402 (* 1 = 0.0104402 loss)
+I0217 12:39:59.612574 22888 solver.cpp:571] Iteration 124000, lr = 0.001
+I0217 12:40:32.191951 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_126000.caffemodel
+I0217 12:40:32.221356 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_126000.solverstate
+I0217 12:40:32.237295 22888 solver.cpp:242] Iteration 126000, loss = 0.018898
+I0217 12:40:32.237332 22888 solver.cpp:258]     Train net output #0: loss = 0.00570664 (* 1 = 0.00570664 loss)
+I0217 12:40:32.237341 22888 solver.cpp:571] Iteration 126000, lr = 0.001
+I0217 12:41:04.886502 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_128000.caffemodel
+I0217 12:41:04.915042 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_128000.solverstate
+I0217 12:41:04.931028 22888 solver.cpp:242] Iteration 128000, loss = 0.0165554
+I0217 12:41:04.931064 22888 solver.cpp:258]     Train net output #0: loss = 0.0107238 (* 1 = 0.0107238 loss)
+I0217 12:41:04.931073 22888 solver.cpp:571] Iteration 128000, lr = 0.001
+I0217 12:41:37.357364 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_130000.caffemodel
+I0217 12:41:37.397567 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_130000.solverstate
+I0217 12:41:37.413972 22888 solver.cpp:242] Iteration 130000, loss = 0.0165362
+I0217 12:41:37.414011 22888 solver.cpp:258]     Train net output #0: loss = 0.0329559 (* 1 = 0.0329559 loss)
+I0217 12:41:37.414021 22888 solver.cpp:571] Iteration 130000, lr = 0.001
+I0217 12:42:09.952695 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_132000.caffemodel
+I0217 12:42:09.983381 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_132000.solverstate
+I0217 12:42:10.081269 22888 solver.cpp:242] Iteration 132000, loss = 0.0208547
+I0217 12:42:10.081321 22888 solver.cpp:258]     Train net output #0: loss = 0.00883862 (* 1 = 0.00883862 loss)
+I0217 12:42:10.081336 22888 solver.cpp:571] Iteration 132000, lr = 0.001
+I0217 12:42:42.623705 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_134000.caffemodel
+I0217 12:42:42.652591 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_134000.solverstate
+I0217 12:42:42.668970 22888 solver.cpp:242] Iteration 134000, loss = 0.0214607
+I0217 12:42:42.669006 22888 solver.cpp:258]     Train net output #0: loss = 0.0339457 (* 1 = 0.0339457 loss)
+I0217 12:42:42.669015 22888 solver.cpp:571] Iteration 134000, lr = 0.001
+I0217 12:43:15.315850 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_136000.caffemodel
+I0217 12:43:15.344676 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_136000.solverstate
+I0217 12:43:15.360795 22888 solver.cpp:242] Iteration 136000, loss = 0.0179037
+I0217 12:43:15.360831 22888 solver.cpp:258]     Train net output #0: loss = 0.00930398 (* 1 = 0.00930398 loss)
+I0217 12:43:15.360841 22888 solver.cpp:571] Iteration 136000, lr = 0.001
+I0217 12:43:47.853286 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_138000.caffemodel
+I0217 12:43:47.882527 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_138000.solverstate
+I0217 12:43:47.898993 22888 solver.cpp:242] Iteration 138000, loss = 0.0210417
+I0217 12:43:47.899039 22888 solver.cpp:258]     Train net output #0: loss = 0.0124927 (* 1 = 0.0124927 loss)
+I0217 12:43:47.899047 22888 solver.cpp:571] Iteration 138000, lr = 0.001
+I0217 12:44:20.535982 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_140000.caffemodel
+I0217 12:44:20.566867 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_140000.solverstate
+I0217 12:44:20.582803 22888 solver.cpp:242] Iteration 140000, loss = 0.0260084
+I0217 12:44:20.582840 22888 solver.cpp:258]     Train net output #0: loss = 0.240267 (* 1 = 0.240267 loss)
+I0217 12:44:20.582849 22888 solver.cpp:571] Iteration 140000, lr = 0.001
+I0217 12:44:53.173503 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_142000.caffemodel
+I0217 12:44:53.205811 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_142000.solverstate
+I0217 12:44:53.222401 22888 solver.cpp:242] Iteration 142000, loss = 0.0193068
+I0217 12:44:53.222439 22888 solver.cpp:258]     Train net output #0: loss = 0.0122264 (* 1 = 0.0122264 loss)
+I0217 12:44:53.222445 22888 solver.cpp:571] Iteration 142000, lr = 0.001
+I0217 12:45:25.769315 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_144000.caffemodel
+I0217 12:45:25.869079 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_144000.solverstate
+I0217 12:45:25.884546 22888 solver.cpp:242] Iteration 144000, loss = 0.0183895
+I0217 12:45:25.884593 22888 solver.cpp:258]     Train net output #0: loss = 0.0471156 (* 1 = 0.0471156 loss)
+I0217 12:45:25.884601 22888 solver.cpp:571] Iteration 144000, lr = 0.001
+I0217 12:45:58.387684 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_146000.caffemodel
+I0217 12:45:58.465287 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_146000.solverstate
+I0217 12:45:58.530916 22888 solver.cpp:242] Iteration 146000, loss = 0.0168538
+I0217 12:45:58.530962 22888 solver.cpp:258]     Train net output #0: loss = 0.00763446 (* 1 = 0.00763446 loss)
+I0217 12:45:58.530975 22888 solver.cpp:571] Iteration 146000, lr = 0.001
+I0217 12:46:31.195797 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_148000.caffemodel
+I0217 12:46:31.289028 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_148000.solverstate
+I0217 12:46:31.319581 22888 solver.cpp:242] Iteration 148000, loss = 0.0166074
+I0217 12:46:31.319617 22888 solver.cpp:258]     Train net output #0: loss = 0.00740864 (* 1 = 0.00740864 loss)
+I0217 12:46:31.319625 22888 solver.cpp:571] Iteration 148000, lr = 0.001
+I0217 12:47:03.820188 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_150000.caffemodel
+I0217 12:47:03.854116 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_150000.solverstate
+I0217 12:47:03.869495 22888 solver.cpp:242] Iteration 150000, loss = 0.020559
+I0217 12:47:03.869534 22888 solver.cpp:258]     Train net output #0: loss = 0.00645011 (* 1 = 0.00645011 loss)
+I0217 12:47:03.869542 22888 solver.cpp:571] Iteration 150000, lr = 0.001
+I0217 12:47:36.203675 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_152000.caffemodel
+I0217 12:47:36.280278 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_152000.solverstate
+I0217 12:47:36.295893 22888 solver.cpp:242] Iteration 152000, loss = 0.0234535
+I0217 12:47:36.295938 22888 solver.cpp:258]     Train net output #0: loss = 0.0534812 (* 1 = 0.0534812 loss)
+I0217 12:47:36.295948 22888 solver.cpp:571] Iteration 152000, lr = 0.001
+I0217 12:48:08.893486 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_154000.caffemodel
+I0217 12:48:08.924758 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_154000.solverstate
+I0217 12:48:08.940709 22888 solver.cpp:242] Iteration 154000, loss = 0.015957
+I0217 12:48:08.940745 22888 solver.cpp:258]     Train net output #0: loss = 0.0881974 (* 1 = 0.0881974 loss)
+I0217 12:48:08.940753 22888 solver.cpp:571] Iteration 154000, lr = 0.001
+I0217 12:48:41.515496 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_156000.caffemodel
+I0217 12:48:41.544553 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_156000.solverstate
+I0217 12:48:41.562278 22888 solver.cpp:242] Iteration 156000, loss = 0.016717
+I0217 12:48:41.562315 22888 solver.cpp:258]     Train net output #0: loss = 0.0100581 (* 1 = 0.0100581 loss)
+I0217 12:48:41.562325 22888 solver.cpp:571] Iteration 156000, lr = 0.001
+I0217 12:49:13.965534 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_158000.caffemodel
+I0217 12:49:13.994058 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_158000.solverstate
+I0217 12:49:14.010087 22888 solver.cpp:242] Iteration 158000, loss = 0.0175094
+I0217 12:49:14.010123 22888 solver.cpp:258]     Train net output #0: loss = 0.0170068 (* 1 = 0.0170068 loss)
+I0217 12:49:14.010131 22888 solver.cpp:571] Iteration 158000, lr = 0.001
+I0217 12:49:46.539528 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_160000.caffemodel
+I0217 12:49:46.614796 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_160000.solverstate
+I0217 12:49:46.630067 22888 solver.cpp:242] Iteration 160000, loss = 0.0173336
+I0217 12:49:46.630101 22888 solver.cpp:258]     Train net output #0: loss = 0.0237482 (* 1 = 0.0237482 loss)
+I0217 12:49:46.630110 22888 solver.cpp:571] Iteration 160000, lr = 0.001
+I0217 12:50:19.223279 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_162000.caffemodel
+I0217 12:50:19.293788 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_162000.solverstate
+I0217 12:50:19.309361 22888 solver.cpp:242] Iteration 162000, loss = 0.0260968
+I0217 12:50:19.309394 22888 solver.cpp:258]     Train net output #0: loss = 0.016771 (* 1 = 0.016771 loss)
+I0217 12:50:19.309404 22888 solver.cpp:571] Iteration 162000, lr = 0.001
+I0217 12:50:51.993130 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_164000.caffemodel
+I0217 12:50:52.038362 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_164000.solverstate
+I0217 12:50:52.141585 22888 solver.cpp:242] Iteration 164000, loss = 0.0127664
+I0217 12:50:52.141644 22888 solver.cpp:258]     Train net output #0: loss = 0.00303531 (* 1 = 0.00303531 loss)
+I0217 12:50:52.141659 22888 solver.cpp:571] Iteration 164000, lr = 0.001
+I0217 12:51:24.544080 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_166000.caffemodel
+I0217 12:51:24.573546 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_166000.solverstate
+I0217 12:51:24.588930 22888 solver.cpp:242] Iteration 166000, loss = 0.0170413
+I0217 12:51:24.588966 22888 solver.cpp:258]     Train net output #0: loss = 0.0329217 (* 1 = 0.0329217 loss)
+I0217 12:51:24.588975 22888 solver.cpp:571] Iteration 166000, lr = 0.001
+I0217 12:51:57.132706 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_168000.caffemodel
+I0217 12:51:57.161440 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_168000.solverstate
+I0217 12:51:57.177583 22888 solver.cpp:242] Iteration 168000, loss = 0.0139894
+I0217 12:51:57.177621 22888 solver.cpp:258]     Train net output #0: loss = 0.00377929 (* 1 = 0.00377929 loss)
+I0217 12:51:57.177630 22888 solver.cpp:571] Iteration 168000, lr = 0.001
+I0217 12:52:29.742339 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_170000.caffemodel
+I0217 12:52:29.768905 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_170000.solverstate
+I0217 12:52:29.785193 22888 solver.cpp:242] Iteration 170000, loss = 0.017849
+I0217 12:52:29.785231 22888 solver.cpp:258]     Train net output #0: loss = 0.00445806 (* 1 = 0.00445806 loss)
+I0217 12:52:29.785239 22888 solver.cpp:571] Iteration 170000, lr = 0.001
+I0217 12:53:02.564623 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_172000.caffemodel
+I0217 12:53:02.595302 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_172000.solverstate
+I0217 12:53:02.610462 22888 solver.cpp:242] Iteration 172000, loss = 0.0180451
+I0217 12:53:02.610497 22888 solver.cpp:258]     Train net output #0: loss = 0.00425808 (* 1 = 0.00425808 loss)
+I0217 12:53:02.610505 22888 solver.cpp:571] Iteration 172000, lr = 0.001
+I0217 12:53:34.956861 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_174000.caffemodel
+I0217 12:53:34.987900 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_174000.solverstate
+I0217 12:53:35.003376 22888 solver.cpp:242] Iteration 174000, loss = 0.0166453
+I0217 12:53:35.003413 22888 solver.cpp:258]     Train net output #0: loss = 0.00526339 (* 1 = 0.00526339 loss)
+I0217 12:53:35.003422 22888 solver.cpp:571] Iteration 174000, lr = 0.001
+I0217 12:54:07.497100 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_176000.caffemodel
+I0217 12:54:07.544924 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_176000.solverstate
+I0217 12:54:07.629873 22888 solver.cpp:242] Iteration 176000, loss = 0.0183241
+I0217 12:54:07.629925 22888 solver.cpp:258]     Train net output #0: loss = 0.00420732 (* 1 = 0.00420732 loss)
+I0217 12:54:07.629937 22888 solver.cpp:571] Iteration 176000, lr = 0.001
+I0217 12:54:40.124454 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_178000.caffemodel
+I0217 12:54:40.155133 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_178000.solverstate
+I0217 12:54:40.171026 22888 solver.cpp:242] Iteration 178000, loss = 0.0155189
+I0217 12:54:40.171072 22888 solver.cpp:258]     Train net output #0: loss = 0.00472037 (* 1 = 0.00472037 loss)
+I0217 12:54:40.171082 22888 solver.cpp:571] Iteration 178000, lr = 0.001
+I0217 12:55:12.683575 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_180000.caffemodel
+I0217 12:55:12.712052 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_180000.solverstate
+I0217 12:55:12.805179 22888 solver.cpp:242] Iteration 180000, loss = 0.0133502
+I0217 12:55:12.805230 22888 solver.cpp:258]     Train net output #0: loss = 0.00973792 (* 1 = 0.00973792 loss)
+I0217 12:55:12.805244 22888 solver.cpp:571] Iteration 180000, lr = 0.001
+I0217 12:55:45.401497 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_182000.caffemodel
+I0217 12:55:45.431635 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_182000.solverstate
+I0217 12:55:45.447533 22888 solver.cpp:242] Iteration 182000, loss = 0.0164126
+I0217 12:55:45.447571 22888 solver.cpp:258]     Train net output #0: loss = 0.0244127 (* 1 = 0.0244127 loss)
+I0217 12:55:45.447579 22888 solver.cpp:571] Iteration 182000, lr = 0.001
+I0217 12:56:18.002786 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_184000.caffemodel
+I0217 12:56:18.032301 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_184000.solverstate
+I0217 12:56:18.048673 22888 solver.cpp:242] Iteration 184000, loss = 0.0177254
+I0217 12:56:18.048710 22888 solver.cpp:258]     Train net output #0: loss = 0.0100592 (* 1 = 0.0100592 loss)
+I0217 12:56:18.048718 22888 solver.cpp:571] Iteration 184000, lr = 0.001
+I0217 12:56:50.738356 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_186000.caffemodel
+I0217 12:56:50.769855 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_186000.solverstate
+I0217 12:56:50.785825 22888 solver.cpp:242] Iteration 186000, loss = 0.0156361
+I0217 12:56:50.785861 22888 solver.cpp:258]     Train net output #0: loss = 0.00433238 (* 1 = 0.00433238 loss)
+I0217 12:56:50.785869 22888 solver.cpp:571] Iteration 186000, lr = 0.001
+I0217 12:57:23.548303 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_188000.caffemodel
+I0217 12:57:23.579912 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_188000.solverstate
+I0217 12:57:23.598891 22888 solver.cpp:242] Iteration 188000, loss = 0.015022
+I0217 12:57:23.598927 22888 solver.cpp:258]     Train net output #0: loss = 0.0180923 (* 1 = 0.0180923 loss)
+I0217 12:57:23.598935 22888 solver.cpp:571] Iteration 188000, lr = 0.001
+I0217 12:57:56.237365 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_190000.caffemodel
+I0217 12:57:56.270359 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_190000.solverstate
+I0217 12:57:56.286370 22888 solver.cpp:242] Iteration 190000, loss = 0.015144
+I0217 12:57:56.286406 22888 solver.cpp:258]     Train net output #0: loss = 0.0342428 (* 1 = 0.0342428 loss)
+I0217 12:57:56.286413 22888 solver.cpp:571] Iteration 190000, lr = 0.001
+I0217 12:58:28.831512 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_192000.caffemodel
+I0217 12:58:28.862342 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_192000.solverstate
+I0217 12:58:28.880069 22888 solver.cpp:242] Iteration 192000, loss = 0.013575
+I0217 12:58:28.880105 22888 solver.cpp:258]     Train net output #0: loss = 0.00707949 (* 1 = 0.00707949 loss)
+I0217 12:58:28.880113 22888 solver.cpp:571] Iteration 192000, lr = 0.001
+I0217 12:59:01.413895 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_194000.caffemodel
+I0217 12:59:01.454579 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_194000.solverstate
+I0217 12:59:01.471942 22888 solver.cpp:242] Iteration 194000, loss = 0.0179601
+I0217 12:59:01.471979 22888 solver.cpp:258]     Train net output #0: loss = 0.00866088 (* 1 = 0.00866088 loss)
+I0217 12:59:01.471988 22888 solver.cpp:571] Iteration 194000, lr = 0.001
+I0217 12:59:34.101743 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_196000.caffemodel
+I0217 12:59:34.131211 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_196000.solverstate
+I0217 12:59:34.227478 22888 solver.cpp:242] Iteration 196000, loss = 0.0172627
+I0217 12:59:34.227530 22888 solver.cpp:258]     Train net output #0: loss = 0.00336554 (* 1 = 0.00336554 loss)
+I0217 12:59:34.227543 22888 solver.cpp:571] Iteration 196000, lr = 0.001
+I0217 13:00:06.841709 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_198000.caffemodel
+I0217 13:00:06.872458 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_198000.solverstate
+I0217 13:00:06.888449 22888 solver.cpp:242] Iteration 198000, loss = 0.012851
+I0217 13:00:06.888486 22888 solver.cpp:258]     Train net output #0: loss = 0.0466292 (* 1 = 0.0466292 loss)
+I0217 13:00:06.888494 22888 solver.cpp:571] Iteration 198000, lr = 0.001
+I0217 13:00:39.289739 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_200000.caffemodel
+I0217 13:00:39.319170 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_200000.solverstate
+I0217 13:00:39.334686 22888 solver.cpp:242] Iteration 200000, loss = 0.0182804
+I0217 13:00:39.334722 22888 solver.cpp:258]     Train net output #0: loss = 0.0143194 (* 1 = 0.0143194 loss)
+I0217 13:00:39.334731 22888 solver.cpp:571] Iteration 200000, lr = 0.001
+I0217 13:01:11.753008 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_202000.caffemodel
+I0217 13:01:11.781888 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_202000.solverstate
+I0217 13:01:11.797739 22888 solver.cpp:242] Iteration 202000, loss = 0.0128295
+I0217 13:01:11.797790 22888 solver.cpp:258]     Train net output #0: loss = 0.0112303 (* 1 = 0.0112303 loss)
+I0217 13:01:11.797798 22888 solver.cpp:571] Iteration 202000, lr = 0.001
+I0217 13:01:44.163091 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_204000.caffemodel
+I0217 13:01:44.193405 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_204000.solverstate
+I0217 13:01:44.209848 22888 solver.cpp:242] Iteration 204000, loss = 0.0169118
+I0217 13:01:44.209883 22888 solver.cpp:258]     Train net output #0: loss = 0.0109105 (* 1 = 0.0109105 loss)
+I0217 13:01:44.209892 22888 solver.cpp:571] Iteration 204000, lr = 0.001
+I0217 13:02:16.747660 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_206000.caffemodel
+I0217 13:02:16.776994 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_206000.solverstate
+I0217 13:02:16.792876 22888 solver.cpp:242] Iteration 206000, loss = 0.0136912
+I0217 13:02:16.792912 22888 solver.cpp:258]     Train net output #0: loss = 0.00697469 (* 1 = 0.00697469 loss)
+I0217 13:02:16.792920 22888 solver.cpp:571] Iteration 206000, lr = 0.001
+I0217 13:02:49.218593 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_208000.caffemodel
+I0217 13:02:49.249469 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_208000.solverstate
+I0217 13:02:49.265774 22888 solver.cpp:242] Iteration 208000, loss = 0.0164529
+I0217 13:02:49.265810 22888 solver.cpp:258]     Train net output #0: loss = 0.0113999 (* 1 = 0.0113999 loss)
+I0217 13:02:49.265820 22888 solver.cpp:571] Iteration 208000, lr = 0.001
+I0217 13:03:21.953783 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_210000.caffemodel
+I0217 13:03:21.983649 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_210000.solverstate
+I0217 13:03:22.106376 22888 solver.cpp:242] Iteration 210000, loss = 0.0215028
+I0217 13:03:22.106428 22888 solver.cpp:258]     Train net output #0: loss = 0.0177209 (* 1 = 0.0177209 loss)
+I0217 13:03:22.106441 22888 solver.cpp:571] Iteration 210000, lr = 0.001
+I0217 13:03:54.632211 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_212000.caffemodel
+I0217 13:03:54.661080 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_212000.solverstate
+I0217 13:03:54.753800 22888 solver.cpp:242] Iteration 212000, loss = 0.0135922
+I0217 13:03:54.753851 22888 solver.cpp:258]     Train net output #0: loss = 0.00494768 (* 1 = 0.00494768 loss)
+I0217 13:03:54.753865 22888 solver.cpp:571] Iteration 212000, lr = 0.001
+I0217 13:04:27.335764 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_214000.caffemodel
+I0217 13:04:27.365226 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_214000.solverstate
+I0217 13:04:27.381888 22888 solver.cpp:242] Iteration 214000, loss = 0.0159483
+I0217 13:04:27.381934 22888 solver.cpp:258]     Train net output #0: loss = 0.0177715 (* 1 = 0.0177715 loss)
+I0217 13:04:27.381943 22888 solver.cpp:571] Iteration 214000, lr = 0.001
+I0217 13:04:59.998222 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_216000.caffemodel
+I0217 13:05:00.027128 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_216000.solverstate
+I0217 13:05:00.043233 22888 solver.cpp:242] Iteration 216000, loss = 0.0142988
+I0217 13:05:00.043270 22888 solver.cpp:258]     Train net output #0: loss = 0.00180387 (* 1 = 0.00180387 loss)
+I0217 13:05:00.043279 22888 solver.cpp:571] Iteration 216000, lr = 0.001
+I0217 13:05:32.518797 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_218000.caffemodel
+I0217 13:05:32.548171 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_218000.solverstate
+I0217 13:05:32.564086 22888 solver.cpp:242] Iteration 218000, loss = 0.0172014
+I0217 13:05:32.564121 22888 solver.cpp:258]     Train net output #0: loss = 0.00855469 (* 1 = 0.00855469 loss)
+I0217 13:05:32.564131 22888 solver.cpp:571] Iteration 218000, lr = 0.001
+I0217 13:06:05.150977 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_220000.caffemodel
+I0217 13:06:05.180238 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_220000.solverstate
+I0217 13:06:05.196043 22888 solver.cpp:242] Iteration 220000, loss = 0.0189805
+I0217 13:06:05.196079 22888 solver.cpp:258]     Train net output #0: loss = 0.00151295 (* 1 = 0.00151295 loss)
+I0217 13:06:05.196089 22888 solver.cpp:571] Iteration 220000, lr = 0.001
+I0217 13:06:37.948634 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_222000.caffemodel
+I0217 13:06:37.981678 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_222000.solverstate
+I0217 13:06:37.997464 22888 solver.cpp:242] Iteration 222000, loss = 0.015024
+I0217 13:06:37.997501 22888 solver.cpp:258]     Train net output #0: loss = 0.005746 (* 1 = 0.005746 loss)
+I0217 13:06:37.997509 22888 solver.cpp:571] Iteration 222000, lr = 0.001
+I0217 13:07:10.667094 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_224000.caffemodel
+I0217 13:07:10.696552 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_224000.solverstate
+I0217 13:07:10.713251 22888 solver.cpp:242] Iteration 224000, loss = 0.0138624
+I0217 13:07:10.713287 22888 solver.cpp:258]     Train net output #0: loss = 0.0437525 (* 1 = 0.0437525 loss)
+I0217 13:07:10.713296 22888 solver.cpp:571] Iteration 224000, lr = 0.001
+I0217 13:07:43.007273 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_226000.caffemodel
+I0217 13:07:43.037489 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_226000.solverstate
+I0217 13:07:43.053382 22888 solver.cpp:242] Iteration 226000, loss = 0.0150934
+I0217 13:07:43.053418 22888 solver.cpp:258]     Train net output #0: loss = 0.0102949 (* 1 = 0.0102949 loss)
+I0217 13:07:43.053427 22888 solver.cpp:571] Iteration 226000, lr = 0.001
+I0217 13:08:15.648833 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_228000.caffemodel
+I0217 13:08:15.692703 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_228000.solverstate
+I0217 13:08:15.782609 22888 solver.cpp:242] Iteration 228000, loss = 0.0120902
+I0217 13:08:15.782661 22888 solver.cpp:258]     Train net output #0: loss = 0.0107647 (* 1 = 0.0107647 loss)
+I0217 13:08:15.782675 22888 solver.cpp:571] Iteration 228000, lr = 0.001
+I0217 13:08:48.269572 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_230000.caffemodel
+I0217 13:08:48.301527 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_230000.solverstate
+I0217 13:08:48.318979 22888 solver.cpp:242] Iteration 230000, loss = 0.0158695
+I0217 13:08:48.319016 22888 solver.cpp:258]     Train net output #0: loss = 0.0515923 (* 1 = 0.0515923 loss)
+I0217 13:08:48.319025 22888 solver.cpp:571] Iteration 230000, lr = 0.001
+I0217 13:09:20.821738 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_232000.caffemodel
+I0217 13:09:20.851135 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_232000.solverstate
+I0217 13:09:20.867030 22888 solver.cpp:242] Iteration 232000, loss = 0.0134564
+I0217 13:09:20.867066 22888 solver.cpp:258]     Train net output #0: loss = 0.00576147 (* 1 = 0.00576147 loss)
+I0217 13:09:20.867075 22888 solver.cpp:571] Iteration 232000, lr = 0.001
+I0217 13:09:53.485276 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_234000.caffemodel
+I0217 13:09:53.515921 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_234000.solverstate
+I0217 13:09:53.531843 22888 solver.cpp:242] Iteration 234000, loss = 0.0126632
+I0217 13:09:53.531890 22888 solver.cpp:258]     Train net output #0: loss = 0.00456132 (* 1 = 0.00456132 loss)
+I0217 13:09:53.531900 22888 solver.cpp:571] Iteration 234000, lr = 0.001
+I0217 13:10:26.156239 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_236000.caffemodel
+I0217 13:10:26.185621 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_236000.solverstate
+I0217 13:10:26.202517 22888 solver.cpp:242] Iteration 236000, loss = 0.0160344
+I0217 13:10:26.202553 22888 solver.cpp:258]     Train net output #0: loss = 0.00320943 (* 1 = 0.00320943 loss)
+I0217 13:10:26.202560 22888 solver.cpp:571] Iteration 236000, lr = 0.001
+I0217 13:10:59.004911 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_238000.caffemodel
+I0217 13:10:59.034518 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_238000.solverstate
+I0217 13:10:59.050449 22888 solver.cpp:242] Iteration 238000, loss = 0.0164227
+I0217 13:10:59.050485 22888 solver.cpp:258]     Train net output #0: loss = 0.00482138 (* 1 = 0.00482138 loss)
+I0217 13:10:59.050494 22888 solver.cpp:571] Iteration 238000, lr = 0.001
+I0217 13:11:31.475091 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_240000.caffemodel
+I0217 13:11:31.673482 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_240000.solverstate
+I0217 13:11:31.689097 22888 solver.cpp:242] Iteration 240000, loss = 0.0143872
+I0217 13:11:31.689131 22888 solver.cpp:258]     Train net output #0: loss = 0.00683081 (* 1 = 0.00683081 loss)
+I0217 13:11:31.689139 22888 solver.cpp:571] Iteration 240000, lr = 0.001
+I0217 13:12:04.231451 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_242000.caffemodel
+I0217 13:12:04.375633 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_242000.solverstate
+I0217 13:12:04.392772 22888 solver.cpp:242] Iteration 242000, loss = 0.0248526
+I0217 13:12:04.392807 22888 solver.cpp:258]     Train net output #0: loss = 0.00919965 (* 1 = 0.00919965 loss)
+I0217 13:12:04.392815 22888 solver.cpp:571] Iteration 242000, lr = 0.001
+I0217 13:12:37.088444 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_244000.caffemodel
+I0217 13:12:37.132697 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_244000.solverstate
+I0217 13:12:37.230545 22888 solver.cpp:242] Iteration 244000, loss = 0.0148943
+I0217 13:12:37.230597 22888 solver.cpp:258]     Train net output #0: loss = 0.0143134 (* 1 = 0.0143134 loss)
+I0217 13:12:37.230609 22888 solver.cpp:571] Iteration 244000, lr = 0.001
+I0217 13:13:09.821996 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_246000.caffemodel
+I0217 13:13:09.853489 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_246000.solverstate
+I0217 13:13:09.873591 22888 solver.cpp:242] Iteration 246000, loss = 0.0131954
+I0217 13:13:09.873626 22888 solver.cpp:258]     Train net output #0: loss = 0.00795341 (* 1 = 0.00795341 loss)
+I0217 13:13:09.873634 22888 solver.cpp:571] Iteration 246000, lr = 0.001
+I0217 13:13:42.489852 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_248000.caffemodel
+I0217 13:13:42.600281 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_248000.solverstate
+I0217 13:13:42.615974 22888 solver.cpp:242] Iteration 248000, loss = 0.01549
+I0217 13:13:42.616009 22888 solver.cpp:258]     Train net output #0: loss = 0.0258487 (* 1 = 0.0258487 loss)
+I0217 13:13:42.616017 22888 solver.cpp:571] Iteration 248000, lr = 0.001
+I0217 13:14:15.164852 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_250000.caffemodel
+I0217 13:14:15.195060 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_250000.solverstate
+I0217 13:14:15.210440 22888 solver.cpp:242] Iteration 250000, loss = 0.0118587
+I0217 13:14:15.210479 22888 solver.cpp:258]     Train net output #0: loss = 0.00372444 (* 1 = 0.00372444 loss)
+I0217 13:14:15.210486 22888 solver.cpp:571] Iteration 250000, lr = 0.001
+I0217 13:14:47.917722 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_252000.caffemodel
+I0217 13:14:47.946554 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_252000.solverstate
+I0217 13:14:47.962393 22888 solver.cpp:242] Iteration 252000, loss = 0.0145988
+I0217 13:14:47.962429 22888 solver.cpp:258]     Train net output #0: loss = 0.0029218 (* 1 = 0.0029218 loss)
+I0217 13:14:47.962436 22888 solver.cpp:571] Iteration 252000, lr = 0.001
+I0217 13:15:20.520126 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_254000.caffemodel
+I0217 13:15:20.549492 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_254000.solverstate
+I0217 13:15:20.566962 22888 solver.cpp:242] Iteration 254000, loss = 0.0147486
+I0217 13:15:20.566998 22888 solver.cpp:258]     Train net output #0: loss = 0.012335 (* 1 = 0.012335 loss)
+I0217 13:15:20.567006 22888 solver.cpp:571] Iteration 254000, lr = 0.001
+I0217 13:15:53.116760 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_256000.caffemodel
+I0217 13:15:53.207073 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_256000.solverstate
+I0217 13:15:53.222582 22888 solver.cpp:242] Iteration 256000, loss = 0.012364
+I0217 13:15:53.222618 22888 solver.cpp:258]     Train net output #0: loss = 0.00182375 (* 1 = 0.00182375 loss)
+I0217 13:15:53.222627 22888 solver.cpp:571] Iteration 256000, lr = 0.001
+I0217 13:16:25.876587 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_258000.caffemodel
+I0217 13:16:25.905766 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_258000.solverstate
+I0217 13:16:25.921159 22888 solver.cpp:242] Iteration 258000, loss = 0.0129298
+I0217 13:16:25.921195 22888 solver.cpp:258]     Train net output #0: loss = 0.0340657 (* 1 = 0.0340657 loss)
+I0217 13:16:25.921203 22888 solver.cpp:571] Iteration 258000, lr = 0.001
+I0217 13:16:58.367116 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_260000.caffemodel
+I0217 13:16:58.394721 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_260000.solverstate
+I0217 13:16:58.542557 22888 solver.cpp:242] Iteration 260000, loss = 0.0125933
+I0217 13:16:58.542608 22888 solver.cpp:258]     Train net output #0: loss = 0.0523274 (* 1 = 0.0523274 loss)
+I0217 13:16:58.542621 22888 solver.cpp:571] Iteration 260000, lr = 0.001
+I0217 13:17:30.970471 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_262000.caffemodel
+I0217 13:17:31.000073 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_262000.solverstate
+I0217 13:17:31.015897 22888 solver.cpp:242] Iteration 262000, loss = 0.0136326
+I0217 13:17:31.015933 22888 solver.cpp:258]     Train net output #0: loss = 0.00730671 (* 1 = 0.00730671 loss)
+I0217 13:17:31.015943 22888 solver.cpp:571] Iteration 262000, lr = 0.001
+I0217 13:18:03.772982 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_264000.caffemodel
+I0217 13:18:03.801565 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_264000.solverstate
+I0217 13:18:03.817462 22888 solver.cpp:242] Iteration 264000, loss = 0.014335
+I0217 13:18:03.817510 22888 solver.cpp:258]     Train net output #0: loss = 0.00293117 (* 1 = 0.00293117 loss)
+I0217 13:18:03.817518 22888 solver.cpp:571] Iteration 264000, lr = 0.001
+I0217 13:18:36.346364 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_266000.caffemodel
+I0217 13:18:36.375898 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_266000.solverstate
+I0217 13:18:36.392452 22888 solver.cpp:242] Iteration 266000, loss = 0.014547
+I0217 13:18:36.392490 22888 solver.cpp:258]     Train net output #0: loss = 0.00606337 (* 1 = 0.00606337 loss)
+I0217 13:18:36.392498 22888 solver.cpp:571] Iteration 266000, lr = 0.001
+I0217 13:19:09.127117 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_268000.caffemodel
+I0217 13:19:09.228960 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_268000.solverstate
+I0217 13:19:09.246206 22888 solver.cpp:242] Iteration 268000, loss = 0.0198482
+I0217 13:19:09.246240 22888 solver.cpp:258]     Train net output #0: loss = 0.00588098 (* 1 = 0.00588098 loss)
+I0217 13:19:09.246249 22888 solver.cpp:571] Iteration 268000, lr = 0.001
+I0217 13:19:41.861567 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_270000.caffemodel
+I0217 13:19:41.889807 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_270000.solverstate
+I0217 13:19:41.906321 22888 solver.cpp:242] Iteration 270000, loss = 0.0125207
+I0217 13:19:41.906357 22888 solver.cpp:258]     Train net output #0: loss = 0.0150589 (* 1 = 0.0150589 loss)
+I0217 13:19:41.906364 22888 solver.cpp:571] Iteration 270000, lr = 0.001
+I0217 13:20:14.368592 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_272000.caffemodel
+I0217 13:20:14.398592 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_272000.solverstate
+I0217 13:20:14.417073 22888 solver.cpp:242] Iteration 272000, loss = 0.0149585
+I0217 13:20:14.417109 22888 solver.cpp:258]     Train net output #0: loss = 0.00618125 (* 1 = 0.00618125 loss)
+I0217 13:20:14.417117 22888 solver.cpp:571] Iteration 272000, lr = 0.001
+I0217 13:20:47.132489 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_274000.caffemodel
+I0217 13:20:47.163329 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_274000.solverstate
+I0217 13:20:47.179162 22888 solver.cpp:242] Iteration 274000, loss = 0.0168803
+I0217 13:20:47.179199 22888 solver.cpp:258]     Train net output #0: loss = 0.00277584 (* 1 = 0.00277584 loss)
+I0217 13:20:47.179208 22888 solver.cpp:571] Iteration 274000, lr = 0.001
+I0217 13:21:19.675425 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_276000.caffemodel
+I0217 13:21:19.704598 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_276000.solverstate
+I0217 13:21:19.804790 22888 solver.cpp:242] Iteration 276000, loss = 0.0137057
+I0217 13:21:19.804875 22888 solver.cpp:258]     Train net output #0: loss = 0.00694726 (* 1 = 0.00694726 loss)
+I0217 13:21:19.804903 22888 solver.cpp:571] Iteration 276000, lr = 0.001
+I0217 13:21:52.290582 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_278000.caffemodel
+I0217 13:21:52.328462 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_278000.solverstate
+I0217 13:21:52.345875 22888 solver.cpp:242] Iteration 278000, loss = 0.0145206
+I0217 13:21:52.345911 22888 solver.cpp:258]     Train net output #0: loss = 0.00570452 (* 1 = 0.00570452 loss)
+I0217 13:21:52.345919 22888 solver.cpp:571] Iteration 278000, lr = 0.001
+I0217 13:22:24.766492 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_280000.caffemodel
+I0217 13:22:24.795361 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_280000.solverstate
+I0217 13:22:24.812482 22888 solver.cpp:242] Iteration 280000, loss = 0.015871
+I0217 13:22:24.812518 22888 solver.cpp:258]     Train net output #0: loss = 0.0292897 (* 1 = 0.0292897 loss)
+I0217 13:22:24.812527 22888 solver.cpp:571] Iteration 280000, lr = 0.001
+I0217 13:22:57.335675 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_282000.caffemodel
+I0217 13:22:57.364173 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_282000.solverstate
+I0217 13:22:57.380095 22888 solver.cpp:242] Iteration 282000, loss = 0.0180579
+I0217 13:22:57.380133 22888 solver.cpp:258]     Train net output #0: loss = 0.036773 (* 1 = 0.036773 loss)
+I0217 13:22:57.380141 22888 solver.cpp:571] Iteration 282000, lr = 0.001
+I0217 13:23:29.961827 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_284000.caffemodel
+I0217 13:23:29.994338 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_284000.solverstate
+I0217 13:23:30.011551 22888 solver.cpp:242] Iteration 284000, loss = 0.0164406
+I0217 13:23:30.011587 22888 solver.cpp:258]     Train net output #0: loss = 0.166165 (* 1 = 0.166165 loss)
+I0217 13:23:30.011595 22888 solver.cpp:571] Iteration 284000, lr = 0.001
+I0217 13:24:02.743204 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_286000.caffemodel
+I0217 13:24:02.772207 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_286000.solverstate
+I0217 13:24:02.791249 22888 solver.cpp:242] Iteration 286000, loss = 0.0142977
+I0217 13:24:02.791296 22888 solver.cpp:258]     Train net output #0: loss = 0.0135796 (* 1 = 0.0135796 loss)
+I0217 13:24:02.791313 22888 solver.cpp:571] Iteration 286000, lr = 0.001
+I0217 13:24:35.224784 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_288000.caffemodel
+I0217 13:24:35.256304 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_288000.solverstate
+I0217 13:24:35.273641 22888 solver.cpp:242] Iteration 288000, loss = 0.0123417
+I0217 13:24:35.273679 22888 solver.cpp:258]     Train net output #0: loss = 0.0181915 (* 1 = 0.0181915 loss)
+I0217 13:24:35.273686 22888 solver.cpp:571] Iteration 288000, lr = 0.001
+I0217 13:25:07.900984 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_290000.caffemodel
+I0217 13:25:07.934124 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_290000.solverstate
+I0217 13:25:07.949923 22888 solver.cpp:242] Iteration 290000, loss = 0.0177594
+I0217 13:25:07.949959 22888 solver.cpp:258]     Train net output #0: loss = 0.0258428 (* 1 = 0.0258428 loss)
+I0217 13:25:07.949966 22888 solver.cpp:571] Iteration 290000, lr = 0.001
+I0217 13:25:40.463114 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_292000.caffemodel
+I0217 13:25:40.492413 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_292000.solverstate
+I0217 13:25:40.584682 22888 solver.cpp:242] Iteration 292000, loss = 0.0118002
+I0217 13:25:40.584734 22888 solver.cpp:258]     Train net output #0: loss = 0.0130756 (* 1 = 0.0130756 loss)
+I0217 13:25:40.584748 22888 solver.cpp:571] Iteration 292000, lr = 0.001
+I0217 13:26:13.239385 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_294000.caffemodel
+I0217 13:26:13.273296 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_294000.solverstate
+I0217 13:26:13.392616 22888 solver.cpp:242] Iteration 294000, loss = 0.01474
+I0217 13:26:13.392665 22888 solver.cpp:258]     Train net output #0: loss = 0.0838507 (* 1 = 0.0838507 loss)
+I0217 13:26:13.392678 22888 solver.cpp:571] Iteration 294000, lr = 0.001
+I0217 13:26:46.049157 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_296000.caffemodel
+I0217 13:26:46.128245 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_296000.solverstate
+I0217 13:26:46.144382 22888 solver.cpp:242] Iteration 296000, loss = 0.0126294
+I0217 13:26:46.144417 22888 solver.cpp:258]     Train net output #0: loss = 0.00234829 (* 1 = 0.00234829 loss)
+I0217 13:26:46.144425 22888 solver.cpp:571] Iteration 296000, lr = 0.001
+I0217 13:27:18.720322 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_298000.caffemodel
+I0217 13:27:18.751266 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_298000.solverstate
+I0217 13:27:18.767233 22888 solver.cpp:242] Iteration 298000, loss = 0.0129726
+I0217 13:27:18.767268 22888 solver.cpp:258]     Train net output #0: loss = 0.00855424 (* 1 = 0.00855424 loss)
+I0217 13:27:18.767277 22888 solver.cpp:571] Iteration 298000, lr = 0.001
+I0217 13:27:51.262200 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_300000.caffemodel
+I0217 13:27:51.290619 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_300000.solverstate
+I0217 13:27:51.307265 22888 solver.cpp:242] Iteration 300000, loss = 0.0132768
+I0217 13:27:51.307301 22888 solver.cpp:258]     Train net output #0: loss = 0.0109982 (* 1 = 0.0109982 loss)
+I0217 13:27:51.307309 22888 solver.cpp:571] Iteration 300000, lr = 0.001
+I0217 13:28:23.921643 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_302000.caffemodel
+I0217 13:28:23.967373 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_302000.solverstate
+I0217 13:28:23.982481 22888 solver.cpp:242] Iteration 302000, loss = 0.0133527
+I0217 13:28:23.982517 22888 solver.cpp:258]     Train net output #0: loss = 0.0479831 (* 1 = 0.0479831 loss)
+I0217 13:28:23.982524 22888 solver.cpp:571] Iteration 302000, lr = 0.001
+I0217 13:28:56.478931 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_304000.caffemodel
+I0217 13:28:56.508685 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_304000.solverstate
+I0217 13:28:56.523870 22888 solver.cpp:242] Iteration 304000, loss = 0.0208887
+I0217 13:28:56.523907 22888 solver.cpp:258]     Train net output #0: loss = 0.823632 (* 1 = 0.823632 loss)
+I0217 13:28:56.523916 22888 solver.cpp:571] Iteration 304000, lr = 0.001
+I0217 13:29:28.948761 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_306000.caffemodel
+I0217 13:29:28.977522 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_306000.solverstate
+I0217 13:29:28.994199 22888 solver.cpp:242] Iteration 306000, loss = 0.0130142
+I0217 13:29:28.994235 22888 solver.cpp:258]     Train net output #0: loss = 0.042257 (* 1 = 0.042257 loss)
+I0217 13:29:28.994243 22888 solver.cpp:571] Iteration 306000, lr = 0.001
+I0217 13:30:01.521839 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_308000.caffemodel
+I0217 13:30:01.550006 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_308000.solverstate
+I0217 13:30:01.564988 22888 solver.cpp:242] Iteration 308000, loss = 0.0144054
+I0217 13:30:01.565026 22888 solver.cpp:258]     Train net output #0: loss = 0.00514671 (* 1 = 0.00514671 loss)
+I0217 13:30:01.565033 22888 solver.cpp:571] Iteration 308000, lr = 0.001
+I0217 13:30:34.335475 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_310000.caffemodel
+I0217 13:30:34.364119 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_310000.solverstate
+I0217 13:30:34.379279 22888 solver.cpp:242] Iteration 310000, loss = 0.0138312
+I0217 13:30:34.379315 22888 solver.cpp:258]     Train net output #0: loss = 0.0124138 (* 1 = 0.0124138 loss)
+I0217 13:30:34.379324 22888 solver.cpp:571] Iteration 310000, lr = 0.001
+I0217 13:31:06.974269 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_312000.caffemodel
+I0217 13:31:07.002706 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_312000.solverstate
+I0217 13:31:07.017881 22888 solver.cpp:242] Iteration 312000, loss = 0.0125012
+I0217 13:31:07.017916 22888 solver.cpp:258]     Train net output #0: loss = 0.00248445 (* 1 = 0.00248445 loss)
+I0217 13:31:07.017925 22888 solver.cpp:571] Iteration 312000, lr = 0.001
+I0217 13:31:39.440479 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_314000.caffemodel
+I0217 13:31:39.470609 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_314000.solverstate
+I0217 13:31:39.488481 22888 solver.cpp:242] Iteration 314000, loss = 0.0148051
+I0217 13:31:39.488517 22888 solver.cpp:258]     Train net output #0: loss = 0.0190672 (* 1 = 0.0190672 loss)
+I0217 13:31:39.488525 22888 solver.cpp:571] Iteration 314000, lr = 0.001
+I0217 13:32:12.005643 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_316000.caffemodel
+I0217 13:32:12.037722 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_316000.solverstate
+I0217 13:32:12.052832 22888 solver.cpp:242] Iteration 316000, loss = 0.0133256
+I0217 13:32:12.052868 22888 solver.cpp:258]     Train net output #0: loss = 0.00273971 (* 1 = 0.00273971 loss)
+I0217 13:32:12.052877 22888 solver.cpp:571] Iteration 316000, lr = 0.001
+I0217 13:32:44.620019 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_318000.caffemodel
+I0217 13:32:44.650687 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_318000.solverstate
+I0217 13:32:44.664024 22888 solver.cpp:242] Iteration 318000, loss = 0.0152218
+I0217 13:32:44.664060 22888 solver.cpp:258]     Train net output #0: loss = 0.00627632 (* 1 = 0.00627632 loss)
+I0217 13:32:44.664068 22888 solver.cpp:571] Iteration 318000, lr = 0.001
+I0217 13:33:17.246568 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_320000.caffemodel
+I0217 13:33:17.276064 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_320000.solverstate
+I0217 13:33:17.291259 22888 solver.cpp:242] Iteration 320000, loss = 0.0150358
+I0217 13:33:17.291292 22888 solver.cpp:258]     Train net output #0: loss = 0.0546893 (* 1 = 0.0546893 loss)
+I0217 13:33:17.291301 22888 solver.cpp:571] Iteration 320000, lr = 0.001
+I0217 13:33:49.828307 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_322000.caffemodel
+I0217 13:33:49.860231 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_322000.solverstate
+I0217 13:33:49.876821 22888 solver.cpp:242] Iteration 322000, loss = 0.0126135
+I0217 13:33:49.876857 22888 solver.cpp:258]     Train net output #0: loss = 0.00349997 (* 1 = 0.00349997 loss)
+I0217 13:33:49.876866 22888 solver.cpp:571] Iteration 322000, lr = 0.001
+I0217 13:34:22.498904 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_324000.caffemodel
+I0217 13:34:22.527503 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_324000.solverstate
+I0217 13:34:22.542601 22888 solver.cpp:242] Iteration 324000, loss = 0.0150147
+I0217 13:34:22.542636 22888 solver.cpp:258]     Train net output #0: loss = 0.00947779 (* 1 = 0.00947779 loss)
+I0217 13:34:22.542645 22888 solver.cpp:571] Iteration 324000, lr = 0.001
+I0217 13:34:55.042358 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_326000.caffemodel
+I0217 13:34:55.071279 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_326000.solverstate
+I0217 13:34:55.086496 22888 solver.cpp:242] Iteration 326000, loss = 0.0134473
+I0217 13:34:55.086534 22888 solver.cpp:258]     Train net output #0: loss = 0.0133903 (* 1 = 0.0133903 loss)
+I0217 13:34:55.086542 22888 solver.cpp:571] Iteration 326000, lr = 0.001
+I0217 13:35:27.686769 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_328000.caffemodel
+I0217 13:35:27.715308 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_328000.solverstate
+I0217 13:35:27.731904 22888 solver.cpp:242] Iteration 328000, loss = 0.0102826
+I0217 13:35:27.731940 22888 solver.cpp:258]     Train net output #0: loss = 0.00592599 (* 1 = 0.00592599 loss)
+I0217 13:35:27.731950 22888 solver.cpp:571] Iteration 328000, lr = 0.001
+I0217 13:36:00.303014 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_330000.caffemodel
+I0217 13:36:00.333021 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_330000.solverstate
+I0217 13:36:00.350792 22888 solver.cpp:242] Iteration 330000, loss = 0.0131295
+I0217 13:36:00.350827 22888 solver.cpp:258]     Train net output #0: loss = 0.00777523 (* 1 = 0.00777523 loss)
+I0217 13:36:00.350836 22888 solver.cpp:571] Iteration 330000, lr = 0.001
+I0217 13:36:32.984443 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_332000.caffemodel
+I0217 13:36:33.016712 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_332000.solverstate
+I0217 13:36:33.031831 22888 solver.cpp:242] Iteration 332000, loss = 0.0181584
+I0217 13:36:33.031878 22888 solver.cpp:258]     Train net output #0: loss = 0.014649 (* 1 = 0.014649 loss)
+I0217 13:36:33.031888 22888 solver.cpp:571] Iteration 332000, lr = 0.001
+I0217 13:37:05.727391 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_334000.caffemodel
+I0217 13:37:05.758903 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_334000.solverstate
+I0217 13:37:05.774052 22888 solver.cpp:242] Iteration 334000, loss = 0.0242811
+I0217 13:37:05.774088 22888 solver.cpp:258]     Train net output #0: loss = 0.00307537 (* 1 = 0.00307537 loss)
+I0217 13:37:05.774097 22888 solver.cpp:571] Iteration 334000, lr = 0.001
+I0217 13:37:38.342757 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_336000.caffemodel
+I0217 13:37:38.380946 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_336000.solverstate
+I0217 13:37:38.396086 22888 solver.cpp:242] Iteration 336000, loss = 0.0154361
+I0217 13:37:38.396123 22888 solver.cpp:258]     Train net output #0: loss = 0.0100287 (* 1 = 0.0100287 loss)
+I0217 13:37:38.396131 22888 solver.cpp:571] Iteration 336000, lr = 0.001
+I0217 13:38:10.827405 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_338000.caffemodel
+I0217 13:38:10.855902 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_338000.solverstate
+I0217 13:38:10.871119 22888 solver.cpp:242] Iteration 338000, loss = 0.0169716
+I0217 13:38:10.871153 22888 solver.cpp:258]     Train net output #0: loss = 0.00568739 (* 1 = 0.00568739 loss)
+I0217 13:38:10.871162 22888 solver.cpp:571] Iteration 338000, lr = 0.001
+I0217 13:38:43.395470 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_340000.caffemodel
+I0217 13:38:43.421460 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_340000.solverstate
+I0217 13:38:43.436537 22888 solver.cpp:242] Iteration 340000, loss = 0.0102902
+I0217 13:38:43.436583 22888 solver.cpp:258]     Train net output #0: loss = 0.0143469 (* 1 = 0.0143469 loss)
+I0217 13:38:43.436591 22888 solver.cpp:571] Iteration 340000, lr = 0.001
+I0217 13:39:16.137677 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_342000.caffemodel
+I0217 13:39:16.166128 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_342000.solverstate
+I0217 13:39:16.182703 22888 solver.cpp:242] Iteration 342000, loss = 0.0122064
+I0217 13:39:16.182739 22888 solver.cpp:258]     Train net output #0: loss = 0.00536229 (* 1 = 0.00536229 loss)
+I0217 13:39:16.182747 22888 solver.cpp:571] Iteration 342000, lr = 0.001
+I0217 13:39:48.931241 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_344000.caffemodel
+I0217 13:39:48.961158 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_344000.solverstate
+I0217 13:39:48.979012 22888 solver.cpp:242] Iteration 344000, loss = 0.012913
+I0217 13:39:48.979048 22888 solver.cpp:258]     Train net output #0: loss = 0.00681552 (* 1 = 0.00681552 loss)
+I0217 13:39:48.979056 22888 solver.cpp:571] Iteration 344000, lr = 0.001
+I0217 13:40:21.519243 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_346000.caffemodel
+I0217 13:40:21.547786 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_346000.solverstate
+I0217 13:40:21.562976 22888 solver.cpp:242] Iteration 346000, loss = 0.00940541
+I0217 13:40:21.563011 22888 solver.cpp:258]     Train net output #0: loss = 0.00648737 (* 1 = 0.00648737 loss)
+I0217 13:40:21.563019 22888 solver.cpp:571] Iteration 346000, lr = 0.001
+I0217 13:40:54.139204 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_348000.caffemodel
+I0217 13:40:54.237021 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_348000.solverstate
+I0217 13:40:54.253270 22888 solver.cpp:242] Iteration 348000, loss = 0.0118676
+I0217 13:40:54.253304 22888 solver.cpp:258]     Train net output #0: loss = 0.0050113 (* 1 = 0.0050113 loss)
+I0217 13:40:54.253314 22888 solver.cpp:571] Iteration 348000, lr = 0.001
+I0217 13:41:26.859344 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_350000.caffemodel
+I0217 13:41:26.888092 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_350000.solverstate
+I0217 13:41:26.904755 22888 solver.cpp:242] Iteration 350000, loss = 0.0111678
+I0217 13:41:26.904789 22888 solver.cpp:258]     Train net output #0: loss = 0.0135156 (* 1 = 0.0135156 loss)
+I0217 13:41:26.904798 22888 solver.cpp:571] Iteration 350000, lr = 0.001
+I0217 13:41:59.286844 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_352000.caffemodel
+I0217 13:41:59.316148 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_352000.solverstate
+I0217 13:41:59.331326 22888 solver.cpp:242] Iteration 352000, loss = 0.0136485
+I0217 13:41:59.331362 22888 solver.cpp:258]     Train net output #0: loss = 0.00375608 (* 1 = 0.00375608 loss)
+I0217 13:41:59.331369 22888 solver.cpp:571] Iteration 352000, lr = 0.001
+I0217 13:42:31.808737 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_354000.caffemodel
+I0217 13:42:31.837390 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_354000.solverstate
+I0217 13:42:31.856102 22888 solver.cpp:242] Iteration 354000, loss = 0.0157605
+I0217 13:42:31.856137 22888 solver.cpp:258]     Train net output #0: loss = 0.04638 (* 1 = 0.04638 loss)
+I0217 13:42:31.856145 22888 solver.cpp:571] Iteration 354000, lr = 0.001
+I0217 13:43:04.487735 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_356000.caffemodel
+I0217 13:43:04.515502 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_356000.solverstate
+I0217 13:43:04.530570 22888 solver.cpp:242] Iteration 356000, loss = 0.0136242
+I0217 13:43:04.530604 22888 solver.cpp:258]     Train net output #0: loss = 0.0105511 (* 1 = 0.0105511 loss)
+I0217 13:43:04.530613 22888 solver.cpp:571] Iteration 356000, lr = 0.001
+I0217 13:43:37.172580 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_358000.caffemodel
+I0217 13:43:37.202724 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_358000.solverstate
+I0217 13:43:37.217869 22888 solver.cpp:242] Iteration 358000, loss = 0.0121354
+I0217 13:43:37.217903 22888 solver.cpp:258]     Train net output #0: loss = 0.00736278 (* 1 = 0.00736278 loss)
+I0217 13:43:37.217913 22888 solver.cpp:571] Iteration 358000, lr = 0.001
+I0217 13:44:09.845269 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_360000.caffemodel
+I0217 13:44:09.873879 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_360000.solverstate
+I0217 13:44:09.891538 22888 solver.cpp:242] Iteration 360000, loss = 0.0116101
+I0217 13:44:09.891574 22888 solver.cpp:258]     Train net output #0: loss = 0.0182099 (* 1 = 0.0182099 loss)
+I0217 13:44:09.891582 22888 solver.cpp:571] Iteration 360000, lr = 0.001
+I0217 13:44:42.316958 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_362000.caffemodel
+I0217 13:44:42.345459 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_362000.solverstate
+I0217 13:44:42.360657 22888 solver.cpp:242] Iteration 362000, loss = 0.0129885
+I0217 13:44:42.360704 22888 solver.cpp:258]     Train net output #0: loss = 0.00726929 (* 1 = 0.00726929 loss)
+I0217 13:44:42.360714 22888 solver.cpp:571] Iteration 362000, lr = 0.001
+I0217 13:45:14.952669 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_364000.caffemodel
+I0217 13:45:14.981703 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_364000.solverstate
+I0217 13:45:14.996878 22888 solver.cpp:242] Iteration 364000, loss = 0.0158488
+I0217 13:45:14.996913 22888 solver.cpp:258]     Train net output #0: loss = 0.0326833 (* 1 = 0.0326833 loss)
+I0217 13:45:14.996922 22888 solver.cpp:571] Iteration 364000, lr = 0.001
+I0217 13:45:47.373548 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_366000.caffemodel
+I0217 13:45:47.402511 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_366000.solverstate
+I0217 13:45:47.417820 22888 solver.cpp:242] Iteration 366000, loss = 0.010906
+I0217 13:45:47.417865 22888 solver.cpp:258]     Train net output #0: loss = 0.0203926 (* 1 = 0.0203926 loss)
+I0217 13:45:47.417875 22888 solver.cpp:571] Iteration 366000, lr = 0.001
+I0217 13:46:19.962126 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_368000.caffemodel
+I0217 13:46:19.990793 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_368000.solverstate
+I0217 13:46:20.005924 22888 solver.cpp:242] Iteration 368000, loss = 0.0119684
+I0217 13:46:20.005969 22888 solver.cpp:258]     Train net output #0: loss = 0.00642375 (* 1 = 0.00642375 loss)
+I0217 13:46:20.005978 22888 solver.cpp:571] Iteration 368000, lr = 0.001
+I0217 13:46:52.665148 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_370000.caffemodel
+I0217 13:46:52.693279 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_370000.solverstate
+I0217 13:46:52.711155 22888 solver.cpp:242] Iteration 370000, loss = 0.010901
+I0217 13:46:52.711199 22888 solver.cpp:258]     Train net output #0: loss = 0.0135764 (* 1 = 0.0135764 loss)
+I0217 13:46:52.711208 22888 solver.cpp:571] Iteration 370000, lr = 0.001
+I0217 13:47:25.157915 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_372000.caffemodel
+I0217 13:47:25.189908 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_372000.solverstate
+I0217 13:47:25.207753 22888 solver.cpp:242] Iteration 372000, loss = 0.0133329
+I0217 13:47:25.207789 22888 solver.cpp:258]     Train net output #0: loss = 0.00912869 (* 1 = 0.00912869 loss)
+I0217 13:47:25.207798 22888 solver.cpp:571] Iteration 372000, lr = 0.001
+I0217 13:47:57.753499 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_374000.caffemodel
+I0217 13:47:57.784860 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_374000.solverstate
+I0217 13:47:57.799985 22888 solver.cpp:242] Iteration 374000, loss = 0.0121903
+I0217 13:47:57.800022 22888 solver.cpp:258]     Train net output #0: loss = 0.00393161 (* 1 = 0.00393161 loss)
+I0217 13:47:57.800029 22888 solver.cpp:571] Iteration 374000, lr = 0.001
+I0217 13:48:30.338418 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_376000.caffemodel
+I0217 13:48:30.368970 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_376000.solverstate
+I0217 13:48:30.384140 22888 solver.cpp:242] Iteration 376000, loss = 0.00998291
+I0217 13:48:30.384176 22888 solver.cpp:258]     Train net output #0: loss = 0.00915188 (* 1 = 0.00915188 loss)
+I0217 13:48:30.384184 22888 solver.cpp:571] Iteration 376000, lr = 0.001
+I0217 13:49:03.060587 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_378000.caffemodel
+I0217 13:49:03.089246 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_378000.solverstate
+I0217 13:49:03.104423 22888 solver.cpp:242] Iteration 378000, loss = 0.0120141
+I0217 13:49:03.104460 22888 solver.cpp:258]     Train net output #0: loss = 0.00846093 (* 1 = 0.00846093 loss)
+I0217 13:49:03.104468 22888 solver.cpp:571] Iteration 378000, lr = 0.001
+I0217 13:49:35.640849 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_380000.caffemodel
+I0217 13:49:35.670851 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_380000.solverstate
+I0217 13:49:35.686312 22888 solver.cpp:242] Iteration 380000, loss = 0.0125212
+I0217 13:49:35.686349 22888 solver.cpp:258]     Train net output #0: loss = 0.0141064 (* 1 = 0.0141064 loss)
+I0217 13:49:35.686358 22888 solver.cpp:571] Iteration 380000, lr = 0.001
+I0217 13:50:08.255405 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_382000.caffemodel
+I0217 13:50:08.283738 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_382000.solverstate
+I0217 13:50:08.299407 22888 solver.cpp:242] Iteration 382000, loss = 0.0126383
+I0217 13:50:08.299476 22888 solver.cpp:258]     Train net output #0: loss = 0.00571604 (* 1 = 0.00571604 loss)
+I0217 13:50:08.299506 22888 solver.cpp:571] Iteration 382000, lr = 0.001
+I0217 13:50:40.778792 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_384000.caffemodel
+I0217 13:50:40.806505 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_384000.solverstate
+I0217 13:50:40.824048 22888 solver.cpp:242] Iteration 384000, loss = 0.00973582
+I0217 13:50:40.824084 22888 solver.cpp:258]     Train net output #0: loss = 0.0175409 (* 1 = 0.0175409 loss)
+I0217 13:50:40.824091 22888 solver.cpp:571] Iteration 384000, lr = 0.001
+I0217 13:51:13.268761 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_386000.caffemodel
+I0217 13:51:13.298743 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_386000.solverstate
+I0217 13:51:13.313892 22888 solver.cpp:242] Iteration 386000, loss = 0.011933
+I0217 13:51:13.313927 22888 solver.cpp:258]     Train net output #0: loss = 0.00822446 (* 1 = 0.00822446 loss)
+I0217 13:51:13.313936 22888 solver.cpp:571] Iteration 386000, lr = 0.001
+I0217 13:51:45.807250 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_388000.caffemodel
+I0217 13:51:45.838624 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_388000.solverstate
+I0217 13:51:45.855340 22888 solver.cpp:242] Iteration 388000, loss = 0.0151815
+I0217 13:51:45.855376 22888 solver.cpp:258]     Train net output #0: loss = 0.0023362 (* 1 = 0.0023362 loss)
+I0217 13:51:45.855384 22888 solver.cpp:571] Iteration 388000, lr = 0.001
+I0217 13:52:18.350070 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_390000.caffemodel
+I0217 13:52:18.378660 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_390000.solverstate
+I0217 13:52:18.393591 22888 solver.cpp:242] Iteration 390000, loss = 0.0103739
+I0217 13:52:18.393637 22888 solver.cpp:258]     Train net output #0: loss = 0.0467411 (* 1 = 0.0467411 loss)
+I0217 13:52:18.393647 22888 solver.cpp:571] Iteration 390000, lr = 0.001
+I0217 13:52:50.893384 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_392000.caffemodel
+I0217 13:52:50.978916 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_392000.solverstate
+I0217 13:52:50.993935 22888 solver.cpp:242] Iteration 392000, loss = 0.0146647
+I0217 13:52:50.993973 22888 solver.cpp:258]     Train net output #0: loss = 0.0184332 (* 1 = 0.0184332 loss)
+I0217 13:52:50.993980 22888 solver.cpp:571] Iteration 392000, lr = 0.001
+I0217 13:53:23.619523 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_394000.caffemodel
+I0217 13:53:23.648107 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_394000.solverstate
+I0217 13:53:23.665705 22888 solver.cpp:242] Iteration 394000, loss = 0.0138248
+I0217 13:53:23.665742 22888 solver.cpp:258]     Train net output #0: loss = 0.106949 (* 1 = 0.106949 loss)
+I0217 13:53:23.665760 22888 solver.cpp:571] Iteration 394000, lr = 0.001
+I0217 13:53:56.297950 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_396000.caffemodel
+I0217 13:53:56.326587 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_396000.solverstate
+I0217 13:53:56.341380 22888 solver.cpp:242] Iteration 396000, loss = 0.0119511
+I0217 13:53:56.341416 22888 solver.cpp:258]     Train net output #0: loss = 0.00378809 (* 1 = 0.00378809 loss)
+I0217 13:53:56.341425 22888 solver.cpp:571] Iteration 396000, lr = 0.001
+I0217 13:54:28.778913 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_398000.caffemodel
+I0217 13:54:28.808818 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_398000.solverstate
+I0217 13:54:28.822990 22888 solver.cpp:242] Iteration 398000, loss = 0.0103312
+I0217 13:54:28.823025 22888 solver.cpp:258]     Train net output #0: loss = 0.0172881 (* 1 = 0.0172881 loss)
+I0217 13:54:28.823035 22888 solver.cpp:571] Iteration 398000, lr = 0.001
+I0217 13:55:01.315810 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_400000.caffemodel
+I0217 13:55:01.344256 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_400000.solverstate
+I0217 13:55:01.359890 22888 solver.cpp:242] Iteration 400000, loss = 0.0170627
+I0217 13:55:01.359926 22888 solver.cpp:258]     Train net output #0: loss = 0.0436687 (* 1 = 0.0436687 loss)
+I0217 13:55:01.359935 22888 solver.cpp:571] Iteration 400000, lr = 0.001
+I0217 13:55:33.889152 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_402000.caffemodel
+I0217 13:55:33.918805 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_402000.solverstate
+I0217 13:55:33.935439 22888 solver.cpp:242] Iteration 402000, loss = 0.0117011
+I0217 13:55:33.935477 22888 solver.cpp:258]     Train net output #0: loss = 0.00338131 (* 1 = 0.00338131 loss)
+I0217 13:55:33.935485 22888 solver.cpp:571] Iteration 402000, lr = 0.001
+I0217 13:56:06.557117 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_404000.caffemodel
+I0217 13:56:06.589220 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_404000.solverstate
+I0217 13:56:06.615036 22888 solver.cpp:242] Iteration 404000, loss = 0.0109358
+I0217 13:56:06.615077 22888 solver.cpp:258]     Train net output #0: loss = 0.00890481 (* 1 = 0.00890481 loss)
+I0217 13:56:06.615087 22888 solver.cpp:571] Iteration 404000, lr = 0.001
+I0217 13:56:39.089443 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_406000.caffemodel
+I0217 13:56:39.118021 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_406000.solverstate
+I0217 13:56:39.132447 22888 solver.cpp:242] Iteration 406000, loss = 0.0114792
+I0217 13:56:39.132483 22888 solver.cpp:258]     Train net output #0: loss = 0.0105883 (* 1 = 0.0105883 loss)
+I0217 13:56:39.132489 22888 solver.cpp:571] Iteration 406000, lr = 0.001
+I0217 13:57:11.720610 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_408000.caffemodel
+I0217 13:57:11.749368 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_408000.solverstate
+I0217 13:57:11.764650 22888 solver.cpp:242] Iteration 408000, loss = 0.0112268
+I0217 13:57:11.764686 22888 solver.cpp:258]     Train net output #0: loss = 0.00916558 (* 1 = 0.00916558 loss)
+I0217 13:57:11.764695 22888 solver.cpp:571] Iteration 408000, lr = 0.001
+I0217 13:57:44.396251 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_410000.caffemodel
+I0217 13:57:44.424545 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_410000.solverstate
+I0217 13:57:44.441617 22888 solver.cpp:242] Iteration 410000, loss = 0.0139815
+I0217 13:57:44.441658 22888 solver.cpp:258]     Train net output #0: loss = 0.060497 (* 1 = 0.060497 loss)
+I0217 13:57:44.441666 22888 solver.cpp:571] Iteration 410000, lr = 0.001
+I0217 13:58:16.981917 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_412000.caffemodel
+I0217 13:58:17.010329 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_412000.solverstate
+I0217 13:58:17.025485 22888 solver.cpp:242] Iteration 412000, loss = 0.0141758
+I0217 13:58:17.025521 22888 solver.cpp:258]     Train net output #0: loss = 0.0208883 (* 1 = 0.0208883 loss)
+I0217 13:58:17.025529 22888 solver.cpp:571] Iteration 412000, lr = 0.001
+I0217 13:58:49.604333 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_414000.caffemodel
+I0217 13:58:49.632846 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_414000.solverstate
+I0217 13:58:49.652268 22888 solver.cpp:242] Iteration 414000, loss = 0.013386
+I0217 13:58:49.652307 22888 solver.cpp:258]     Train net output #0: loss = 0.00634291 (* 1 = 0.00634291 loss)
+I0217 13:58:49.652313 22888 solver.cpp:571] Iteration 414000, lr = 0.001
+I0217 13:59:22.258870 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_416000.caffemodel
+I0217 13:59:22.287705 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_416000.solverstate
+I0217 13:59:22.302600 22888 solver.cpp:242] Iteration 416000, loss = 0.0107887
+I0217 13:59:22.302637 22888 solver.cpp:258]     Train net output #0: loss = 0.00407369 (* 1 = 0.00407369 loss)
+I0217 13:59:22.302646 22888 solver.cpp:571] Iteration 416000, lr = 0.001
+I0217 13:59:54.887086 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_418000.caffemodel
+I0217 13:59:54.915773 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_418000.solverstate
+I0217 13:59:54.930719 22888 solver.cpp:242] Iteration 418000, loss = 0.0145034
+I0217 13:59:54.930765 22888 solver.cpp:258]     Train net output #0: loss = 0.0128211 (* 1 = 0.0128211 loss)
+I0217 13:59:54.930774 22888 solver.cpp:571] Iteration 418000, lr = 0.001
+I0217 14:00:27.198482 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_420000.caffemodel
+I0217 14:00:27.227195 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_420000.solverstate
+I0217 14:00:27.241829 22888 solver.cpp:242] Iteration 420000, loss = 0.0193562
+I0217 14:00:27.241866 22888 solver.cpp:258]     Train net output #0: loss = 0.00486048 (* 1 = 0.00486048 loss)
+I0217 14:00:27.241874 22888 solver.cpp:571] Iteration 420000, lr = 0.001
+I0217 14:00:59.841244 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_422000.caffemodel
+I0217 14:00:59.871331 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_422000.solverstate
+I0217 14:00:59.888315 22888 solver.cpp:242] Iteration 422000, loss = 0.0172978
+I0217 14:00:59.888361 22888 solver.cpp:258]     Train net output #0: loss = 0.00833595 (* 1 = 0.00833595 loss)
+I0217 14:00:59.888370 22888 solver.cpp:571] Iteration 422000, lr = 0.001
+I0217 14:01:32.520304 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_424000.caffemodel
+I0217 14:01:32.549572 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_424000.solverstate
+I0217 14:01:32.565559 22888 solver.cpp:242] Iteration 424000, loss = 0.0112704
+I0217 14:01:32.565598 22888 solver.cpp:258]     Train net output #0: loss = 0.00292556 (* 1 = 0.00292556 loss)
+I0217 14:01:32.565605 22888 solver.cpp:571] Iteration 424000, lr = 0.001
+I0217 14:02:04.993706 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_426000.caffemodel
+I0217 14:02:05.021881 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_426000.solverstate
+I0217 14:02:05.036481 22888 solver.cpp:242] Iteration 426000, loss = 0.0126719
+I0217 14:02:05.036519 22888 solver.cpp:258]     Train net output #0: loss = 0.00875025 (* 1 = 0.00875025 loss)
+I0217 14:02:05.036526 22888 solver.cpp:571] Iteration 426000, lr = 0.001
+I0217 14:02:37.474875 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_428000.caffemodel
+I0217 14:02:37.591527 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_428000.solverstate
+I0217 14:02:37.607841 22888 solver.cpp:242] Iteration 428000, loss = 0.011115
+I0217 14:02:37.607875 22888 solver.cpp:258]     Train net output #0: loss = 0.0029757 (* 1 = 0.0029757 loss)
+I0217 14:02:37.607884 22888 solver.cpp:571] Iteration 428000, lr = 0.001
+I0217 14:03:10.150375 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_430000.caffemodel
+I0217 14:03:10.315513 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_430000.solverstate
+I0217 14:03:10.330502 22888 solver.cpp:242] Iteration 430000, loss = 0.037803
+I0217 14:03:10.330535 22888 solver.cpp:258]     Train net output #0: loss = 0.0901562 (* 1 = 0.0901562 loss)
+I0217 14:03:10.330544 22888 solver.cpp:571] Iteration 430000, lr = 0.001
+I0217 14:03:43.009589 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_432000.caffemodel
+I0217 14:03:43.040355 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_432000.solverstate
+I0217 14:03:43.055487 22888 solver.cpp:242] Iteration 432000, loss = 0.0113324
+I0217 14:03:43.055523 22888 solver.cpp:258]     Train net output #0: loss = 0.00331337 (* 1 = 0.00331337 loss)
+I0217 14:03:43.055532 22888 solver.cpp:571] Iteration 432000, lr = 0.001
+I0217 14:04:15.538836 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_434000.caffemodel
+I0217 14:04:15.570801 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_434000.solverstate
+I0217 14:04:15.585937 22888 solver.cpp:242] Iteration 434000, loss = 0.0178976
+I0217 14:04:15.585973 22888 solver.cpp:258]     Train net output #0: loss = 0.00786372 (* 1 = 0.00786372 loss)
+I0217 14:04:15.585981 22888 solver.cpp:571] Iteration 434000, lr = 0.001
+I0217 14:04:48.125687 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_436000.caffemodel
+I0217 14:04:48.155688 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_436000.solverstate
+I0217 14:04:48.170837 22888 solver.cpp:242] Iteration 436000, loss = 0.0145383
+I0217 14:04:48.170871 22888 solver.cpp:258]     Train net output #0: loss = 0.00677698 (* 1 = 0.00677698 loss)
+I0217 14:04:48.170879 22888 solver.cpp:571] Iteration 436000, lr = 0.001
+I0217 14:05:20.735169 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_438000.caffemodel
+I0217 14:05:20.767060 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_438000.solverstate
+I0217 14:05:20.782205 22888 solver.cpp:242] Iteration 438000, loss = 0.0146303
+I0217 14:05:20.782240 22888 solver.cpp:258]     Train net output #0: loss = 0.00616366 (* 1 = 0.00616366 loss)
+I0217 14:05:20.782248 22888 solver.cpp:571] Iteration 438000, lr = 0.001
+I0217 14:05:53.554577 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_440000.caffemodel
+I0217 14:05:53.584233 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_440000.solverstate
+I0217 14:05:53.600834 22888 solver.cpp:242] Iteration 440000, loss = 0.0155194
+I0217 14:05:53.600872 22888 solver.cpp:258]     Train net output #0: loss = 0.00206233 (* 1 = 0.00206233 loss)
+I0217 14:05:53.600879 22888 solver.cpp:571] Iteration 440000, lr = 0.001
+I0217 14:06:25.927983 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_442000.caffemodel
+I0217 14:06:25.957499 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_442000.solverstate
+I0217 14:06:25.972674 22888 solver.cpp:242] Iteration 442000, loss = 0.0132958
+I0217 14:06:25.972712 22888 solver.cpp:258]     Train net output #0: loss = 0.0192585 (* 1 = 0.0192585 loss)
+I0217 14:06:25.972720 22888 solver.cpp:571] Iteration 442000, lr = 0.001
+I0217 14:06:58.515972 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_444000.caffemodel
+I0217 14:06:58.541807 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_444000.solverstate
+I0217 14:06:58.558538 22888 solver.cpp:242] Iteration 444000, loss = 0.0137367
+I0217 14:06:58.558574 22888 solver.cpp:258]     Train net output #0: loss = 0.00339666 (* 1 = 0.00339666 loss)
+I0217 14:06:58.558583 22888 solver.cpp:571] Iteration 444000, lr = 0.001
+I0217 14:07:31.172312 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_446000.caffemodel
+I0217 14:07:31.200883 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_446000.solverstate
+I0217 14:07:31.214124 22888 solver.cpp:242] Iteration 446000, loss = 0.0108537
+I0217 14:07:31.214169 22888 solver.cpp:258]     Train net output #0: loss = 0.0453613 (* 1 = 0.0453613 loss)
+I0217 14:07:31.214187 22888 solver.cpp:571] Iteration 446000, lr = 0.001
+I0217 14:08:03.796053 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_448000.caffemodel
+I0217 14:08:03.823335 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_448000.solverstate
+I0217 14:08:03.840899 22888 solver.cpp:242] Iteration 448000, loss = 0.0107647
+I0217 14:08:03.840936 22888 solver.cpp:258]     Train net output #0: loss = 0.0160896 (* 1 = 0.0160896 loss)
+I0217 14:08:03.840945 22888 solver.cpp:571] Iteration 448000, lr = 0.001
+I0217 14:08:36.446821 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_450000.caffemodel
+I0217 14:08:36.479990 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_450000.solverstate
+I0217 14:08:36.498189 22888 solver.cpp:242] Iteration 450000, loss = 0.0157181
+I0217 14:08:36.498224 22888 solver.cpp:258]     Train net output #0: loss = 0.0126301 (* 1 = 0.0126301 loss)
+I0217 14:08:36.498234 22888 solver.cpp:571] Iteration 450000, lr = 0.001
+I0217 14:09:09.026379 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_452000.caffemodel
+I0217 14:09:09.054965 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_452000.solverstate
+I0217 14:09:09.071568 22888 solver.cpp:242] Iteration 452000, loss = 0.0133196
+I0217 14:09:09.071604 22888 solver.cpp:258]     Train net output #0: loss = 0.0243932 (* 1 = 0.0243932 loss)
+I0217 14:09:09.071612 22888 solver.cpp:571] Iteration 452000, lr = 0.001
+I0217 14:09:41.844370 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_454000.caffemodel
+I0217 14:09:41.873064 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_454000.solverstate
+I0217 14:09:41.888190 22888 solver.cpp:242] Iteration 454000, loss = 0.010852
+I0217 14:09:41.888224 22888 solver.cpp:258]     Train net output #0: loss = 0.0108659 (* 1 = 0.0108659 loss)
+I0217 14:09:41.888233 22888 solver.cpp:571] Iteration 454000, lr = 0.001
+I0217 14:10:14.624410 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_456000.caffemodel
+I0217 14:10:14.653149 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_456000.solverstate
+I0217 14:10:14.668334 22888 solver.cpp:242] Iteration 456000, loss = 0.0112955
+I0217 14:10:14.668368 22888 solver.cpp:258]     Train net output #0: loss = 0.00601686 (* 1 = 0.00601686 loss)
+I0217 14:10:14.668377 22888 solver.cpp:571] Iteration 456000, lr = 0.001
+I0217 14:10:47.365093 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_458000.caffemodel
+I0217 14:10:47.393648 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_458000.solverstate
+I0217 14:10:47.408784 22888 solver.cpp:242] Iteration 458000, loss = 0.0101756
+I0217 14:10:47.408819 22888 solver.cpp:258]     Train net output #0: loss = 0.0104572 (* 1 = 0.0104572 loss)
+I0217 14:10:47.408829 22888 solver.cpp:571] Iteration 458000, lr = 0.001
+I0217 14:11:19.928074 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_460000.caffemodel
+I0217 14:11:19.955667 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_460000.solverstate
+I0217 14:11:19.971333 22888 solver.cpp:242] Iteration 460000, loss = 0.00986355
+I0217 14:11:19.971367 22888 solver.cpp:258]     Train net output #0: loss = 0.0080537 (* 1 = 0.0080537 loss)
+I0217 14:11:19.971376 22888 solver.cpp:571] Iteration 460000, lr = 0.001
+I0217 14:11:52.543830 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_462000.caffemodel
+I0217 14:11:52.569866 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_462000.solverstate
+I0217 14:11:52.584770 22888 solver.cpp:242] Iteration 462000, loss = 0.014091
+I0217 14:11:52.584815 22888 solver.cpp:258]     Train net output #0: loss = 0.00763217 (* 1 = 0.00763217 loss)
+I0217 14:11:52.584825 22888 solver.cpp:571] Iteration 462000, lr = 0.001
+I0217 14:12:25.212826 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_464000.caffemodel
+I0217 14:12:25.242869 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_464000.solverstate
+I0217 14:12:25.257823 22888 solver.cpp:242] Iteration 464000, loss = 0.0117396
+I0217 14:12:25.257858 22888 solver.cpp:258]     Train net output #0: loss = 0.00288036 (* 1 = 0.00288036 loss)
+I0217 14:12:25.257866 22888 solver.cpp:571] Iteration 464000, lr = 0.001
+I0217 14:12:57.914041 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_466000.caffemodel
+I0217 14:12:57.949292 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_466000.solverstate
+I0217 14:12:57.964450 22888 solver.cpp:242] Iteration 466000, loss = 0.0128343
+I0217 14:12:57.964486 22888 solver.cpp:258]     Train net output #0: loss = 0.00399834 (* 1 = 0.00399834 loss)
+I0217 14:12:57.964495 22888 solver.cpp:571] Iteration 466000, lr = 0.001
+I0217 14:13:30.375700 22888 solver.cpp:449] Snapshotting to binary proto file ./snapshots/fcn_iter_468000.caffemodel
+I0217 14:13:30.404361 22888 solver.cpp:734] Snapshotting solver state to binary proto file./snapshots/fcn_iter_468000.solverstate
+I0217 14:13:30.419414 22888 solver.cpp:242] Iteration 468000, loss = 0.0114219
+I0217 14:13:30.419447 22888 solver.cpp:258]     Train net output #0: loss = 0.0162277 (* 1 = 0.0162277 loss)
+I0217 14:13:30.419456 22888 solver.cpp:571] Iteration 468000, lr = 0.001
