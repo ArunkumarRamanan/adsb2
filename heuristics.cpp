@@ -509,7 +509,7 @@ namespace adsb2 {
                     cv::Rect_<float> lb = unround(s.box);
                     //cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
                     cv::Point_<float> C = weighted_box_center(s.images[IM_PROB], s.box);
-                    float R = max_R(C, lb) * 3;
+                    float R = max_R(C, lb) * 1.5;
                     s.update_polar(C, R);
                 }
             }

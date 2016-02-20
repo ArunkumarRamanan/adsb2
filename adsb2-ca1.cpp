@@ -151,7 +151,7 @@ namespace adsb2 {
                     cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
                 }
                 linearPolar(vis, &vis_cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
-                cv::hconcat(slice.images[IM_POLAR] + vis, slice.images[IM_IMAGE] + vis_cart, slice._extra);
+                hconcat3(slice.images[IM_POLAR] + vis, slice.images[IM_POLAR_PROB] * 255 + vis, slice.images[IM_IMAGE] + vis_cart, &slice._extra);
             }
         }
     }

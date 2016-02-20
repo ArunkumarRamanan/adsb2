@@ -161,8 +161,10 @@ namespace adsb2 {
     enum {  // images
         IM_RAW = 0, // raw image as loaded from DICOM, U16C1
         IM_IMAGE,   // cooked
+        IM_IMAGE2,
         IM_VAR,     // variance
         IM_PROB,    // bound probability
+        IM_PROB2,
         IM_LABEL,
         // the above five images should have the same size when exists
         IM_POLAR,
