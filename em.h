@@ -19,13 +19,14 @@ namespace adsb2 {
     class EM {
     public:
         static unsigned constexpr N = 600;
+        static unsigned constexpr D = 17;
         struct Sample {
             string sid;
-            double target;
-            double mu;
-            double sigma;
-            vector<double> cdf;
+            double target;      // real value
+            array<double, D> v; // features
+            vector<double> cdf; // prediction for submit
 
+            /*
             void gaussianAcc () {
                 cdf.resize(N);
                 for (unsigned i = 0; i < N; ++i) {
@@ -33,13 +34,14 @@ namespace adsb2 {
                     cdf[i] = 0.5*erfc(x);
                 }
             }
+            */
         };
     private:
-        static constexpr double LIMIT = 3; // 5 * sigma
-        static constexpr unsigned QUANT = 50;
-        array<double, QUANT> T, dT;
+        array<double, D> A, dA;  // linear parameter of mu
+        array<double, D> B, dB;  // linear parameter of sigma
 
         struct WS {
+            double mu, sigma;
             array<double, N> f;
             array<double, N> x;
             array<double, N> P;
@@ -49,20 +51,18 @@ namespace adsb2 {
         };
 
         void prep (Sample const &s, WS *ws) {
+            double mu = 0, sigma = 0;
+            for (unsigned d = 0; d < D; ++d) {
+                mu += s.v[d] * A[d];
+                sigma += s.v[d] * B[d];
+            }
+            ws->mu = mu;
+            ws->sigma = sigma;
             // x_i = exp(T[l])
             ws->X = 0;
             for (unsigned n = 0; n < N; ++n) {
-                double l = abs(s.mu - n) * QUANT / (LIMIT * s.sigma);
-                double v = -100;
-                int lb = floor(l);
-                int ub = lb + 1;
-                if (ub < QUANT) {
-                    v = T[lb] * (ub - l) + T[ub] * (l - lb);
-                }
-                else if (lb < QUANT) {
-                    v = T[lb];
-                }
-                v = exp(v);
+                double l = (mu - n) / sigma;
+                double v = exp(-0.5 * l * l);
                 ws->x[n] = v;
                 ws->X += v;
             }
@@ -110,61 +110,44 @@ namespace adsb2 {
             return ws.loss;
         }
 
-        double backward (vector<Sample> const &ss) {
-            vector<WS> wss(ss.size());
-            for (unsigned i = 0; i < ss.size(); ++i) {
-                prep(ss[i], &wss[i]);
-            }
-            std::fill(dT.begin(), dT.end(), 0);
-            double loss = 0;
-            for (unsigned i = 0; i < ss.size(); ++i) {
-                auto &s = ss[i];
-                auto &ws = wss[i];
-                loss += ws.loss;
-                for (unsigned n = 0; n < N; ++n) {
-                    /*
-                        dT[l] += ws.dHx[n] * ws.x[n];
-                        */
-                    double l = abs(s.mu - n) * QUANT / (LIMIT * s.sigma);
-                    int lb = floor(l);
-                    int ub = lb + 1;
-                    if (ub < QUANT) {
-                        dT[lb] += ws.dHx[n] * ws.x[n] * (ub - l);
-                        dT[ub] += ws.dHx[n] * ws.x[n] * (l - lb);
-                    }
-                    else if (lb < QUANT) {
-                        dT[lb] += ws.dHx[n] * ws.x[n];
-                    }
+        double backward (Sample const &s) {
+            WS ws;
+            prep(s, &ws);
+            std::fill(dA.begin(), dA.end(), 0);
+            std::fill(dB.begin(), dB.end(), 0);
+            for (unsigned n = 0; n < N; ++n) {
+                double z = (ws.mu - n) / ws.sigma;
+                double ma = -ws.dHx[n] * ws.x[n] * z;
+                double mb = ws.dHx[n] * ws.x[n] * z * z / ws.sigma;
+                for (unsigned d = 0; d < D; ++d) {
+                    dA[d] += ma * s.v[d];
+                    dB[d] += mb * s.v[d];
                 }
             }
-            for (auto &t: dT) {
-                t /= ss.size();
-            }
-            return loss / ss.size();
+            return ws.loss;
         }
 
         double eta;
         double lambda;
     public:
         EM (double eta_ = 0.0001, double lambda_ = 1.0): eta(eta_), lambda(lambda_) {
-            for (unsigned l = 0; l < QUANT; ++l) {
-                double x = l  * LIMIT / QUANT;
-                T[l] = -0.5 * sqr(x);
-            }
-            std::fill(T.begin(), T.end(), 0);
+            std::fill(A.begin(), A.end(), 0);
+            A[D-1] = 1.0;
+            std::fill(B.begin(), B.end(), 0);
+            B[D-1] = 0.1;
         }
 
         void load (string const &path) {
             ifstream is(path.c_str());
-            for (auto &t: T) {
-                is >> t;
+            for (unsigned d = 0; d < D; ++d) {
+                is >> A[d] >> B[d];
             }
         }
 
         void save (string const &path) {
             ofstream os(path.c_str());
-            for (auto const &t: T) {
-                os << t << std::endl;
+            for (unsigned d = 0; d < D; ++d) {
+                os << A[d] << '\t' << B[d] << std::endl;
             }
         }
 
@@ -173,18 +156,37 @@ namespace adsb2 {
             BOOST_VERIFY(is);
             Sample s;
             samples->clear();
-            while (is >> s.sid >> s.target >> s.mu >> s.sigma) {
+            while (is >> s.sid >> s.target) {
+                BOOST_VERIFY(s.sid.find('_') != string::npos);
+                s.v[0] = 1.0;
+                for (unsigned d = 1; d < D; ++d) {
+                    is >> s.v[d];
+                }
+                s.v[D-2]/=1000;
                 samples->push_back(s);
             }
         }
 
         double train (vector<Sample> const &ss) {
-            double loss = backward(ss);
-            for (unsigned i = 0; i < QUANT; ++i){
-                T[i] *= lambda;
-                T[i] -= eta * dT[i];
+            double loss = 0;
+            array<double, D> xA;
+            array<double, D> xB;
+            std::fill(xA.begin(), xA.end(), 0);
+            std::fill(xB.begin(), xB.end(), 0);
+            for (auto const &s: ss) {
+                loss += backward(s);
+                for (unsigned d = 0; d < D; ++d) {
+                    xA[d] += dA[d];
+                    xB[d] += dB[d];
+                }
             }
-            return loss;
+            for (unsigned d = 0; d < D; ++d){
+                A[d] *= lambda;
+                A[d] -= eta * xA[d] / ss.size();
+                B[d] *= lambda;
+                B[d] -= eta * xB[d] / ss.size();
+            }
+            return loss / ss.size();
         }
 
         double predict (vector<Sample> *ss) {

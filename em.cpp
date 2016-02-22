@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
     double eta;
     double lambda;
     int loop;
+    int batch;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -30,6 +31,7 @@ int main(int argc, char **argv) {
     ("eta,E", po::value(&eta)->default_value(0.0001), "")
     ("lambda,L", po::value(&lambda)->default_value(1), "")
     ("loop,n", po::value(&loop)->default_value(100), "")
+    ("batch,B", po::value(&batch)->default_value(32), "")
     ("load,l", po::value(&load_path), "")
     ("save,s", po::value(&save_path), "")
     ;
@@ -61,7 +63,12 @@ int main(int argc, char **argv) {
         }
         for (unsigned i = 0; i < loop; ++i) {
             random_shuffle(samples.begin(), samples.end());
-            double e = em.train(samples);
+            double e;
+            for (unsigned j = 0; j + batch <= samples.size(); j += batch) {
+                vector<EM::Sample> B(samples.begin() + j,
+                                         samples.begin() + (j + batch));
+                e = em.train(B);
+            }
             cerr << i << ": " << e;
             if (V.size()) {
                 double e = em.predict(&V);
