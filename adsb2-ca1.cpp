@@ -7,6 +7,7 @@ namespace adsb2 {
         struct E {
             float opt;   // optimal value
             int prev;    // prev slice
+            int prev0;   // optimal location of 0, for circular opt
         };
         typedef boost::multi_array<E, 2> WorkSpaceBase;
         class WorkSpace:public WorkSpaceBase {
@@ -52,6 +53,7 @@ namespace adsb2 {
                         acc += delta;
                         e[x].opt = acc;
                         e[x].prev = -1;
+                        e[x].prev0 = -1;
                     }
                     continue;
                 }
@@ -69,6 +71,9 @@ namespace adsb2 {
                     int best_prev = 0;
                     for (int p = lb; p <= ub; ++p) {
                         float score = prev[p].opt + acc - penalty(p - x);
+                        if (y + 1 == image.rows) {  // need to consider connection to 0
+                            score -= penalty(prev[p].prev0 -x);
+                        }
                         if (score > best_score) {
                             best_score = score;
                             best_prev = p;
@@ -76,6 +81,12 @@ namespace adsb2 {
                     }
                     e[x].opt = best_score;
                     e[x].prev = best_prev;
+                    if (y == 1) {
+                        e[x].prev0 = e[x].prev;
+                    }
+                    else {
+                        e[x].prev0 = prev[best_prev].prev0;
+                    }
                     if ((x == 0) || (best_score > best_cc_score)) {
                         best_cc_score = best_score;
                         best_cc = x;
