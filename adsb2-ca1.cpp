@@ -1,3 +1,4 @@
+#include <limits>
 #include <boost/multi_array.hpp>
 #include "adsb2.h"
 
@@ -92,6 +93,51 @@ namespace adsb2 {
             std::reverse(seg.begin(), seg.end());
             slice->polar_contour.swap(seg);
         }
+
+        float contour_avg (Slice *slice, int delta) const {
+            float sum = 0;
+            auto const &ctr = slice->polar_contour;
+            cv::Mat const &image = slice->images[IM_POLAR];
+            CHECK(ctr.size() == image.rows);
+            for (unsigned i = 0; i < ctr.size(); ++i) {
+                float const *ptr = image.ptr<float const>(i);
+                int x = ctr[i] + delta;
+                if (x < 0) x = 0;
+                if (x >= image.cols) x = image.cols - 1;
+                sum += ptr[x];
+            }
+            return sum / ctr.size();
+        }
+
+        void extend (Slice *slice) const {
+            static const int L = 10;
+            vector<float> dist(2*L+1);
+            float sum = 0;
+            for (int i = -L; i <= L; ++i) {
+                sum += dist[L+i] = contour_avg(slice, i);
+            }
+            float best = -std::numeric_limits<float>::max();
+            int best_nleft = 0;
+            float left = 0;
+            for (unsigned nleft = 1; nleft < dist.size(); ++nleft) {
+                left += dist[nleft-1];
+                float right = sum - left;
+                float nright = dist.size() - nleft;
+
+                float gap = left / nleft - right / nright;
+                if (gap > best) {
+                    best = gap;
+                    best_nleft = nleft;
+                }
+            }
+            int delta = best_nleft - L;
+            if (delta > 0) {
+                for (auto &p: slice->polar_contour) {
+                    p += delta;
+                }
+            }
+
+        }
     public:
         CA1 (Config const &conf)
             : margin(conf.get<int>("adsb2.ca1.margin", 5)),
@@ -102,11 +148,13 @@ namespace adsb2 {
         }
         void apply_slice (Slice *s) {
             helper(s);
+            extend(s);
         }
         void apply (Series *ss) const {
 #pragma omp parallel for
             for (unsigned i = 0; i < ss->size(); ++i) {
                 helper(&ss->at(i));
+                extend(&ss->at(i));
             }
         }
     };
