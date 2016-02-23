@@ -248,6 +248,16 @@ namespace adsb2 {
         }
     }
 
+    static inline void color_sum (cv::Mat &color, cv::Mat &mask, float *csum, float *psum) {
+        float cs = 0, ps = 0;
+        loop<float, uint8_t>(color, mask, [&cs, &ps](float a, uint8_t b) {
+                    if (b) cs += a;
+                    ps += b;
+                });
+        *csum = cs;
+        *psum = ps;
+    }
+
     static inline float box_score (cv::Mat &prob, cv::Rect const &box) {
         float total = cv::sum(prob)[0];
         float inside = cv::sum(prob(box))[0];

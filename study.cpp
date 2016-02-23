@@ -94,6 +94,9 @@ int main(int argc, char **argv) {
         delete bb_det;
     }
     */
+    if (vm.count("no-top") == 0) {
+        ComputeTop(&study, config);
+    }
     ComputeBoundProb(&study);
     cerr << "Filtering..." << endl;
     ProbFilter(&study, config);
@@ -107,10 +110,7 @@ int main(int argc, char **argv) {
 
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
-    if (vm.count("no-top") == 0) {
-        ComputeTop(&study, config);
-    }
-
+    //RefineBottom(&study, config);
 #if 0
     if (decap > 0) {
         CHECK(decap < 5);
@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
                 os << s.path.native()
                     << '\t' << i
                     << '\t' << j
-                    << '\t' << s.area
+                    << '\t' << s.data[SL_AREA]
                     << '\t' << s.box.x
                     << '\t' << s.box.y
                     << '\t' << s.box.width

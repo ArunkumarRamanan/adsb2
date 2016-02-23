@@ -63,7 +63,7 @@ namespace adsb2 {
     int caffe_batch = 0;
     int font_height = 0;
     int font_face = cv::FONT_HERSHEY_SIMPLEX;
-    double font_scale = 0.6;
+    double font_scale = 0.4;
     int font_thickness = 1;
     cv::Mat polar_morph_kernel;
 
@@ -354,8 +354,7 @@ namespace adsb2 {
 
     Slice::Slice (string const &txt)
         : do_not_cook(false),
-        box(-1,-1,0,0),
-        area(0)
+        box(-1,-1,0,0)
     {
         std::fill(data.begin(), data.end(), 0);
         using namespace boost::algorithm;
@@ -405,7 +404,6 @@ namespace adsb2 {
         s->anno = anno;
         s->anno_data = anno_data;
         s->box = box;
-        s->area = area;
     }
 
     void Slice::visualize (bool show_prob) {
@@ -437,7 +435,7 @@ namespace adsb2 {
         }
         image.convertTo(images[IM_VISUAL], CV_8U);
         cv::Point org(images[IM_IMAGE].cols + 20, 0);
-        draw_text(images[IM_VISUAL], fmt::format("AR: {:3.2f}", area), org, 0);
+        draw_text(images[IM_VISUAL], fmt::format("AR: {:3.2f}", data[SL_AREA]), org, 0);
         draw_text(images[IM_VISUAL], fmt::format("BS: {:1.2f}", data[SL_BSCORE]), org, 1);
         if (data[SL_BSCORE_DELTA]) {
             draw_text(images[IM_VISUAL], fmt::format("BD: {:1.2f}", data[SL_BSCORE_DELTA]), org, 2);
@@ -445,6 +443,8 @@ namespace adsb2 {
         draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 3);
         draw_text(images[IM_VISUAL], fmt::format("CR: {:1.2f}", data[SL_CSCORE]), org, 4);
         draw_text(images[IM_VISUAL], fmt::format("TS: {:1.2f}", data[SL_TSCORE]), org, 5);
+        draw_text(images[IM_VISUAL], fmt::format("BT: {:1.1f}", data[SL_BOTTOM]), org, 6);
+        draw_text(images[IM_VISUAL], fmt::format("CS: {:2.1f}", data[SL_CCOLOR]), org, 7);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
@@ -1301,6 +1301,24 @@ namespace adsb2 {
     cv::Mat virtical_unextend (cv::Mat in, int r) {
         if (r == 0) return in;
         return in.rowRange(r, in.rows - r);
+    }
+
+    void ApplyDetector (string const &name,
+                        Slice *slice,
+                        int FROM, int TO,
+                        float scale, unsigned vext) {
+        cv::Mat from = slice->images[FROM];
+        if (!from.data) return;
+        from = virtical_extend(from, vext);
+        cv::Mat to;
+        Detector *det = Detector::get(name);
+        CHECK(det) << " cannot create detector.";
+        det->apply(from, &to);
+        slice->images[TO] = virtical_unextend(to, vext);
+        CHECK(slice->images[TO].isContinuous());
+        if (scale != 1.0) {
+            slice->images[TO] *= scale;
+        }
     }
 
     void ApplyDetector (string const &name,

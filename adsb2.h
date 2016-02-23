@@ -125,6 +125,7 @@ namespace adsb2 {
         virtual void contour (Slice const &, cv::Mat *, cv::Scalar const &) const;
     };
 
+    // Predicted bounding box
     class PredAnnoOps: public AnnoOps {
     public:
         struct Data {
@@ -161,10 +162,10 @@ namespace adsb2 {
     enum {  // images
         IM_RAW = 0, // raw image as loaded from DICOM, U16C1
         IM_IMAGE,   // cooked
-        IM_IMAGE2,
+        IM_IMAGE2,  // for bound prediction with top model, identical to IM_IMAGE when exists
         IM_VAR,     // variance
         IM_PROB,    // bound probability
-        IM_PROB2,
+        IM_PROB2,   // bound probability with top model
         IM_LABEL,
         // the above five images should have the same size when exists
         IM_POLAR,
@@ -184,6 +185,9 @@ namespace adsb2 {
         SL_CSCORE,
         SL_COLOR_LB,
         SL_COLOR_UB,
+        SL_BOTTOM,
+        SL_AREA,
+        SL_CCOLOR,  // inside color / color
         SL_SIZE
     };
 
@@ -210,7 +214,7 @@ namespace adsb2 {
         cv::Rect local_box;
         // the following are prediction results
         cv::Rect box;      // bounding box prediction
-        float area;        // area prediction
+        //float area;        // area prediction
 
 
         cv::Mat _extra;
@@ -218,8 +222,8 @@ namespace adsb2 {
         Slice ()
             : do_not_cook(false),
             anno(nullptr),
-            box(-1,-1,0,0),
-            area(-1) {
+            box(-1,-1,0,0)
+        {
                 std::fill(data.begin(), data.end(), 0);
         }
 
@@ -504,6 +508,7 @@ namespace adsb2 {
     // to filter out static regions
     // applies to the prob image of each slice
     void ApplyDetector (string const &name, Study *, int from, int to, float scale = 1, unsigned vext = 0);
+    void ApplyDetector (string const &name, Slice *, int from, int to, float scale = 1, unsigned vext = 0);
 
     static inline void ComputeBoundProb (Study *study) {
         ApplyDetector("bound", study, IM_IMAGE, IM_PROB, 1.0, 0);
@@ -523,7 +528,8 @@ namespace adsb2 {
     void RefineTop (Study *study, Config const &conf);
     void getColorBounds (Series &series, int color_bins, uint16_t *lb, uint16_t *ub);
     void PatchBottomBound(Study *study, Config const &);
-    void TrimBottom (Study *study, Config const &);
+    void EvalBottom (Study *study, Config const &);
+    void RefineBottom (Study *study, Config const &);
 
     struct Volume {
         float mean;
@@ -544,7 +550,7 @@ namespace adsb2 {
         float raw_r = r / s.meta.raw_spacing;
         */
         os << s.path.native()
-            << '\t' << s.area
+            << '\t' << s.data[SL_AREA]
             << '\t' << s.box.x
             << '\t' << s.box.y
             << '\t' << s.box.width

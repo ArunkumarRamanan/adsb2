@@ -431,7 +431,7 @@ namespace adsb2 {
             for (auto const &s: series) {
                 //CHECK(s.area >= 0);
                 CHECK(s.meta.slice_location == v.location);
-                r.push_back(s.area * s.meta.spacing * s.meta.spacing);
+                r.push_back(s.data[SL_AREA] * s.meta.spacing * s.meta.spacing);
             }
             for (unsigned j = 0; j < W; ++j) { // extend the range for smoothing
                 r.push_back(r[j]);
@@ -502,14 +502,14 @@ namespace adsb2 {
             */
             for (auto &s: ss) {
                 if (s.box.width == 0) {
-                    s.area = 0;
+                    s.data[SL_AREA] = 0;
                     s.images[IM_POLAR] = cv::Mat();
                 }
                 else {
                     cv::Rect_<float> lb = unround(s.box);
                     //cv::Point2f C = cv::Point2f(lb.x + 0.5 * lb.width, lb.y + 0.5 * lb.height);
                     cv::Point_<float> C = weighted_box_center(s.images[IM_PROB], s.box);
-                    float R = max_R(C, lb) * 1.5;
+                    float R = max_R(C, lb) * 3;
                     s.update_polar(C, R);
                 }
             }
@@ -653,7 +653,7 @@ namespace adsb2 {
         }
         for (unsigned i = 0; i < cut; ++i) {
             for (auto &s: study->at(i)) {
-                s.area = 0;
+                s.data[SL_AREA] = 0;
             }
         }
     }
@@ -731,22 +731,63 @@ namespace adsb2 {
         }
     }
 
-    void TrimBottom(Study *study, Config const &conf) {
-        /*
-        for (auto &s: study->back()) {
-            s.area = 0;
+    void EvalBottom(Study *study, Config const &conf) {
+        // 1. find 
+    }
+
+    void study_CA1 (Slice *pslice, Config const &config, bool vis);
+
+    void RefineBottomHelper (vector<Slice *> &slices, Config const &conf) {
+        for (unsigned x = 1; x < slices.size(); ++x) {
+            Slice *prev = slices[x-1];
+            Slice *cur = slices[x];
+            cv::Rect box = prev->polar_box;
+            // improve ?? center of top % white pixels
+            cv::Point_<float> C = weighted_box_center(cur->images[IM_IMAGE], box);
+            float R = max_R(C, box) * 3;
+            cur->update_polar(C, R);
+            ApplyDetector("contour", cur, IM_POLAR, IM_POLAR_PROB, 1.0, cur->images[IM_IMAGE].rows/4);
+            // study ca1
+            study_CA1(cur, conf, true);
+            cv::Rect inter = cur->polar_box & box;
+            cur->data[SL_BOTTOM] = 1;
+            if (cur->data[SL_AREA] == 0) {
+                // if this one fail, all the rest should fail, too
+                for (unsigned x1 = x; x1 < slices.size(); ++x1) {
+                    slices[x1]->polar_box = cv::Rect();
+                    slices[x1]->data[SL_AREA] = 0;
+                    slices[x1]->data[SL_BOTTOM] = 2;
+                }
+                return;
+            }
         }
-        */
-        /*
-        for (unsigned sr = 2 * study->size()/3;
-                      sr < study->size(); ++sr) {
-            for (Slice &s: study->at(sr)) {
-                if (s.data[SL_BSCORE] > th) {
-                    todo.push_back(&s);
+    }
+
+    void RefineBottom (Study *study, Config const &conf) {
+        float max_area = conf.get<float>("adsb2.refine.max", 300);
+        unsigned l = study->size() / 2;
+        unsigned ns = study->at(l).size();
+        for (unsigned i = l+1; i < study->size(); ++i) {
+            if (ns != study->at(i).size()) return;
+        }
+        std::cerr << "Refining bottoms..." << std::endl;
+        boost::progress_display progress(ns, std::cerr);
+#pragma omp parallel for schedule(dynamic, 1)
+        for (unsigned sid = 0; sid < ns; ++sid) {
+            for (unsigned i = l; i < study->size(); ++i) {
+                if (study->at(i)[sid].data[SL_AREA]  < max_area) {
+                    vector<Slice *> slices;
+                    for (unsigned j = i; j < study->size(); ++j) {
+                        slices.push_back(&study->at(j)[sid]);
+                    }
+                    RefineBottomHelper(slices, conf);
+#pragma omp critical
+                    ++progress;
+                    break;
                 }
             }
         }
-        */
     }
+
 }
 
