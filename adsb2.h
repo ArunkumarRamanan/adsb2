@@ -188,6 +188,8 @@ namespace adsb2 {
         SL_BOTTOM,
         SL_AREA,
         SL_CCOLOR,  // inside color / color
+        SL_ARATE,
+        SL_BOTTOM_PATCH,
         SL_SIZE
     };
 
@@ -609,9 +611,10 @@ namespace adsb2 {
     class BottomDetector {
     public:
         virtual float apply (array<float, SL_SIZE> const &) const = 0;
+        static BottomDetector *get ();
     };
 
-    BottomDetector *make_bottom_detector (Config const &conf);
+    BottomDetector *make_bottom_detector ();
 
 }
 

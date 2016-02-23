@@ -5,6 +5,8 @@ CXXFLAGS += $(OPENMP) -g -O3 -std=c++11 -I/opt/caffe-fcn/include -Icaffex-fcn -D
 LDFLAGS += $(OPENMP) -L/opt/caffe-fcn/lib -static
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
 LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
+	 -lxgboost \
+	 /usr/local/lib/dmlc_simple.o -lrabit \
 	 -lgmpxx \
 	 -lgmp \
 	 -lcppformat \
@@ -20,10 +22,10 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lunwind -lrt -lm -lpthread -ldl
 	 
 HEADERS = adsb2.h
-COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o
+COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o bottom-detector.o
 
 
-PROGS = dump-bottom-feature report score swap propose regroup check make_gif dump-1245 study-color import dump-2ch top dump-bottom submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
+PROGS = detect-bottom dump-bottom-feature report score swap propose regroup check make_gif dump-1245 study-color import dump-2ch top dump-bottom submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
 
 all:	$(PROGS)
 

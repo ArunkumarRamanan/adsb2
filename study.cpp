@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
     ("bound", "")
     ("no-gif", "")
     ("no-top", "")
+    ("no-bottom", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -94,9 +95,11 @@ int main(int argc, char **argv) {
         delete bb_det;
     }
     */
+#if 0
     if (vm.count("no-top") == 0) {
         ComputeTop(&study, config);
     }
+#endif
     ComputeBoundProb(&study);
     cerr << "Filtering..." << endl;
     ProbFilter(&study, config);
@@ -110,7 +113,10 @@ int main(int argc, char **argv) {
 
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
-    //RefineBottom(&study, config);
+    if (vm.count("no-bottom") == 0) {
+    EvalBottom(&study, config);
+    RefineBottom(&study, config);
+    }
 #if 0
     if (decap > 0) {
         CHECK(decap < 5);

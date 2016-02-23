@@ -732,7 +732,48 @@ namespace adsb2 {
     }
 
     void EvalBottom(Study *study, Config const &conf) {
-        // 1. find 
+        unsigned l = study->size() / 2;
+        if (l < 1) l = 1;
+        BottomDetector *det = BottomDetector::get();
+        for (unsigned i = l; i < study->size(); ++i) {
+            auto &top = study->at(i-1);
+            auto &cur = study->at(i);
+            if (top.size() == cur.size()) {
+                for (unsigned i = 0; i < top.size(); ++i) {
+                    cur[i].data[SL_ARATE] =
+                        cur[i].data[SL_AREA] / top[i].data[SL_AREA];
+                }
+            }
+            else {
+                LOG(WARNING) << "sax size mismatch";
+                for (unsigned i = 0; i < top.size(); ++i) {
+                    cur[i].data[SL_ARATE] = 1.0;
+                }
+            }
+            for (auto &s: cur) {
+                s.data[SL_BOTTOM] = det->apply(s.data);
+            }
+        }
+    }
+
+    void RefineBottomHelperSimple (vector<Slice *> &slices, Config const &conf) {
+        int first_good = slices.size() - 4;
+        int first_bad = slices.size() - 3;
+        if (first_good < 0) return;
+        while (first_bad < slices.size()) {
+            if (slices.at(first_bad)->data[SL_BOTTOM] > 0.6) break;
+            ++first_good;
+            ++first_bad;
+        }
+        if (first_bad >= slices.size()) return;
+        float init = sqrt(slices[first_good]->data[SL_AREA]);
+        int n = slices.size() - first_good;
+        for (int i = 1; i < n; ++i) {
+            float area = init * (n - i - 1) / (n-1);
+            area *= area;
+            slices[first_good + i]->data[SL_AREA] = area;
+            slices[first_good + i]->data[SL_BOTTOM_PATCH] = 1;
+        }
     }
 
     void study_CA1 (Slice *pslice, Config const &config, bool vis);
@@ -750,13 +791,13 @@ namespace adsb2 {
             // study ca1
             study_CA1(cur, conf, true);
             cv::Rect inter = cur->polar_box & box;
-            cur->data[SL_BOTTOM] = 1;
+            cur->data[SL_BOTTOM_PATCH] = 1;
             if (cur->data[SL_AREA] == 0) {
                 // if this one fail, all the rest should fail, too
                 for (unsigned x1 = x; x1 < slices.size(); ++x1) {
                     slices[x1]->polar_box = cv::Rect();
                     slices[x1]->data[SL_AREA] = 0;
-                    slices[x1]->data[SL_BOTTOM] = 2;
+                    slices[x1]->data[SL_BOTTOM_PATCH] = 2;
                 }
                 return;
             }
@@ -774,18 +815,13 @@ namespace adsb2 {
         boost::progress_display progress(ns, std::cerr);
 #pragma omp parallel for schedule(dynamic, 1)
         for (unsigned sid = 0; sid < ns; ++sid) {
-            for (unsigned i = l; i < study->size(); ++i) {
-                if (study->at(i)[sid].data[SL_AREA]  < max_area) {
-                    vector<Slice *> slices;
-                    for (unsigned j = i; j < study->size(); ++j) {
-                        slices.push_back(&study->at(j)[sid]);
-                    }
-                    RefineBottomHelper(slices, conf);
-#pragma omp critical
-                    ++progress;
-                    break;
-                }
+            vector<Slice *> slices;
+            for (unsigned j = 0; j < study->size(); ++j) {
+                slices.push_back(&study->at(j)[sid]);
             }
+            RefineBottomHelperSimple(slices, conf);
+#pragma omp critical
+            ++progress;
         }
     }
 

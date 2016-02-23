@@ -105,6 +105,7 @@ namespace adsb2 {
 
     class DetectorManager {
         unordered_map<std::pair<std::thread::id, string>, Detector *, pairhash> insts;   // instance for each thread
+        unordered_map<std::thread::id, BottomDetector *> bottom_insts;   // instance for each thread
         std::mutex mutex;
     public:
         DetectorManager () {
@@ -112,6 +113,10 @@ namespace adsb2 {
 
         ~DetectorManager () {
             for (auto &p: insts) {
+                CHECK(p.second);
+                delete p.second;
+            }
+            for (auto &p: bottom_insts) {
                 CHECK(p.second);
                 delete p.second;
             }
@@ -131,10 +136,29 @@ namespace adsb2 {
                 return it->second;
             }
         }
+
+        BottomDetector *get_bottom () {
+            std::lock_guard<std::mutex> lock(mutex); 
+            std::thread::id key(std::this_thread::get_id());
+            auto it = bottom_insts.find(key);
+            if (it == bottom_insts.end()) {
+                BottomDetector *det = make_bottom_detector();
+                CHECK(det) << "failed to create bottom detector";
+                bottom_insts[key] = det;
+                return det;
+            }
+            else {
+                return it->second;
+            }
+        }
     } detector_manager;
 
     Detector *Detector::get (string const &name) {
         return detector_manager.get(name);
+    }
+
+    BottomDetector *BottomDetector::get () {
+        return detector_manager.get_bottom();
     }
 
     fs::path temp_path (const fs::path& model) {
@@ -443,8 +467,9 @@ namespace adsb2 {
         draw_text(images[IM_VISUAL], fmt::format("PS: {:1.2f}", data[SL_PSCORE]), org, 3);
         draw_text(images[IM_VISUAL], fmt::format("CR: {:1.2f}", data[SL_CSCORE]), org, 4);
         draw_text(images[IM_VISUAL], fmt::format("TS: {:1.2f}", data[SL_TSCORE]), org, 5);
-        draw_text(images[IM_VISUAL], fmt::format("BT: {:1.1f}", data[SL_BOTTOM]), org, 6);
+        draw_text(images[IM_VISUAL], fmt::format("BT: {:1.2f}", data[SL_BOTTOM]), org, 6);
         draw_text(images[IM_VISUAL], fmt::format("CS: {:2.1f}", data[SL_CCOLOR]), org, 7);
+        draw_text(images[IM_VISUAL], fmt::format("BP: {:1.1f}", data[SL_BOTTOM_PATCH]), org, 8);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
