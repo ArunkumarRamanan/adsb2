@@ -377,7 +377,6 @@ namespace adsb2 {
     Detector *make_cascade_detector (Config const &);
     Detector *make_scd_detector (Config const &);
     */
-
     class Sampler {
         // regular
         float max_color;
@@ -542,6 +541,7 @@ namespace adsb2 {
 
     void FindMinMaxVol (Study const &study, Volume *minv, Volume *maxv, Config const &config);
 
+#if 0
     static inline void report (std::ostream &os, Slice const &s, cv::Rect const &bound) {
         /*
         float r = std::sqrt(s.area)/2 * s.meta.spacing;
@@ -571,6 +571,7 @@ namespace adsb2 {
         }
         os << std::endl;
     }
+#endif
 
     class Eval {
         static constexpr unsigned CASES = 500;
@@ -585,5 +586,32 @@ namespace adsb2 {
         float score (fs::path const &, vector<std::pair<string, float>> *);
         float score (unsigned n1, unsigned n2, vector<float> const &x);
     };
+
+    struct SliceReport {
+        int study_id;
+        int slice_id;
+        int sax_id;
+        fs::path path;          // must always present
+        cv::Rect box;
+        cv::Rect polar_box;
+        Meta meta;              // available after load_raw
+        array<float, SL_SIZE> data;
+
+        void parse (string const &line);
+    };
+
+    class StudyReport: public vector<vector<SliceReport>> {
+    public:
+        StudyReport (fs::path const &);
+        void dump (std::ostream &os);
+    };
+
+    class BottomDetector {
+    public:
+        virtual float apply (array<float, SL_SIZE> const &) const = 0;
+    };
+
+    BottomDetector *make_bottom_detector (Config const &conf);
+
 }
 

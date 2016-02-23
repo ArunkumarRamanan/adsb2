@@ -219,6 +219,7 @@ int main(int argc, char **argv) {
             fs::remove(gp2);
         }
     }
+    /*
     else {
         for (auto const &series: study) {
             for (auto const &s: series) {
@@ -226,6 +227,7 @@ int main(int argc, char **argv) {
             }
         }
     }
+    */
     return 0;
 }
 

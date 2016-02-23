@@ -15,10 +15,9 @@ namespace adsb2 {
             WorkSpace (int rows, int cols): WorkSpaceBase(boost::extents[rows][cols]) {
             }
         };
-        int margin;
-        float thr;
         float smooth;
-        float wall;
+        float th;
+        int extra_delta;
         float penalty (int dx) const {
             return smooth *abs(dx);
         };
@@ -27,16 +26,6 @@ namespace adsb2 {
             slice->polar_contour.clear();
             cv::Mat image = slice->images[IM_POLAR_PROB];
             CHECK(image.type() == CV_32F);
-            if (image.cols < margin * 2) return;
-            float th = 0;
-            {
-                float left_mean = cv::mean(image.colRange(0, margin))[0];
-                float right_mean = cv::mean(image.colRange(image.cols - margin, image.cols))[0];
-                //cerr << left_mean << ' ' << right_mean << endl;
-                if (!(right_mean < left_mean)) return;
-                th = left_mean + (right_mean - left_mean) * thr;
-            }
-
             // thr big => th small => tight
 
             WorkSpace ws(image.rows, image.cols);
@@ -49,7 +38,6 @@ namespace adsb2 {
                     float acc = 0;
                     for (int x = 0; x < image.cols; ++x) {
                         float delta = I[x] - th;
-                        if (delta < 0) delta *= wall;
                         acc += delta;
                         e[x].opt = acc;
                         e[x].prev = -1;
@@ -63,7 +51,6 @@ namespace adsb2 {
                 float best_cc_score = -1;
                 for (int x = 0; x < image.cols; ++x) {
                     float delta = I[x] - th;
-                    if (delta < 0) delta *= wall;
                     acc += delta;
                     int lb = std::max(x - 7, 0);
                     int ub = std::min(x + 7, image.cols-1);
@@ -142,6 +129,8 @@ namespace adsb2 {
                 }
             }
             int delta = best_nleft - L;
+            if (delta < 0) delta = 0;
+            delta += extra_delta;
             if (delta > 0) {
                 for (auto &p: slice->polar_contour) {
                     p += delta;
@@ -151,10 +140,9 @@ namespace adsb2 {
         }
     public:
         CA1 (Config const &conf)
-            : margin(conf.get<int>("adsb2.ca1.margin", 5)),
-            thr(conf.get<float>("adsb2.ca1.th", 0.6)),
-            smooth(conf.get<float>("adsb2.ca1.smooth", 150/255.0)),
-            wall(conf.get<float>("adsb2.ca1.wall", 300/255.0))
+            : th(conf.get<float>("adsb2.ca1.th", 0.5)),
+            smooth(conf.get<float>("adsb2.ca1.smooth", 3)),
+            extra_delta(conf.get<int>("adsb2.ca1.extra", 0))
         {
         }
         void apply_slice (Slice *s) {

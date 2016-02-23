@@ -1399,5 +1399,98 @@ namespace adsb2 {
         return cv::Point_<float>(box.x + sx/s, box.y + sy/s);
     }
 
+    static int path_to_study_id (fs::path const &p) {
+        fs::path last;
+        for (auto c: p) {
+            if (c.native() == "study") {
+                break;
+            }
+            last = c;
+        }
+        return lexical_cast<int>(last.native());
+    }
+
+    void SliceReport::parse (string const &line) {
+        istringstream ss(line);
+        float area;
+        ss >> path;
+        ss >> sax_id >> slice_id;
+        ss >> area;
+        ss >> box.x;
+        ss >> box.y;
+        ss >> box.width;
+        ss >> box.height;
+        ss >> polar_box.x;
+        ss >> polar_box.y;
+        ss >> polar_box.width;
+        ss >> polar_box.height;
+        ss >> meta.slice_location >> meta.trigger_time >> meta.spacing >> meta.raw_spacing;
+        study_id = path_to_study_id(path);
+        for (auto &v: meta) {
+            ss >> v;
+        }
+        for (auto &v: data) {
+            ss >> v;
+        }
+        CHECK(ss);
+        CHECK(area == data[SL_AREA]);
+    }
+
+    StudyReport::StudyReport (fs::path const &path) {
+        fs::ifstream is(path);
+        string line;
+        vector<SliceReport> all;
+        int max_slice = 0;
+        int max_sax = 0;
+        while (getline(is, line)) {
+            SliceReport s;
+            s.parse(line);
+            if (s.slice_id > max_slice) max_slice = s.slice_id;
+            if (s.sax_id > max_sax) max_sax = s.sax_id;
+            if (all.size()) {
+                CHECK(all.back().study_id == s.study_id);
+            }
+            all.push_back(s);
+        }
+        ++max_slice;
+        ++max_sax;
+        resize(max_sax);
+        for (auto &s: all) {
+            at(s.sax_id).push_back(s);
+        }
+        for (auto const &ss: *this) {
+            CHECK(ss.size() == max_slice);
+        }
+    }
+
+    void StudyReport::dump (std::ostream &os) {
+        for (auto const &ss: *this) {
+            for (auto const &s: ss) {
+                os << s.path.native()
+                    << '\t' << s.sax_id
+                    << '\t' << s.slice_id
+                    << '\t' << s.data[SL_AREA]
+                    << '\t' << s.box.x
+                    << '\t' << s.box.y
+                    << '\t' << s.box.width
+                    << '\t' << s.box.height
+                    << '\t' << s.polar_box.x
+                    << '\t' << s.polar_box.y
+                    << '\t' << s.polar_box.width
+                    << '\t' << s.polar_box.height
+                    << '\t' << s.meta.slice_location
+                    << '\t' << s.meta.trigger_time
+                    << '\t' << s.meta.spacing
+                    << '\t' << s.meta.raw_spacing;
+                for (auto const &v: s.meta) {
+                    os << '\t' << v;
+                }
+                for (auto const &v: s.data) {
+                    os << '\t' << v;
+                }
+                os << std::endl;
+            }
+        }
+    }
 }
 
