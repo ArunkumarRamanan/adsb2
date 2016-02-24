@@ -33,6 +33,12 @@ namespace adsb2 {
     using boost::lexical_cast;
     namespace fs = boost::filesystem;
 
+    template <typename T>
+    static inline T sqr (T x) {
+        return x * x;
+    }
+
+
     extern char const *HEADER;
 
     // XML configuration
@@ -60,6 +66,8 @@ namespace adsb2 {
         float spacing;      //  mm
         float raw_spacing;  // original spacing as in file
         float slice_location;
+
+        float cohort;
         MetaBase (): spacing(-1), raw_spacing(-1) {
         }
         static char const *FIELDS[];
@@ -595,7 +603,9 @@ namespace adsb2 {
 #endif
 
     class Eval {
-        static constexpr unsigned CASES = 500;
+    public:
+        static unsigned constexpr CASES = 500;
+    private:
         float volumes[CASES][2];
         static float crps (float v, vector<float> const &x);
     public:
@@ -625,8 +635,10 @@ namespace adsb2 {
     class StudyReport: public vector<vector<SliceReport>> {
     public:
         StudyReport (fs::path const &);
+        StudyReport (Study const &sss);
         void dump (std::ostream &os);
     };
+    void GaussianAcc (float v, float scale, vector<float> *s);
 
 
 }

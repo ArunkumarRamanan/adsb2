@@ -1,4 +1,5 @@
 #include <sstream>
+#include <unordered_set>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -9,25 +10,15 @@
 using namespace std;
 using namespace adsb2;
 
-static inline float sqr (float x) {
-    return x * x;
-}
-
-void GaussianAcc (float v, float scale, vector<float> *s) {
-    s->resize(Eval::VALUES);
-    float sum = 0;
-    for (unsigned i = 0; i < Eval::VALUES; ++i) {
-        float x = (float(i) - v) / scale;
-        x = exp(-0.5 * x * x);
-        s->at(i) = x;
-        sum += x;
-    }
-    float acc = 0;
-    for (auto &v: *s) {
-        acc += v;
-        v = acc / sum;
-    }
-}
+// models:
+//      sys
+//      dia
+//      sys_err
+//      dia_err
+// each model:
+//      train set
+//      test set
+//      script
 
 bool compute1 (StudyReport const &rep, float *sys, float *dia) {
     vector<float> all(rep[0].size(), 0);
@@ -102,37 +93,25 @@ struct Sample {
     vector<float> dia_v;
 };
 
-void run_train1 (vector<Sample> &ss, int mode) {
-    CHECK(mode >= 1 && mode <= 3);
-    Eval eval;
+void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, unordered_set<int> const &train) {
+    fs::create_directories(dir);
+    CHECK(mode == 0 || mode == 1);
+    CHECK(level == 1 || level == 2);
+    fs::ofstream os_train(dir/fs::path("train"));
+    fs::ofstream os_test(dir/fs::path("test"));
     for (auto &s: ss) {
-        if (mode & 1) {
-            cout << s.sys_t;
-            dump_ft(s.ft, cout);
-            cout << endl;
+        float target;
+        if (level == 1) {
+            target = (mode == 0) ? s.sys_t : s.dia_t;
         }
-        if (mode & 2) {
-            cout << s.dia_t;
-            dump_ft(s.ft, cout);
-            cout << endl;
+        else if (level == 2) {
+            target = (mode == 0) ? fabs(s.sys_t - s.sys_p) : fabs(s.dia_t - s.dia_p);
         }
-    }
-}
-
-void run_train2 (vector<Sample> &ss, int mode) {
-    CHECK(mode >= 1 && mode <= 3);
-    Eval eval;
-    for (auto &s: ss) {
-        if (mode & 1) {
-            cout << fabs(s.sys_t - s.sys_p);
-            dump_ft(s.ft, cout);
-            cout << endl;
-        }
-        if (mode & 2) {
-            cout << fabs(s.dia_t - s.dia_p);
-            dump_ft(s.ft, cout);
-            cout << endl;
-        }
+        else CHECK(0);
+        ostream &os = (train.empty() || train.count(s.study)) ? os_train : os_test;
+        os << target;
+        dump_ft(s.ft, os);
+        os << endl;
     }
 }
 
@@ -143,8 +122,8 @@ void run_eval (vector<Sample> &ss) {
         float sys_x = eval.score(s.study, 0, s.sys_v);
         float dia_x = eval.score(s.study, 1, s.dia_v);
         sum += sys_x + dia_x;
-        cout << s.study << "_Systole" << '\t' << sys_x << endl;
-        cout << s.study << "_Diastole" << '\t' << dia_x << endl;
+        cout << s.study << "_Systole" << '\t' << sys_x << '\t' << s.sys_t << '\t' << s.sys_p << '\t' << (s.sys_t - s.sys_p) << '\t' << s.sys_e << endl;
+        cout << s.study << "_Diastole" << '\t' << dia_x << '\t' << s.dia_t << '\t' << s.dia_p << '\t' << (s.dia_t - s.dia_p) << '\t' << s.dia_e << endl;
     }
     cout << sum / (ss.size() *2);
 }
@@ -167,15 +146,14 @@ void run_submit (vector<Sample> &ss) {
 
 
 int main(int argc, char **argv) {
-    //Series stack("sax", "tmp");
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
     vector<string> paths;
+    string train_path;
     string method;
     string ws;
     float scale;
-    int mode;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -183,10 +161,10 @@ int main(int argc, char **argv) {
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&paths), "")
-    ("scale,s", po::value(&scale)->default_value(20), "")
+    ("scale,s", po::value(&scale)->default_value(1.0), "")
     ("detail", "")
     ("method", po::value(&method), "")
-    ("mode", po::value(&mode)->default_value(1), "")
+    ("train", po::value(&train_path), "")
     ("ws,w", po::value(&ws), "")
     ;
 
@@ -219,14 +197,30 @@ int main(int argc, char **argv) {
         cerr << "Failed to load config file: " << config_path << ", using defaults." << endl;
     }
     OverrideConfig(overrides, &config);
+    config.put("adsb2.models", ws); // find models in workspace
+
     GlobalInit(argv[0], config);
+    unordered_set<int> train_set;
+
+    if (train_path.size()) {
+        int x;
+        ifstream is(train_path.c_str());
+        while (is >> x) {
+            train_set.insert(x);
+        }
+    }
+
     Eval eval;
     vector<Sample> samples;
     int level = 0;
+    //  level 0:    no model
+    //  level 1:    target model
+    //  level 2:    target model & error model
     if (method == "train1") level = 0;
-    if (method == "train2") level = 1;
-    if (method == "eval") level = 2;
-    if (method == "submit") level = 2;
+    else if (method == "train2") level = 1;
+    else if (method == "eval") level = 2;
+    else if (method == "submit") level = 2;
+    else CHECK(0) << "method " << method << " not supported";
 
     Classifier *target_sys = 0;
     Classifier *target_dia = 0;
@@ -240,6 +234,9 @@ int main(int argc, char **argv) {
         error_sys = Classifier::get("error.sys");
         error_dia = Classifier::get("error.dia");
     }
+
+    fs::path root(ws);
+    fs::create_directories(root);
     for (auto const &p: paths) {
         fs::path path(p);
         StudyReport x(path);
@@ -266,8 +263,8 @@ int main(int argc, char **argv) {
             s.dia_p = target_dia->apply(s.ft);
         }
         if (level >= 2) {
-            s.sys_e = error_sys->apply(s.ft);
-            s.dia_e = error_dia->apply(s.ft);
+            s.sys_e = error_sys->apply(s.ft) * scale;
+            s.dia_e = error_dia->apply(s.ft) * scale;
             GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
             GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
         }
@@ -275,10 +272,12 @@ int main(int argc, char **argv) {
     }
 
     if (method == "train1") {
-        run_train1(samples, mode);
+        run_train(samples, 1, 0, root/fs::path("d.target.sys"), train_set);
+        run_train(samples, 1, 1, root/fs::path("d.target.dia"), train_set);
     }
     else if (method == "train2") {
-        run_train2(samples, mode);
+        run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set);
+        run_train(samples, 2, 1, root/fs::path("d.error.dia"), train_set);
     }
     else if (method == "eval") {
         run_eval(samples);
