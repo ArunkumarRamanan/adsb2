@@ -33,6 +33,8 @@ namespace adsb2 {
     using boost::lexical_cast;
     namespace fs = boost::filesystem;
 
+    extern char const *HEADER;
+
     // XML configuration
     typedef boost::property_tree::ptree Config;
 

@@ -86,12 +86,85 @@ void compute2 (StudyReport const &rep, float *sys, float *dia) {
     *dia = M/1000;
 }
 
+void dump_ft (vector<float> const &ft, ostream &os) {
+    for (unsigned i = 0; i < ft.size(); ++i) {
+        os << " " << i << ":" << ft[i];
+    }
+}
+
 struct Sample {
+    int study;
     vector<float> ft;
-    float sys, dia;
-    float sys_p, dia_p;
-    float sys_e, dia_e;
+    float sys_t, dia_t; // target
+    float sys_p, dia_p; // prediction
+    float sys_e, dia_e; // error
+    vector<float> sys_v;
+    vector<float> dia_v;
 };
+
+void run_train1 (vector<Sample> &ss, int mode) {
+    CHECK(mode >= 1 && mode <= 3);
+    Eval eval;
+    for (auto &s: ss) {
+        if (mode & 1) {
+            cout << s.sys_t;
+            dump_ft(s.ft, cout);
+            cout << endl;
+        }
+        if (mode & 2) {
+            cout << s.dia_t;
+            dump_ft(s.ft, cout);
+            cout << endl;
+        }
+    }
+}
+
+void run_train2 (vector<Sample> &ss, int mode) {
+    CHECK(mode >= 1 && mode <= 3);
+    Eval eval;
+    for (auto &s: ss) {
+        if (mode & 1) {
+            cout << fabs(s.sys_t - s.sys_p);
+            dump_ft(s.ft, cout);
+            cout << endl;
+        }
+        if (mode & 2) {
+            cout << fabs(s.dia_t - s.dia_p);
+            dump_ft(s.ft, cout);
+            cout << endl;
+        }
+    }
+}
+
+void run_eval (vector<Sample> &ss) {
+    Eval eval;
+    float sum = 0;
+    for (auto &s: ss) {
+        float sys_x = eval.score(s.study, 0, s.sys_v);
+        float dia_x = eval.score(s.study, 1, s.dia_v);
+        sum += sys_x + dia_x;
+        cout << s.study << "_Systole" << '\t' << sys_x << endl;
+        cout << s.study << "_Diastole" << '\t' << dia_x << endl;
+    }
+    cout << sum / (ss.size() *2);
+}
+
+void run_submit (vector<Sample> &ss) {
+    cout << adsb2::HEADER << endl;
+    for (auto &s: ss) {
+        cout << s.study << "_Systole";
+        for (auto &f: s.sys_v) {
+            cout << ',' << f;
+        }
+        cout << endl;
+        cout << s.study << "_Diastole";
+        for (auto &f: s.dia_v) {
+            cout << ',' << f;
+        }
+        cout << endl;
+    }
+}
+
 
 int main(int argc, char **argv) {
     //Series stack("sax", "tmp");
@@ -99,7 +172,10 @@ int main(int argc, char **argv) {
     string config_path;
     vector<string> overrides;
     vector<string> paths;
+    string method;
+    string ws;
     float scale;
+    int mode;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -109,9 +185,14 @@ int main(int argc, char **argv) {
     ("input,i", po::value(&paths), "")
     ("scale,s", po::value(&scale)->default_value(20), "")
     ("detail", "")
+    ("method", po::value(&method), "")
+    ("mode", po::value(&mode)->default_value(1), "")
+    ("ws,w", po::value(&ws), "")
     ;
 
     po::positional_options_description p;
+    p.add("ws", 1);
+    p.add("method", 1);
     p.add("input", -1);
 
     po::variables_map vm;
@@ -119,11 +200,17 @@ int main(int argc, char **argv) {
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
-    if (vm.count("help") || paths.empty()) {
+    if (vm.count("help") || ws.empty() || method.empty()) {
         cerr << desc;
         return 1;
     }
     bool detail = vm.count("detail") > 0;
+    if (paths.empty()) {
+        string p;
+        while (cin >> p) {
+            paths.push_back(p);
+        }
+    }
 
     Config config;
     try {
@@ -134,17 +221,32 @@ int main(int argc, char **argv) {
     OverrideConfig(overrides, &config);
     GlobalInit(argv[0], config);
     Eval eval;
-    vector<float> v;
-    Classifier *target_sys = Classifier::get("target.sys");
-    Classifier *target_dia = Classifier::get("target.dia");
-    Classifier *error_sys = Classifier::get("error.sys");
-    Classifier *error_dia = Classifier::get("error.dia");
-    for (auto const &s: paths) {
-        fs::path p(s);
-        StudyReport x(p);
-        float sys1, dia1, sys2, dia2;
-        float gs_sys, gs_dia;
-        int study = x.front().front().study_id;
+    vector<Sample> samples;
+    int level = 0;
+    if (method == "train1") level = 0;
+    if (method == "train2") level = 1;
+    if (method == "eval") level = 2;
+    if (method == "submit") level = 2;
+
+    Classifier *target_sys = 0;
+    Classifier *target_dia = 0;
+    Classifier *error_sys = 0;
+    Classifier *error_dia = 0;
+    if (level >= 1) {
+        target_sys = Classifier::get("target.sys");
+        target_dia = Classifier::get("target.dia");
+    }
+    if (level >= 2) {
+        error_sys = Classifier::get("error.sys");
+        error_dia = Classifier::get("error.dia");
+    }
+    for (auto const &p: paths) {
+        fs::path path(p);
+        StudyReport x(path);
+        Sample s;
+        float sys1, dia1;
+        float sys2, dia2;
+        s.study = x.front().front().study_id;
         if (detail) {
             for (auto &s: x.back()) {
                 s.data[SL_AREA] = 0;
@@ -156,16 +258,34 @@ int main(int argc, char **argv) {
             dia1 = dia2;
         }
         vector<float> ft{sys1, dia1, sys2, dia2, x[0][0].meta[Meta::SEX], x[0][0].meta[Meta::AGE]};
-
-        float sys_mu = target_sys->apply(ft);
-        float sys_sigma = 14; // sqrt(error_sys->apply(ft));
-        float dia_mu = target_dia->apply(ft);
-        float dia_sigma = 16; //sqrt(error_dia->apply(ft));
-
-        GaussianAcc(sys_mu, sys_sigma, &v);
-        cout << study << "_Systole" << '\t' << eval.score(study, 0, v) << endl;
-        GaussianAcc(dia_mu, dia_sigma, &v);
-        cout << study << "_Diastole" << '\t' << eval.score(study, 1, v) << endl;
+        s.ft = ft;
+        s.sys_t = eval.get(s.study, 0);
+        s.dia_t = eval.get(s.study, 1);
+        if (level >= 1) {
+            s.sys_p = target_sys->apply(s.ft);
+            s.dia_p = target_dia->apply(s.ft);
+        }
+        if (level >= 2) {
+            s.sys_e = error_sys->apply(s.ft);
+            s.dia_e = error_dia->apply(s.ft);
+            GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
+            GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
+        }
+        samples.push_back(s);
     }
+
+    if (method == "train1") {
+        run_train1(samples, mode);
+    }
+    else if (method == "train2") {
+        run_train2(samples, mode);
+    }
+    else if (method == "eval") {
+        run_eval(samples);
+    }
+    else if (method == "submit") {
+        run_submit(samples);
+    }
+    return 0;
 }
 

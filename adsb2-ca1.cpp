@@ -147,13 +147,13 @@ namespace adsb2 {
         }
         void apply_slice (Slice *s) {
             helper(s);
-            extend(s);
+            //extend(s);
         }
         void apply (Series *ss) const {
 #pragma omp parallel for
             for (unsigned i = 0; i < ss->size(); ++i) {
                 helper(&ss->at(i));
-                extend(&ss->at(i));
+                //extend(&ss->at(i));
             }
         }
     };
