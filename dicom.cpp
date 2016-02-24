@@ -1,6 +1,8 @@
 #include <boost/lexical_cast.hpp>
 #include <dcmtk/dcmdata/dctk.h>
 #include <dcmtk/dcmimgle/dcmimage.h>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include "adsb2.h"
 
 namespace adsb2 {
@@ -26,6 +28,25 @@ namespace adsb2 {
         OFCondition status = ff.getDataset()->findAndGetOFString(key, str);
         CHECK(status.good()) << "cannot find element " << key << ": " << path;
         return string(str.begin(), str.end());
+    }
+
+    template <typename T>
+    vector<T> dicom_gets (DcmFileFormat &ff, DcmTagKey key, fs::path const &path) {
+        OFString str;
+        OFCondition status = ff.getDataset()->findAndGetOFStringArray(key, str);
+        CHECK(status.good()) << "cannot find element " << key << ": " << path;
+        string all(str.begin(), str.end());
+        vector<string> ss;
+        //std::cerr << all << std::endl;
+        {
+            using namespace boost::algorithm;
+            split(ss, all, is_any_of("\\"), token_compress_off);
+        }
+        vector<T> v;
+        for (auto const &s: ss) {
+            v.push_back(lexical_cast<T>(s));
+        }
+        return v;
     }
     /*
         struct Series {
@@ -74,6 +95,20 @@ namespace adsb2 {
         meta->trigger_time = dicom_get<float>(ff, DCM_TriggerTime, path);
         meta->spacing = dicom_get<float>(ff, DCM_PixelSpacing, path);
         meta->raw_spacing = meta->spacing;
+        vector<float> pos = dicom_gets<float>(ff, DCM_ImagePositionPatient, path);
+        CHECK(pos.size() == 3);
+        meta->pos = cv::Point3f(pos[0], pos[1], pos[2]);
+        vector<float> ori = dicom_gets<float>(ff, DCM_ImageOrientationPatient, path);
+        CHECK(ori.size() == 6);
+        meta->ori_row = cv::Point3f(ori[0], ori[1], ori[2]);
+        meta->ori_col = cv::Point3f(ori[3], ori[4], ori[5]);
+
+        cv::Point3f cr = meta->ori_row.cross(meta->ori_col);
+        float norm = cv::norm(cr);
+        if (abs(norm - 1) > 0.001) {
+            LOG(WARNING) << "cross product";
+        }
+        meta->z = cr.dot(meta->pos);
 #if 0   // IMPORTANT: regular images do not have DiCOM meta data
         cv::Mat raw = cv::imread(path.native(), -1);
         if (!raw.data) {

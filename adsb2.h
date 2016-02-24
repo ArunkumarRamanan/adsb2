@@ -66,6 +66,10 @@ namespace adsb2 {
         float spacing;      //  mm
         float raw_spacing;  // original spacing as in file
         float slice_location;
+        float z;
+        cv::Point3f pos;
+        cv::Point3f ori_row;
+        cv::Point3f ori_col;
 
         float cohort;
         MetaBase (): spacing(-1), raw_spacing(-1) {

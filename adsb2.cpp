@@ -1443,6 +1443,7 @@ namespace adsb2 {
         for (auto &v: data) {
             ss >> v;
         }
+        data[SL_AREA] = area;
         //CHECK(ss);
         CHECK(area == data[SL_AREA]);
     }
