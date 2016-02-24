@@ -364,6 +364,9 @@ namespace adsb2 {
     };
 
     // A detector 
+    class Detector;
+    Detector *make_caffe_detector (fs::path const &path);
+
     class Detector {
     public:
         virtual ~Detector () {}
@@ -372,9 +375,23 @@ namespace adsb2 {
         virtual void apply (vector<cv::Mat> &image, vector<cv::Mat> *prob) = 0;
         // get thread-local detector
         static Detector *get (string const &name);
+        static Detector *create (fs::path const &path) {
+            return make_caffe_detector(path);
+        }
     };
 
-    Detector *make_caffe_detector (fs::path const &path);
+    class Classifier;
+    Classifier *make_xgboost_classifier (fs::path const &path);
+
+    class Classifier {
+    public:
+        virtual float apply (vector<float> const &) const = 0;
+        static Classifier *get (string const &name);
+        static Classifier *create (fs::path const &path) {
+            return make_xgboost_classifier(path);
+        }
+    };
+
     /*
     Detector *make_cascade_detector (Config const &);
     Detector *make_scd_detector (Config const &);
@@ -583,6 +600,7 @@ namespace adsb2 {
         static constexpr unsigned VALUES = 600;
         Eval ();
         float get (unsigned n1, unsigned n2) const {
+            if (n1 > 500) return 0;
             return volumes[n1-1][n2];
         }
         float score (fs::path const &, vector<std::pair<string, float>> *);
@@ -608,13 +626,6 @@ namespace adsb2 {
         void dump (std::ostream &os);
     };
 
-    class BottomDetector {
-    public:
-        virtual float apply (array<float, SL_SIZE> const &) const = 0;
-        static BottomDetector *get ();
-    };
-
-    BottomDetector *make_bottom_detector ();
 
 }
 

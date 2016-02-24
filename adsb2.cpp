@@ -103,31 +103,27 @@ namespace adsb2 {
       }
     };
 
-    class DetectorManager {
-        unordered_map<std::pair<std::thread::id, string>, Detector *, pairhash> insts;   // instance for each thread
-        unordered_map<std::thread::id, BottomDetector *> bottom_insts;   // instance for each thread
+    template <typename T>
+    class ModelManager {
+        unordered_map<std::pair<std::thread::id, string>, T *, pairhash> insts;   // instance for each thread
         std::mutex mutex;
     public:
-        DetectorManager () {
+        ModelManager () {
         }
 
-        ~DetectorManager () {
+        ~ModelManager () {
             for (auto &p: insts) {
                 CHECK(p.second);
                 delete p.second;
             }
-            for (auto &p: bottom_insts) {
-                CHECK(p.second);
-                delete p.second;
-            }
         }
 
-        Detector *get (string const &name) {
+        T *get (string const &name) {
             std::lock_guard<std::mutex> lock(mutex); 
             std::pair<std::thread::id, string> key(std::this_thread::get_id(), name);
             auto it = insts.find(key);
             if (it == insts.end()) {
-                Detector *det = make_caffe_detector(model_dir / fs::path(name));
+                T *det = T::create(model_dir / fs::path(name));
                 CHECK(det) << "failed to create detector " << name;
                 insts[key] = det;
                 return det;
@@ -136,29 +132,17 @@ namespace adsb2 {
                 return it->second;
             }
         }
+    };
 
-        BottomDetector *get_bottom () {
-            std::lock_guard<std::mutex> lock(mutex); 
-            std::thread::id key(std::this_thread::get_id());
-            auto it = bottom_insts.find(key);
-            if (it == bottom_insts.end()) {
-                BottomDetector *det = make_bottom_detector();
-                CHECK(det) << "failed to create bottom detector";
-                bottom_insts[key] = det;
-                return det;
-            }
-            else {
-                return it->second;
-            }
-        }
-    } detector_manager;
+    ModelManager<Detector> detector_manager;
+    ModelManager<Classifier> classifier_manager;
 
     Detector *Detector::get (string const &name) {
         return detector_manager.get(name);
     }
 
-    BottomDetector *BottomDetector::get () {
-        return detector_manager.get_bottom();
+    Classifier *Classifier::get (string const &name) {
+        return classifier_manager.get(name);
     }
 
     fs::path temp_path (const fs::path& model) {
@@ -1457,7 +1441,7 @@ namespace adsb2 {
         for (auto &v: data) {
             ss >> v;
         }
-        CHECK(ss);
+        //CHECK(ss);
         CHECK(area == data[SL_AREA]);
     }
 
@@ -1483,9 +1467,11 @@ namespace adsb2 {
         for (auto &s: all) {
             at(s.sax_id).push_back(s);
         }
+        /*
         for (auto const &ss: *this) {
             CHECK(ss.size() == max_slice);
         }
+        */
     }
 
     void StudyReport::dump (std::ostream &os) {

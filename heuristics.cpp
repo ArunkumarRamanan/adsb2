@@ -734,7 +734,7 @@ namespace adsb2 {
     void EvalBottom(Study *study, Config const &conf) {
         unsigned l = study->size() / 2;
         if (l < 1) l = 1;
-        BottomDetector *det = BottomDetector::get();
+        Classifier *det = Classifier::get("bottom");
         for (unsigned i = l; i < study->size(); ++i) {
             auto &top = study->at(i-1);
             auto &cur = study->at(i);
@@ -751,7 +751,12 @@ namespace adsb2 {
                 }
             }
             for (auto &s: cur) {
-                s.data[SL_BOTTOM] = det->apply(s.data);
+                vector<float> ft{s.data[SL_BSCORE],
+                                 s.data[SL_PSCORE],
+                                 s.data[SL_CSCORE],
+                                 s.data[SL_CCOLOR],
+                                 s.data[SL_ARATE]};
+                s.data[SL_BOTTOM] = det->apply(ft);
             }
         }
     }
