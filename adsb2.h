@@ -648,5 +648,6 @@ namespace adsb2 {
     };
     void GaussianAcc (float v, float scale, vector<float> *s);
 
+    extern char const *VERSION;
 }
 

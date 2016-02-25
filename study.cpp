@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
     po::notify(vm); 
 
     if (vm.count("help") || input_dir.empty()) {
+        cerr << "ADSB2 VERSION: " << VERSION << endl;
         cerr << desc;
         return 1;
     }

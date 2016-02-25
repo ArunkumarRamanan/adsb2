@@ -245,6 +245,7 @@ int main(int argc, char **argv) {
     po::notify(vm); 
 
     if (vm.count("help") || ws.empty() || method.empty() || cohort_path.empty()) {
+        cerr << "ADSB2 VERSION: " << VERSION << endl;
         cerr << desc;
         return 1;
     }
