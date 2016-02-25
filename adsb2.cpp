@@ -1466,6 +1466,7 @@ namespace adsb2 {
 
     StudyReport::StudyReport (fs::path const &path) {
         fs::ifstream is(path);
+        if (!is) return;
         string line;
         vector<SliceReport> all;
         int max_slice = 0;

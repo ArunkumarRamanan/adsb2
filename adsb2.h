@@ -648,6 +648,8 @@ namespace adsb2 {
     };
     void GaussianAcc (float v, float scale, vector<float> *s);
 
+    bool compute1 (StudyReport const &rep, float *sys, float *dia);
+    void compute2 (StudyReport const &rep, float *sys, float *dia);
 
 }
 

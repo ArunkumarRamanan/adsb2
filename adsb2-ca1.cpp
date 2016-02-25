@@ -138,22 +138,29 @@ namespace adsb2 {
             }
 
         }
+        bool do_extend;
     public:
         CA1 (Config const &conf)
             : th(conf.get<float>("adsb2.ca1.th", 0.5)),
             smooth(conf.get<float>("adsb2.ca1.smooth", 3)),
-            extra_delta(conf.get<int>("adsb2.ca1.extra", 0))
+            extra_delta(conf.get<int>("adsb2.ca1.extra", 0)),
+            do_extend(conf.get<int>("adsb2.ca1.extend", 0) > 0)
+              
         {
         }
         void apply_slice (Slice *s) {
             helper(s);
-            //extend(s);
+            if (do_extend) {
+                extend(s);
+            }
         }
         void apply (Series *ss) const {
 #pragma omp parallel for
             for (unsigned i = 0; i < ss->size(); ++i) {
                 helper(&ss->at(i));
-                //extend(&ss->at(i));
+                if (do_extend) {
+                    extend(&ss->at(i));
+                }
             }
         }
     };
