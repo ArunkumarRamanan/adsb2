@@ -310,7 +310,8 @@ int main(int argc, char **argv) {
             sys1 = sys2;
             dia1 = dia2;
         }
-        vector<float> ft{sys1, dia1, sys2, dia2, x[0][0].meta[Meta::SEX], x[0][0].meta[Meta::AGE]};
+        auto &front = x[0][0];
+        vector<float> ft{sys1, dia1, sys2, dia2, front.meta[Meta::SEX], front.meta[Meta::AGE], front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing}; //, front.meta.PercentPhaseFieldOfView};
         if (cohort.size()) {
             auto it = cohort.find(s.study);
             CHECK(it != cohort.end());
