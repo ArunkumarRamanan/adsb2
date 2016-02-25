@@ -250,6 +250,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     bool detail = vm.count("detail") > 0;
+
     if (paths.empty()) {
         string p;
         while (cin >> p) {
@@ -338,7 +339,11 @@ int main(int argc, char **argv) {
         }
         auto &front = x[0][0];
         //front.reprobe_meta(data_root);
-        vector<float> ft{sys1, dia1, sys2, dia2, front.meta[Meta::SEX], front.meta[Meta::AGE], front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing}; //, front.meta.PercentPhaseFieldOfView};
+        vector<float> ft{
+            front.meta[Meta::SEX], front.meta[Meta::AGE],
+            front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing,
+            sys1, dia1, sys2, dia2,
+        };
         int cid = 0;
         if (cohort.size()) {
             auto it = cohort.find(s.study);
