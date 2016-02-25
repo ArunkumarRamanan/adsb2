@@ -69,8 +69,8 @@ namespace adsb2 {
 
     void dicom_setup (char const *path, Config const &config);
     void GlobalInit (char const *path, Config const &config) {
-        if (config.get<int>("adsb2.about")) {
-            cerr << "ADSB2 VERSION: " << VERSION << endl;
+        if (config.get<int>("adsb2.about", 0)) {
+            std::cerr << "ADSB2 VERSION: " << VERSION << std::endl;
         }
 #ifdef CPU_ONLY
         caffe_batch = 1;
