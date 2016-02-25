@@ -96,6 +96,8 @@ namespace adsb2 {
         meta->spacing = dicom_get<float>(ff, DCM_PixelSpacing, path);
         meta->cohort = dicom_get<string>(ff, DCM_PerformedProcedureStepID, path);
         meta->raw_spacing = meta->spacing;
+        meta->AcquisitionMatrix = dicom_gets<float>(ff, DCM_AcquisitionMatrix, path);
+        meta->PercentPhaseFieldOfView = dicom_get<float>(ff, DCM_PercentPhaseFieldOfView, path);
         vector<float> pos = dicom_gets<float>(ff, DCM_ImagePositionPatient, path);
         CHECK(pos.size() == 3);
         meta->pos = cv::Point3f(pos[0], pos[1], pos[2]);

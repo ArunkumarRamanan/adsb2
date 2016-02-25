@@ -24,7 +24,6 @@ using namespace adsb2;
 //      test set
 //      script
 //
-int boost_round = 1500;
 
 void join (vector<string> const &v, string *acc) {
     ostringstream os;
@@ -109,7 +108,7 @@ struct Sample {
 };
 
 void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, unordered_set<int> const &train,
-        fs::path const &model) {
+        fs::path const &model, int round) {
     fs::create_directories(dir);
     CHECK(mode == 0 || mode == 1);
     CHECK(level == 1 || level == 2);
@@ -143,7 +142,7 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
         if (ntest) {
             cmd.push_back(fmt::format("eval[test]={}", test_path.native()));
         }
-        cmd.push_back(fmt::format("num_round={}", boost_round));
+        cmd.push_back(fmt::format("num_round={}", round));
         cmd.push_back(fmt::format("model_out={}", model.native()));
         cmd.push_back("2>&1");
         cmd.push_back("|");
@@ -214,6 +213,8 @@ int main(int argc, char **argv) {
     string cohort_path;
     string method;
     string ws;
+    fs::path data_root;
+    int round1, round2;
     float scale;
 
     po::options_description desc("Allowed options");
@@ -227,8 +228,10 @@ int main(int argc, char **argv) {
     ("method", po::value(&method), "")
     ("train", po::value(&train_path), "")
     ("cohort", po::value(&cohort_path), "")
-    ("round", po::value(&boost_round)->default_value(1500), "")
+    ("round1", po::value(&round1)->default_value(2000), "")
+    ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
+    ("root", po::value(&data_root), "")
     ("ws,w", po::value(&ws), "")
     ;
 
@@ -329,7 +332,9 @@ int main(int argc, char **argv) {
             sys1 = sys2;
             dia1 = dia2;
         }
-        vector<float> ft{sys1, dia1, sys2, dia2, x[0][0].meta[Meta::SEX], x[0][0].meta[Meta::AGE]};
+        auto &front = x[0][0];
+        //front.reprobe_meta(data_root);
+        vector<float> ft{sys1, dia1, sys2, dia2, front.meta[Meta::SEX], front.meta[Meta::AGE], front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing}; //, front.meta.PercentPhaseFieldOfView};
         int cid = 0;
         if (cohort.size()) {
             auto it = cohort.find(s.study);
@@ -359,14 +364,14 @@ int main(int argc, char **argv) {
     if (method == "train1") {
         vector<Sample> c0, c1;
         split_by_cohort(samples, cohort, &c0, &c1);
-        run_train(c0, 1, 0, root/fs::path("d.target.sys.0"), train_set, root/fs::path("target.sys.0"));
-        run_train(c0, 1, 1, root/fs::path("d.target.dia.0"), train_set, root/fs::path("target.dia.0"));
-        run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"));
-        run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"));
+        run_train(c0, 1, 0, root/fs::path("d.target.sys.0"), train_set, root/fs::path("target.sys.0"), round1);
+        run_train(c0, 1, 1, root/fs::path("d.target.dia.0"), train_set, root/fs::path("target.dia.0"), round1);
+        run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"), round1);
+        run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"), round1);
     }
     else if (method == "train2") {
-        run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set, root/fs::path("error.sys"));
-        run_train(samples, 2, 1, root/fs::path("d.error.dia"), train_set, root/fs::path("error.dia"));
+        run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set, root/fs::path("error.sys"), round2);
+        run_train(samples, 2, 1, root/fs::path("d.error.dia"), train_set, root/fs::path("error.dia"), round2);
     }
     else if (method == "eval") {
         run_eval(samples);

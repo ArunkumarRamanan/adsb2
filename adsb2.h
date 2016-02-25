@@ -67,6 +67,8 @@ namespace adsb2 {
         float raw_spacing;  // original spacing as in file
         float slice_location;
         float z;
+        vector<float> AcquisitionMatrix;
+        float PercentPhaseFieldOfView;
         cv::Point3f pos;
         cv::Point3f ori_row;
         cv::Point3f ori_col;
@@ -634,6 +636,8 @@ namespace adsb2 {
         array<float, SL_SIZE> data;
 
         void parse (string const &line);
+
+        void reprobe_meta (fs::path const &);
     };
 
     class StudyReport: public vector<vector<SliceReport>> {

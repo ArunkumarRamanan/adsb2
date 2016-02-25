@@ -1421,6 +1421,22 @@ namespace adsb2 {
         return lexical_cast<int>(last.native());
     }
 
+    void SliceReport::reprobe_meta (fs::path const &root) {
+        fs::path newp = path;
+        if (!root.empty()) {
+            vector<fs::path> comps(path.begin(), path.end());
+            newp = root;
+            for (unsigned i = 1; i < comps.size(); ++i) {
+                if (comps[i].native() == "study") {
+                    for (unsigned j = i-1; j < comps.size(); ++j) {
+                        newp /= comps[j];
+                    }
+                }
+            }
+        }
+        load_dicom(newp, &meta);
+    }
+
     void SliceReport::parse (string const &line) {
         istringstream ss(line);
         float area;
