@@ -201,6 +201,10 @@ namespace adsb2 {
             float cs1, ps1; // inside
             color_sum(color, mask, &cs1, &ps1);
             CHECK(cs1 >= 0);
+            if (ps1 <= 0) {
+                LOG(ERROR) << "ps1 == 0: " << ps1;
+                ps1 = 1;
+            }
             CHECK(ps1 > 0);
 
             cv::Mat kernel = cv::Mat::ones(ext, ext, CV_8U);
@@ -210,6 +214,10 @@ namespace adsb2 {
             cs2 -= cs1;
             ps2 -= ps1;
             CHECK(cs2 >= 0);
+            if (ps2 <= 0) {
+                LOG(ERROR) << "ps2 <= 0: " << ps2;
+                ps2 = 1;
+            }
             CHECK(ps2 > 0);
 
             cs1 /= ps1;

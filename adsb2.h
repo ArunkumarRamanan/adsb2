@@ -70,8 +70,8 @@ namespace adsb2 {
         cv::Point3f pos;
         cv::Point3f ori_row;
         cv::Point3f ori_col;
-
-        float cohort;
+        float width, height;
+        string cohort;
         MetaBase (): spacing(-1), raw_spacing(-1) {
         }
         static char const *FIELDS[];
