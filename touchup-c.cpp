@@ -14,6 +14,31 @@ namespace adsb2 {
 using namespace std;
 using namespace adsb2;
 
+float top_th;
+void patch_top_bottom (StudyReport &rep) {
+    for (unsigned xx = 0;; ++xx) {
+        vector<SliceReport *> ss;
+        for (auto &sax: rep) {
+            if (xx < sax.size()) {
+                ss.push_back(&sax[xx]);
+            }
+        }
+        if (ss.empty()) break;
+        // find first non-top
+        for (unsigned i = 0; i < ss.size(); ++i) {
+            if (ss[i]->data[SL_TSCORE] < top_th) {
+                for (int j = i-1; j >= 0; --j) {
+                    if (ss[j]->data[SL_AREA] > ss[j+1]->data[SL_AREA]) {
+                        ss[j]->data[SL_AREA] = ss[j+1]->data[SL_AREA];
+                    }
+                }
+                break;
+            }
+        }
+
+
+    }
+}
 // models:
 //      sys
 //      dia
@@ -232,6 +257,8 @@ int main(int argc, char **argv) {
     ("root", po::value(&data_root), "")
     ("ws,w", po::value(&ws), "")
     ("clinical", "")
+    ("top", "")
+    ("top-th", po::value(&top_th)->default_value(1.0), "")
     ;
 
     po::positional_options_description p;
@@ -325,6 +352,9 @@ int main(int argc, char **argv) {
             LOG(ERROR) << "Cannot load " << path;
             continue;
         }
+        if (vm.count("top")) {
+            patch_top_bottom(x);
+        }
         Sample s;
         float sys1, dia1;
         float sys2, dia2;
@@ -374,14 +404,24 @@ int main(int argc, char **argv) {
     }
 
     if (method == "show") {
+        float dsys = 0;
+        float ddia = 0;
+        float dall = 0;
         for (auto &s: samples) {
+            float d = s.sys_t - s.sys;
             cout << s.study << "_Systole\t";
-            cout << s.sys_t - s.sys
-                 << '\t' << s.sys_t << '\t' << s.sys << endl;
+            cout << d << '\t' << s.sys_t << '\t' << s.sys << endl;
+            dsys += d * d;
+            dall += d * d;
+            d = s.dia_t - s.dia;
             cout << s.study << "_Diastole\t";
-            cout << s.dia_t - s.dia
-                 << '\t' << s.dia_t << '\t' << s.dia << endl;
+            cout << d << '\t' << s.dia_t << '\t' << s.dia << endl;
+            ddia += d * d;
+            dall += d * d;
         }
+        cout << "sys: " << sqrt(dsys / samples.size()) << endl;
+        cout << "dia: " << sqrt(ddia / samples.size()) << endl;
+        cout << "all: " << sqrt(dall / samples.size()/2) << endl;
     }
     if (method == "train1") {
         vector<Sample> c0, c1;
