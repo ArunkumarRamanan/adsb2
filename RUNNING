@@ -1,0 +1,23 @@
+1. Prepare data directory
+- /ssd/wdong/adsb2/raw/{1,2,3,...,700, ...}
+		all raw data unzipped and pooled
+- /home/wdong/adsb2	
+		code & binary, working directory
+
+
+2. Train Models.
+
+# train bound model
+caffe/bound/import.sh
+caffe/bound/train.sh
+# train contour model
+caffe/contour/import.sh
+caffe/contour/train.sh
+# bound model
+cp caffe/bound/snapshots/fcn_iter_562000.caffemodel models/bound/caffe.params
+# contour model
+cp caffe/bound/snapshots/fcn_iter_450000.caffemodel models/contour/caffe.params
+
+3. Generating Predictions
+
+4. 

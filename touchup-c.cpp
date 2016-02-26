@@ -102,7 +102,11 @@ struct Sample {
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
+<<<<<<< HEAD
     float sys, dia;
+=======
+    float sys1, sys2, dia1, dia2;
+>>>>>>> dp
     vector<float> sys_v;
     vector<float> dia_v;
 };
@@ -231,6 +235,7 @@ int main(int argc, char **argv) {
     ("shuffle", "")
     ("root", po::value(&data_root), "")
     ("ws,w", po::value(&ws), "")
+    ("clinical", "")
     ;
 
     po::positional_options_description p;
@@ -249,6 +254,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     bool detail = vm.count("detail") > 0;
+    bool clinical = vm.count("clinical") > 0;
 
     if (paths.empty()) {
         string p;
