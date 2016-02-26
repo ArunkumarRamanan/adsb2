@@ -232,6 +232,7 @@ int main(int argc, char **argv) {
     ("shuffle", "")
     ("root", po::value(&data_root), "")
     ("ws,w", po::value(&ws), "")
+    ("clinical", "")
     ;
 
     po::positional_options_description p;
@@ -250,6 +251,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     bool detail = vm.count("detail") > 0;
+    bool clinical = vm.count("clinical") > 0;
 
     if (paths.empty()) {
         string p;
@@ -341,8 +343,12 @@ int main(int argc, char **argv) {
         //front.reprobe_meta(data_root);
         vector<float> ft{
             front.meta[Meta::SEX], front.meta[Meta::AGE],
-            front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing,
-            sys1, dia1, sys2, dia2,
+            front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing};
+        if (!clinical) {
+            ft.push_back(sys1);
+            ft.push_back(dia1);
+            ft.push_back(sys2);
+            ft.push_back(dia2);
         };
         int cid = 0;
         if (cohort.size()) {
