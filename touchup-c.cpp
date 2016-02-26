@@ -372,7 +372,7 @@ int main(int argc, char **argv) {
     }
 
     if (method == "show") {
-        for (auto &s: ss) {
+        for (auto &s: samples) {
             cout << s.study << "_Systole";
             cout << s.sys_t - s.sys
                  << '\t' << s.sys_t << '\t' << s.sys << endl;
