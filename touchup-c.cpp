@@ -373,10 +373,10 @@ int main(int argc, char **argv) {
 
     if (method == "show") {
         for (auto &s: samples) {
-            cout << s.study << "_Systole";
+            cout << s.study << "_Systole\t";
             cout << s.sys_t - s.sys
                  << '\t' << s.sys_t << '\t' << s.sys << endl;
-            cout << s.study << "_Diastole";
+            cout << s.study << "_Diastole\t";
             cout << s.dia_t - s.dia
                  << '\t' << s.dia_t << '\t' << s.dia << endl;
         }
