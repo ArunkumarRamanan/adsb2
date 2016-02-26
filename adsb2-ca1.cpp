@@ -9,88 +9,100 @@ namespace adsb2 {
         return sqrt(x * x + y * y);
     }
 
-    class CA1: public CA {
-        struct E {
-            float opt;   // optimal value
-            cv::Point2f pt;  // cartesion coordinate
-            int prev;    // prev slice
-            cv::Point2f prev0;   // optimal location of 0, for circular opt
-        };
-        typedef boost::multi_array<E, 2> WorkSpaceBase;
-        class WorkSpace:public WorkSpaceBase {
-        public:
-            WorkSpace (int rows, int cols): WorkSpaceBase(boost::extents[rows][cols]) {
-            }
-        };
-        float smooth;
-        int margin;
-        float thr;
-        int extra_delta;
-#if 0
-        float penalty (float dx) const {
-            float v = smooth * dx;
-            /*
-#pragma omp critical
-            std::cerr << dx << '\t' << v << std::endl;
-            */
-            return v;
-        };
-#endif
+    struct WorkSpaceEntry {
+        float pixel[2];      // pixel[0]: color
+                             // pixel[1]: probability
+                             
+        cv::Point2f pt;      // cartesion coordinate
 
-        void helper (Slice *slice) const {
-            slice->polar_contour.clear();
-            cv::Mat image = slice->images[IM_POLAR_PROB];
-            CHECK(image.type() == CV_32F);
-            // thr big => th small => tight
-            float th = 0;
-            {
-                float big_mean = cv::mean(image.colRange(0, margin))[0];
-                float small_mean = cv::mean(image.colRange(image.cols - margin, image.cols))[0];
-                //cerr << left_mean << ' ' << right_mean << endl;
-                if (!(small_mean < big_mean)) return;
-                th = small_mean + (big_mean - small_mean) * thr;
-            }
+        float opt;           // optimal value
+        int prev;            // pointer to prev row's optimal column
+        cv::Point2f prev0;   // optimal location of 0, for circular trick
+    };
 
-            WorkSpace ws(image.rows, image.cols);
-            for (int y = 0; y < image.rows; ++y) {
-                E *e = &(ws[y][0]);
+    typedef boost::multi_array<WorkSpaceEntry, 2> WorkSpaceBase;
+
+    class WorkSpace:public WorkSpaceBase {
+    public:
+        WorkSpace (cv::Mat image, cv::Mat prob, float polar_R): WorkSpaceBase(boost::extents[image.rows][image.cols]) {
+            CHECK(image.cols == prob.cols);
+            CHECK(image.rows == prob.rows);
+            int rows = image.rows;
+            int cols = image.cols;
+            for (int y = 0; y < rows; ++y) {
+                float const *p_i = image.ptr<float const>(y);
+                float const *p_p = prob.ptr<float const>(y);
+                auto *e = &((*this)[y][0]);
                 double phi = M_PI * 2 * y / image.rows;
-                for (int x = 0; x < image.cols; ++x) {
-                    double rho = x * slice->polar_R / image.cols;
+                for (int x = 0; x < cols; ++x) {
+                    double rho = x * polar_R / image.cols;
                     cv::Point2f pt(rho * std::cos(phi), rho * std::sin(phi));
-                    e[x].pt = slice->polar_C + pt;
+                    e[x].pt = pt; //slice->polar_C + pt;
+                    e[x].pixel[0] = p_i[x];
+                    e[x].pixel[1] = p_p[x];
+                    e[x].opt = -std::numeric_limits<float>::max();
+                    e[x].prev = -1;
                 }
             }
+        }
+
+        void run (vector<std::pair<int, int>> const &range,
+                  vector<int> *seg,
+                  unsigned key,
+                  bool mono,
+                  float th,
+                  float nd,
+                  float smooth,
+                  int max_gap) {
+            size_t rows = shape()[0];
+            size_t cols = shape()[1];
             int best_cc = 0;
-            for (int y = 0; y < image.rows; ++y) {
-                CHECK(y < image.rows);
-                E *e = &(ws[y][0]);
-                float const *I = image.ptr<float const>(y);
-                if (y == 0) {
+            for (int y = 0; y < rows; ++y) {
+                auto *e = &((*this)[y][0]);
+                if (y == 0) {   // first row, no connection to previous
                     float acc = 0;
-                    for (int x = 0; x < image.cols; ++x) {
-                        float delta = I[x] - th;
+                    float last_delta = std::numeric_limits<float>::max();
+                    for (int x = range[y].first; x < range[y].second; ++x) {
+                        float delta = e[x].pixel[key] - th;
+                        if (delta < 0) delta *= nd;
+                        if (mono) {
+                            if (delta > last_delta) {
+                                delta = last_delta;
+                            }
+                            else {
+                                last_delta = delta;
+                            }
+                        }
                         acc += delta;
                         e[x].opt = acc;
                         e[x].prev = -1;
-                        //e[x].prev0 = -1;
                     }
                     continue;
                 }
-                E *prev = &(ws[y-1][0]);
+                auto *prev = &((*this)[y-1][0]);
                 float acc = 0;
-                best_cc = 0;
+                best_cc = -1;
                 float best_cc_score = -1;
-                for (int x = 0; x < image.cols; ++x) {
-                    float delta = I[x] - th;
+                float last_delta = std::numeric_limits<float>::max();
+                for (int x = range[y].first; x < range[y].second; ++x) {
+                    float delta = e[x].pixel[key] - th;
+                    if (delta < 0) delta *= nd;
+                    if (mono) {
+                        if (delta > last_delta) {
+                            delta = last_delta;
+                        }
+                        else {
+                            last_delta = delta;
+                        }
+                    }
                     acc += delta;
-                    int lb = std::max(x - 7, 0);
-                    int ub = std::min(x + 7, image.cols-1);
-                    float best_score = -1;
+                    int lb = std::max(x - max_gap, range[y-1].first);
+                    int ub = std::min(x + max_gap + 1, range[y-1].second);
+                    float best_score = -std::numeric_limits<float>::max();
                     int best_prev = 0;
-                    for (int p = lb; p <= ub; ++p) {
+                    for (int p = lb; p < ub; ++p) {
                         float score = prev[p].opt + acc - smooth * distance(prev[p].pt, e[x].pt);
-                        if (y + 1 == image.rows) {  // need to consider connection to 0
+                        if (y + 1 == rows) {  // need to consider connection to 0
                             score -= smooth * distance(prev[p].prev0, e[x].pt);
                         }
                         if (score > best_score) {
@@ -106,21 +118,17 @@ namespace adsb2 {
                     else {
                         e[x].prev0 = prev[best_prev].prev0;
                     }
-                    if ((x == 0) || (best_score > best_cc_score)) {
+                    if ((best_cc < 0) || (best_score > best_cc_score)) {
                         best_cc_score = best_score;
                         best_cc = x;
-                        if (y + 1 == image.rows) {
-#pragma omp critical
-                            std::cerr << "BSCORE: " << best_cc_score << std::endl;
-                        }
                     }
                 }
             }
-            int y = image.rows - 1;
-            vector<int> seg;
+            int y = rows - 1;
+            seg->clear();
             while (y >= 0) {
-                seg.push_back(best_cc);
-                best_cc = ws[y][best_cc].prev;
+                seg->push_back(best_cc);
+                best_cc = (*this)[y][best_cc].prev;
                 --y;
             }
 #if 0       // test polar transformation code
@@ -142,14 +150,46 @@ namespace adsb2 {
             } while (false);
 #endif
             CHECK(best_cc = -1);
-            std::reverse(seg.begin(), seg.end());
-            slice->polar_contour.swap(seg);
+            std::reverse(seg->begin(), seg->end());
+        }
+    };
+
+    class CA1: public CA {
+        float smooth1;
+        float smooth2;
+        int margin1;
+        int margin2;
+        int gap;
+        float thr1;
+        float thr2;
+        int extra_delta;
+        bool do_extend;
+        float top_th;
+        float ndisc;
+#if 0
+        float penalty (float dx) const {
+            float v = smooth * dx;
+            /*
+#pragma omp critical
+            std::cerr << dx << '\t' << v << std::endl;
+            */
+            return v;
+        };
+#endif
+        float get_dp1_th (cv::Mat image) const {
+            float th = 0;
+            {
+                float big_mean = cv::mean(image.colRange(0, margin1))[0];
+                float small_mean = cv::mean(image.colRange(image.cols - margin1, image.cols))[0];
+                //cerr << left_mean << ' ' << right_mean << endl;
+                if (!(small_mean < big_mean)) return std::max(small_mean, big_mean);
+                th = small_mean + (big_mean - small_mean) * thr1;
+            }
+            return th;
         }
 
-        float contour_avg (Slice *slice, int delta) const {
+        float contour_avg (cv::Mat image, vector<int> const &ctr, int delta) const {
             float sum = 0;
-            auto const &ctr = slice->polar_contour;
-            cv::Mat const &image = slice->images[IM_POLAR];
             CHECK(ctr.size() == image.rows);
             for (unsigned i = 0; i < ctr.size(); ++i) {
                 float const *ptr = image.ptr<float const>(i);
@@ -161,12 +201,32 @@ namespace adsb2 {
             return sum / ctr.size();
         }
 
-        void extend (Slice *slice) const {
+        float get_dp2_th (cv::Mat image, vector<int> const &ctr) const {
+            float th = 0;
+            {
+                float big_mean = cv::mean(image.colRange(0, margin1))[0];
+                /*
+                float small_mean = cv::mean(image.colRange(image.cols - margin, image.cols))[0];
+                //cerr << left_mean << ' ' << right_mean << endl;
+                if (!(small_mean < big_mean)) return std::max(small_mean, big_mean);
+                th = small_mean + (big_mean - small_mean) * thr;
+                */
+                float small_mean = big_mean;
+                for (int i = 0; i < margin2; ++i) {
+                    float x = contour_avg(image, ctr, i);
+                    if (x < small_mean) small_mean = x;
+                }
+                th = small_mean + (big_mean - small_mean) * thr2;
+            }
+            return th;
+        }
+
+        void shift (cv::Mat image, vector<int> *ctr) const {
             static const int L = 10;
             vector<float> dist(2*L+1);
             float sum = 0;
             for (int i = -L; i <= L; ++i) {
-                sum += dist[L+i] = contour_avg(slice, i);
+                sum += dist[L+i] = contour_avg(image, *ctr, i);
             }
             float best = -std::numeric_limits<float>::max();
             int best_nleft = 0;
@@ -186,35 +246,66 @@ namespace adsb2 {
             if (delta < 0) delta = 0;
             delta += extra_delta;
             if (delta > 0) {
-                for (auto &p: slice->polar_contour) {
+                for (auto &p: *ctr) {
                     p += delta;
                 }
             }
-
         }
-        bool do_extend;
+
+        void helper (Slice *slice) const {
+            cv::Mat image = slice->images[IM_POLAR];
+            cv::Mat prob = slice->images[IM_POLAR_PROB];
+            int rows = image.rows;
+            int cols = image.cols;
+            WorkSpace ws(image, prob, slice->polar_R);
+            vector<int> contour;
+            {
+                vector<std::pair<int, int>> range1;
+                {
+                    for (int i = 0; i < image.rows; ++i) {
+                        range1.push_back(std::make_pair(0, cols));
+                    }
+                }
+                ws.run(range1, &contour, 1, false, get_dp1_th(prob), 1.0, smooth1, gap);
+            }
+            if (do_extend) {
+                // extend 1
+                shift(image, &contour);
+                if (slice->data[SL_TSCORE] < top_th) {
+                    vector<std::pair<int, int>> range2(rows);
+                    for (int i = 0; i < rows; ++i) {
+                        range2[i].first = contour[i] - 0;
+                        range2[i].second = contour[i] + margin2;
+                    }
+                    float th = get_dp2_th(image, contour);
+                    ws.run(range2, &contour, 0, true, th, ndisc, smooth2, gap);
+                }
+            }
+            slice->polar_contour.swap(contour);
+        }
+
     public:
         CA1 (Config const &conf)
-            : margin(conf.get<int>("adsb2.ca1.margin", 5)),
-            thr(conf.get<float>("adsb2.ca1.th", 0.8)),
-            smooth(conf.get<float>("adsb2.ca1.smooth", 10)),
+            : margin1(conf.get<int>("adsb2.ca1.margin1", 5)),
+            margin2(conf.get<int>("adsb2.ca1.margin2", 40)),
+            thr1(conf.get<float>("adsb2.ca1.th1", 0.8)),
+            thr2(conf.get<float>("adsb2.ca1.th2", 0.05)),
+            smooth1(conf.get<float>("adsb2.ca1.smooth1", 10)),
+            smooth2(conf.get<float>("adsb2.ca1.smooth2", 255)),
             extra_delta(conf.get<int>("adsb2.ca1.extra", 0)),
-            do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0)
+            gap(conf.get<int>("adsb2.ca1.gap", 7)),
+            do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0),
+            top_th(conf.get<float>("adsb2.ca1.top_th", 0.95)),
+            ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2))
         {
         }
         void apply_slice (Slice *s) {
             helper(s);
-            if (do_extend) {
-                extend(s);
-            }
         }
         void apply (Series *ss) const {
 #pragma omp parallel for
             for (unsigned i = 0; i < ss->size(); ++i) {
                 helper(&ss->at(i));
-                if (do_extend) {
-                    extend(&ss->at(i));
-                }
             }
         }
     };

@@ -98,10 +98,10 @@ int main(int argc, char **argv) {
     */
     vector<Slice *> slices;
     study.pool(&slices);
-#ifdef USE_TOP
     if (vm.count("top")) {
         ComputeTop(&study, config);
     }
+#ifdef USE_TOP
     for (auto &ss: study) {
         float sum = 0;
         for (auto &s: ss) {

@@ -102,11 +102,7 @@ struct Sample {
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
-<<<<<<< HEAD
     float sys, dia;
-=======
-    float sys1, sys2, dia1, dia2;
->>>>>>> dp
     vector<float> sys_v;
     vector<float> dia_v;
 };
