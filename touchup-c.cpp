@@ -37,7 +37,7 @@ bool compute1 (StudyReport const &rep, float *sys, float *dia) {
             float b = rep[sax+1][sl].data[SL_AREA] * sqr(rep[sax+1][sl].meta.spacing);
             float gap = fabs(rep[sax+1][sl].meta.slice_location
                       - rep[sax][sl].meta.slice_location);
-            if ((gap > 25)) gap = 10;
+            if ((gap > 25)) gap = 0;
             v += (a + b + sqrt(a*b)) * gap / 3;
         }
         all[sl] = v / 1000;
@@ -102,6 +102,7 @@ struct Sample {
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
+    float sys, dia;
     vector<float> sys_v;
     vector<float> dia_v;
 };
@@ -209,7 +210,6 @@ int main(int argc, char **argv) {
     vector<string> overrides;
     vector<string> paths;
     string train_path;
-    string cohort_path;
     string method;
     string ws;
     fs::path data_root;
@@ -226,7 +226,6 @@ int main(int argc, char **argv) {
     ("detail", "")
     ("method", po::value(&method), "")
     ("train", po::value(&train_path), "")
-    ("cohort", po::value(&cohort_path), "")
     ("round1", po::value(&round1)->default_value(2000), "")
     ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
@@ -244,7 +243,7 @@ int main(int argc, char **argv) {
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
-    if (vm.count("help") || ws.empty() || method.empty() || cohort_path.empty()) {
+    if (vm.count("help") || ws.empty() || method.empty()) {
         cerr << "ADSB2 VERSION: " << VERSION << endl;
         cerr << desc;
         return 1;
@@ -281,7 +280,7 @@ int main(int argc, char **argv) {
     unordered_map<int, int> cohort;
     {
         int id, c;
-        ifstream is(cohort_path.c_str());
+        fs::ifstream is(home_dir/fs::path("cohort"));
         while (is >> id >> c) {
             cohort[id] = c;
         }
@@ -293,7 +292,8 @@ int main(int argc, char **argv) {
     //  level 0:    no model
     //  level 1:    target model
     //  level 2:    target model & error model
-    if (method == "train1") level = 0;
+    if (method == "show") level = 0;
+    else if (method == "train1") level = 0;
     else if (method == "train2") level = 1;
     else if (method == "eval") level = 2;
     else if (method == "submit") level = 2;
@@ -337,11 +337,12 @@ int main(int argc, char **argv) {
             sys1 = sys2;
             dia1 = dia2;
         }
+        s.sys = sys1;
+        s.dia = dia1;
         auto &front = x[0][0];
         //front.reprobe_meta(data_root);
         vector<float> ft{
             front.meta[Meta::SEX], front.meta[Meta::AGE],
-            front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing,
             sys1, dia1, sys2, dia2,
         };
         int cid = 0;
@@ -370,6 +371,16 @@ int main(int argc, char **argv) {
         random_shuffle(samples.begin(), samples.end());
     }
 
+    if (method == "show") {
+        for (auto &s: ss) {
+            cout << s.study << "_Systole";
+            cout << s.sys_t - s.sys
+                 << '\t' << s.sys_t << '\t' << s.sys << endl;
+            cout << s.study << "_Diastole";
+            cout << s.dia_t - s.dia
+                 << '\t' << s.dia_t << '\t' << s.dia << endl;
+        }
+    }
     if (method == "train1") {
         vector<Sample> c0, c1;
         split_by_cohort(samples, cohort, &c0, &c1);
