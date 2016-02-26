@@ -43,8 +43,8 @@ int main(int argc, char **argv) {
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
     ("no-gif", "")
-    ("no-top", "")
-    ("no-bottom", "")
+    ("top", "")
+    ("bottom", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -96,16 +96,38 @@ int main(int argc, char **argv) {
         delete bb_det;
     }
     */
-#if 0
-    if (vm.count("no-top") == 0) {
+    vector<Slice *> slices;
+    study.pool(&slices);
+#ifdef USE_TOP
+    if (vm.count("top")) {
         ComputeTop(&study, config);
+    }
+    for (auto &ss: study) {
+        float sum = 0;
+        for (auto &s: ss) {
+            sum += s.data[SL_TSCORE];
+        }
+        sum /= ss.size();
+        if (sum > 0.8) {
+            for (auto &s: ss) {
+                s.images[IM_IMAGE2] = s.images[IM_IMAGE];
+                s.images[IM_IMAGE] = cv::Mat();
+            }
+        }
     }
 #endif
     ComputeBoundProb(&study);
+#ifdef USE_TOP
+    ApplyDetector("top_bound", &study, IM_IMAGE2, IM_PROB2, 1.0, 0);
+    for (Slice *s: slices) {
+        if (s->images[IM_PROB2].data) {
+            s->images[IM_PROB] = s->images[IM_PROB2];
+            s->images[IM_IMAGE] = s->images[IM_IMAGE2];
+        }
+    }
+#endif
     cerr << "Filtering..." << endl;
     ProbFilter(&study, config);
-    vector<Slice *> slices;
-    study.pool(&slices);
     cerr << "Finding squares..." << endl;
 #pragma omp parallel for schedule(dynamic, 1)
     for (unsigned i = 0; i < slices.size(); ++i) {
@@ -114,9 +136,9 @@ int main(int argc, char **argv) {
 
     ComputeContourProb(&study, config);
     study_CA1(&study, config, true);
-    if (vm.count("no-bottom") == 0) {
-    EvalBottom(&study, config);
-    RefineBottom(&study, config);
+    if (vm.count("bottom")) {
+        EvalBottom(&study, config);
+        RefineBottom(&study, config);
     }
 #if 0
     if (decap > 0) {

@@ -3,11 +3,18 @@
 #include "adsb2.h"
 
 namespace adsb2 {
+    static inline double distance (cv::Point2f const &p1, cv::Point2f const &p2) {
+        double x = p1.x - p2.x;
+        double y = p1.y - p2.y;
+        return sqrt(x * x + y * y);
+    }
+
     class CA1: public CA {
         struct E {
             float opt;   // optimal value
+            cv::Point2f pt;  // cartesion coordinate
             int prev;    // prev slice
-            int prev0;   // optimal location of 0, for circular opt
+            cv::Point2f prev0;   // optimal location of 0, for circular opt
         };
         typedef boost::multi_array<E, 2> WorkSpaceBase;
         class WorkSpace:public WorkSpaceBase {
@@ -16,19 +23,44 @@ namespace adsb2 {
             }
         };
         float smooth;
-        float th;
+        int margin;
+        float thr;
         int extra_delta;
-        float penalty (int dx) const {
-            return smooth *abs(dx);
+#if 0
+        float penalty (float dx) const {
+            float v = smooth * dx;
+            /*
+#pragma omp critical
+            std::cerr << dx << '\t' << v << std::endl;
+            */
+            return v;
         };
+#endif
 
         void helper (Slice *slice) const {
             slice->polar_contour.clear();
             cv::Mat image = slice->images[IM_POLAR_PROB];
             CHECK(image.type() == CV_32F);
             // thr big => th small => tight
+            float th = 0;
+            {
+                float big_mean = cv::mean(image.colRange(0, margin))[0];
+                float small_mean = cv::mean(image.colRange(image.cols - margin, image.cols))[0];
+                //cerr << left_mean << ' ' << right_mean << endl;
+                if (!(small_mean < big_mean)) return;
+                th = small_mean + (big_mean - small_mean) * thr;
+            }
 
             WorkSpace ws(image.rows, image.cols);
+            for (int y = 0; y < image.rows; ++y) {
+                E *e = &(ws[y][0]);
+                double phi = M_PI * 2 * y / image.rows;
+                for (int x = 0; x < image.cols; ++x) {
+                    double rho = x * slice->polar_R / image.cols;
+                    cv::Point2f pt(rho * std::cos(phi), rho * std::sin(phi));
+                    e[x].pt = slice->polar_C + pt;
+                }
+            }
             int best_cc = 0;
             for (int y = 0; y < image.rows; ++y) {
                 CHECK(y < image.rows);
@@ -41,7 +73,7 @@ namespace adsb2 {
                         acc += delta;
                         e[x].opt = acc;
                         e[x].prev = -1;
-                        e[x].prev0 = -1;
+                        //e[x].prev0 = -1;
                     }
                     continue;
                 }
@@ -57,9 +89,9 @@ namespace adsb2 {
                     float best_score = -1;
                     int best_prev = 0;
                     for (int p = lb; p <= ub; ++p) {
-                        float score = prev[p].opt + acc - penalty(p - x);
+                        float score = prev[p].opt + acc - smooth * distance(prev[p].pt, e[x].pt);
                         if (y + 1 == image.rows) {  // need to consider connection to 0
-                            score -= penalty(prev[p].prev0 -x);
+                            score -= smooth * distance(prev[p].prev0, e[x].pt);
                         }
                         if (score > best_score) {
                             best_score = score;
@@ -69,7 +101,7 @@ namespace adsb2 {
                     e[x].opt = best_score;
                     e[x].prev = best_prev;
                     if (y == 1) {
-                        e[x].prev0 = e[x].prev;
+                        e[x].prev0 = prev[e[x].prev].pt;
                     }
                     else {
                         e[x].prev0 = prev[best_prev].prev0;
@@ -77,6 +109,10 @@ namespace adsb2 {
                     if ((x == 0) || (best_score > best_cc_score)) {
                         best_cc_score = best_score;
                         best_cc = x;
+                        if (y + 1 == image.rows) {
+#pragma omp critical
+                            std::cerr << "BSCORE: " << best_cc_score << std::endl;
+                        }
                     }
                 }
             }
@@ -87,6 +123,24 @@ namespace adsb2 {
                 best_cc = ws[y][best_cc].prev;
                 --y;
             }
+#if 0       // test polar transformation code
+#pragma omp critical
+            do {
+                static int cc = 0;
+                ++cc;
+                if (cc < 150) break;
+                cv::Mat image = slice->images[IM_IMAGE];
+                vector<cv::Point> pts;
+                for (unsigned i = 0; i < seg.size(); ++i) {
+                    pts.push_back(ws[i][seg[i]].pt);
+                }
+                cv::Point const *ppts = &pts[0];
+                int npts = seg.size();
+                cv::fillPoly(image, &ppts, &npts, 1, cv::Scalar(0xFF));
+                cv::imwrite("xxx.png", image);
+                exit(1);
+            } while (false);
+#endif
             CHECK(best_cc = -1);
             std::reverse(seg.begin(), seg.end());
             slice->polar_contour.swap(seg);
@@ -141,11 +195,11 @@ namespace adsb2 {
         bool do_extend;
     public:
         CA1 (Config const &conf)
-            : th(conf.get<float>("adsb2.ca1.th", 0.5)),
-            smooth(conf.get<float>("adsb2.ca1.smooth", 3)),
+            : margin(conf.get<int>("adsb2.ca1.margin", 5)),
+            thr(conf.get<float>("adsb2.ca1.th", 0.8)),
+            smooth(conf.get<float>("adsb2.ca1.smooth", 10)),
             extra_delta(conf.get<int>("adsb2.ca1.extra", 0)),
             do_extend(conf.get<int>("adsb2.ca1.extend", 0) > 0)
-              
         {
         }
         void apply_slice (Slice *s) {

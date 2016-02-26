@@ -252,7 +252,12 @@ namespace adsb2 {
         void load_raw () {
             cv::Mat raw = load_dicom(path, &meta);
 #if 1       // Yuanfang's annotation assume images are all in landscape position
-            if (raw.rows > raw.cols) {
+            if ((raw.rows > raw.cols)
+#if 0
+                    || ((raw.rows == raw.cols)
+                        && (abs(meta.ori_row.z) < abs(meta.ori_col.z)))
+#endif 
+                    ) {
                 cv::transpose(raw, raw);
             }
 #endif
