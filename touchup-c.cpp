@@ -346,8 +346,8 @@ int main(int argc, char **argv) {
         auto &front = x[0][0];
         //front.reprobe_meta(data_root);
         vector<float> ft{
-            front.meta[Meta::SEX], front.meta[Meta::AGE],
-            front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing};
+            front.meta[Meta::SEX], front.meta[Meta::AGE]};
+            //front.meta[Meta::SLICE_THICKNESS]}; //, front.meta.raw_spacing};
         if (!clinical) {
             ft.push_back(sys1);
             ft.push_back(dia1);
