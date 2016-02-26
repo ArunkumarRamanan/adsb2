@@ -199,7 +199,7 @@ namespace adsb2 {
             thr(conf.get<float>("adsb2.ca1.th", 0.8)),
             smooth(conf.get<float>("adsb2.ca1.smooth", 10)),
             extra_delta(conf.get<int>("adsb2.ca1.extra", 0)),
-            do_extend(conf.get<int>("adsb2.ca1.extend", 0) > 0)
+            do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0)
         {
         }
         void apply_slice (Slice *s) {
