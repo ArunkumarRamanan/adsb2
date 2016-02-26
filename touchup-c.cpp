@@ -102,6 +102,7 @@ struct Sample {
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
+    float sys1, sys2, dia1, dia2;
     vector<float> sys_v;
     vector<float> dia_v;
 };
@@ -295,7 +296,8 @@ int main(int argc, char **argv) {
     //  level 0:    no model
     //  level 1:    target model
     //  level 2:    target model & error model
-    if (method == "train1") level = 0;
+    if (method == "show") level = 0;
+    else if (method == "train1") level = 0;
     else if (method == "train2") level = 1;
     else if (method == "eval") level = 2;
     else if (method == "submit") level = 2;
@@ -339,6 +341,10 @@ int main(int argc, char **argv) {
             sys1 = sys2;
             dia1 = dia2;
         }
+        s.sys1 = sys1;
+        s.sys2 = sys2;
+        s.dia1 = dia1;
+        s.dia2 = dia2;
         auto &front = x[0][0];
         //front.reprobe_meta(data_root);
         vector<float> ft{
@@ -374,6 +380,15 @@ int main(int argc, char **argv) {
 
     if (vm.count("shuffle")){
         random_shuffle(samples.begin(), samples.end());
+    }
+
+    if (method == "show") {
+        for (auto const &s: samples) {
+            cout << s.study
+                 << '\t' << s.sys_t << ':' << s.sys1 << '-' << s.sys2
+                 << '\t' << s.dia_t << ':' << s.dia1 << '-' << s.dia2
+                 << endl;
+        }
     }
 
     if (method == "train1") {
