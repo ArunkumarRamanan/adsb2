@@ -210,7 +210,6 @@ int main(int argc, char **argv) {
     vector<string> overrides;
     vector<string> paths;
     string train_path;
-    string cohort_path;
     string method;
     string ws;
     fs::path data_root;
@@ -227,7 +226,6 @@ int main(int argc, char **argv) {
     ("detail", "")
     ("method", po::value(&method), "")
     ("train", po::value(&train_path), "")
-    ("cohort", po::value(&cohort_path), "")
     ("round1", po::value(&round1)->default_value(2000), "")
     ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
@@ -246,7 +244,7 @@ int main(int argc, char **argv) {
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
-    if (vm.count("help") || ws.empty() || method.empty() || cohort_path.empty()) {
+    if (vm.count("help") || ws.empty() || method.empty()) {
         cerr << "ADSB2 VERSION: " << VERSION << endl;
         cerr << desc;
         return 1;
@@ -284,7 +282,7 @@ int main(int argc, char **argv) {
     unordered_map<int, int> cohort;
     {
         int id, c;
-        ifstream is(cohort_path.c_str());
+        fs::ifstream is(home_dir/fs::path("cohort"));
         while (is >> id >> c) {
             cohort[id] = c;
         }
@@ -384,10 +382,12 @@ int main(int argc, char **argv) {
 
     if (method == "show") {
         for (auto const &s: samples) {
-            cout << s.study
-                 << '\t' << s.sys_t << ':' << s.sys1 << '-' << s.sys2
-                 << '\t' << s.dia_t << ':' << s.dia1 << '-' << s.dia2
-                 << endl;
+            cout << s.study << "_Systole"
+                 << '\t' << s.sys_t - s.sys1
+                 << '\t' << s.sys_t << '\t' << s.sys1  << endl;
+            cout << s.study << "_Diastole"
+                 << '\t' << s.dia_t - s.dia1
+                 << '\t' << s.dia_t << '\t' << s.dia1  << endl;
         }
     }
 
