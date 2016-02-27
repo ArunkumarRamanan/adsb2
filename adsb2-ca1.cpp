@@ -170,7 +170,8 @@ namespace adsb2 {
         bool do_extend;
         float top_th;
         float ndisc;
-        float ctrpct;
+        float wctrpct;
+        float bctrpct;
 #if 0
         float penalty (float dx) const {
             float v = smooth * dx;
@@ -202,12 +203,13 @@ namespace adsb2 {
                 int x = ctr[i] + delta;
                 if (x < 0) x = 0;
                 if (x >= image.cols) x = image.cols - 1;
-                v.push_back(x);
+                v.push_back(ptr[x]);
             }
             CHECK(v.size() == ctr.size());
 
             int N = ctr.size() * pct;
             if (N > ctr.size()) N = ctr.size();
+            CHECK(N > ctr.size() / 2);
 
             int best_begin = 0;
 
@@ -253,7 +255,7 @@ namespace adsb2 {
                 */
                 float small_mean = big_mean;
                 for (int i = 0; i < bound; ++i) {
-                    float x = contour_avg(image, ctr, i, ctrpct, 1);
+                    float x = contour_avg(image, ctr, i, bctrpct, 1);
                     if (x < small_mean) small_mean = x;
                 }
                 th = small_mean + (big_mean - small_mean) * thr2;
@@ -262,27 +264,27 @@ namespace adsb2 {
         }
 
         // return absolute bound
-        void find_shift (cv::Mat image, vector<int> const &ctr, int *delta, int *bound) const {
+        void find_shift (cv::Mat image, vector<int> const &ctr, int *bound) const {
             static const int W = 2;
             int L1 = margin1;   // 5
             int L2 = margin2;   // 40
             vector<float> wavg(L1 + L2 +1);       // array index i <-> delta     i - L1
-            vector<float> avg(L1 + L2 +1);       // array index i <-> delta     i - L1
+            vector<float> bavg(L1 + L2 +1);       // array index i <-> delta     i - L1
                                                  //             0                -L1
                                                  //             L1                 0
                                                  //             L1 + L2            L2
-            vector<float> grad(avg.size(), 0);   // actually reverse gradient
-            vector<float> sigma(avg.size());
+            vector<float> grad(bavg.size(), 0);   // actually reverse gradient
+            vector<float> sigma(bavg.size());
             for (int i = -L1; i <= L2; ++i) {
                 float s;
-                wavg[L1+i] = contour_avg(image, ctr, i, 1, -1, &s);
-                avg[L1+i] = contour_avg(image, ctr, i, ctrpct, 1, &s);
+                wavg[L1+i] = contour_avg(image, ctr, i, wctrpct, -1);
+                bavg[L1+i] = contour_avg(image, ctr, i, bctrpct, 1, &s);
                 sigma[L1+i] = s;
             }
             // compute delta
             int P1 = 0;
-            for (int i = W; i + W < avg.size(); ++i) {
-                grad[i] = wavg[i-W] - avg[i+W];
+            for (int i = W; i + W < grad.size(); ++i) {
+                grad[i] = wavg[i-W] - bavg[i+W];
                 if (grad[i] > grad[P1]) {
                     P1 = i;
                 }
@@ -298,17 +300,18 @@ namespace adsb2 {
             //
             CHECK(P2 < sigma.size());
 
+            /*
             float best = -std::numeric_limits<float>::max();
             int best_nleft = 0;
             float left = 0;
 
             float sum = 0;
             for (unsigned i = 0; i <= P2; ++i) {
-                sum += avg[i];
+                sum += bavg[i];
             }
 
             for (unsigned nleft = 1; nleft <= P2; ++nleft) {
-                left += avg[nleft-1];
+                left += bavg[nleft-1];
                 float right = sum - left;
                 float nright = P2 + 1 - nleft;
 
@@ -320,10 +323,13 @@ namespace adsb2 {
             }
             *delta = best_nleft - L1 + extra_delta;
             if (*delta < 0) *delta = 0;
+            */
             *bound = P2 + 1 - L1;
+            /*
             if (*delta > *bound - 1) {
                 *delta = *bound - 1;
             }
+            */
         }
 
         void helper (Slice *slice, vector<int> *plb = nullptr, int *pbound = nullptr) const {
@@ -344,16 +350,10 @@ namespace adsb2 {
             }
             if (do_extend) {
                 // extend 1
-                int delta, bound;
-                find_shift(image, contour, &delta, &bound);
+                int bound;
+                find_shift(image, contour, &bound);
                 if (plb) *plb = contour;
                 if (pbound) *pbound = bound;
-                if (delta > 0) {
-                    for (auto &v: contour) {
-                        v += delta;
-                    }
-                }
-                bound -= delta;
                 if (slice->data[SL_TSCORE] < top_th) {
                     vector<std::pair<int, int>> range2(rows);
                     for (int i = 0; i < rows; ++i) {
@@ -380,7 +380,8 @@ namespace adsb2 {
             do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0),
             top_th(conf.get<float>("adsb2.ca1.top_th", 0.95)),
             ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2)),
-            ctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8))
+            wctrpct(conf.get<float>("adsb2.ca1.wctrpct", 0.9)),
+            bctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8))
 
         {
         }
