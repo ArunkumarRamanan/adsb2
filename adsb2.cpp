@@ -15,6 +15,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include "adsb2.h"
+#include "adsb2-io.h"
 
 extern "C" {
 void    openblas_set_num_threads (int);    
@@ -403,6 +404,68 @@ namespace adsb2 {
             CHECK(0);
         }
     }
+
+    void Slice::save (std::ostream &os) const {
+        int v = VERSION;
+        io::write(os, v);
+        io::write(os, id);
+        io::write(os, path);
+        io::write(os, meta);
+        for (unsigned i = 0; i < IM_SIZE; ++i) {
+            io::write(os, images[i]);
+        }
+        io::write(os, data);
+        io::write(os, do_not_cook);
+        io::write(os, line);
+
+        int anno_id = 0;
+        if (anno == &box_anno_ops) anno_id = 1;
+        else if (anno == &poly_anno_ops) anno_id = 2;
+        else if (anno == &pred_anno_ops) anno_id = 3;
+        else CHECK(0) << "unknown annotation type.";
+        io::write(os, anno_id);
+
+        anno_data.save(os);
+        io::write(os, polar_C);
+        io::write(os, polar_R);
+        io::write(os, polar_contour);
+        io::write(os, polar_box);
+        io::write(os, local_box);
+        io::write(os, box);
+        io::write(os, _extra);
+    }
+
+    void Slice::load (std::istream &is) {
+        int v;
+        io::read(is, &v);
+        CHECK(v == VERSION);
+        io::read(is, &id);
+        io::read(is, &path);
+        io::read(is, &meta);
+        for (unsigned i = 0; i < IM_SIZE; ++i) {
+            io::read(is, &images[i]);
+        }
+        io::read(is, &data);
+        io::read(is, &do_not_cook);
+        io::read(is, &line);
+
+        int anno_id = 0;
+        io::read(is, &anno_id);
+        if (anno_id == 1) anno = &box_anno_ops;
+        else if (anno_id == 2) anno = &poly_anno_ops;
+        else if (anno_id == 3) anno = &pred_anno_ops;
+        else CHECK(0) << "unknown annotation type.";
+
+        anno_data.load(is);
+        io::read(is, &polar_C);
+        io::read(is, &polar_R);
+        io::read(is, &polar_contour);
+        io::read(is, &polar_box);
+        io::read(is, &local_box);
+        io::read(is, &box);
+        io::read(is, &_extra);
+    }
+
 
     void Slice::clone (Slice *s) const {
         s->id = id;

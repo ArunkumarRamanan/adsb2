@@ -161,6 +161,7 @@ int main(int argc, char **argv) {
         cerr << "Saving output..." << endl;
         fs::path dir(output_dir);
         fs::create_directories(dir);
+        study.save(dir/fs::path("study"));
         {
             fs::ofstream vol(dir/fs::path("volume.txt"));
             vol << min.mean << '\t' << std::sqrt(min.var)

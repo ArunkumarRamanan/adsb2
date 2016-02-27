@@ -20,6 +20,7 @@
 #include <cppformat/format.h>
 #include <glog/logging.h>
 #include "adsb2-cv.h"
+#include "adsb2-io.h"
 
 namespace adsb2 {
 
@@ -58,27 +59,28 @@ namespace adsb2 {
             NUMBER_OF_IMAGES,
             SLICE_LOCATION_RAW,
             SERIES_NUMBER,
-            
             SERIES_FIELDS,
-            STUDY_FIELDS = 2,   // the first 2 fields are study fields
+            STUDY_FIELDS = 3,   // the first 2 fields are study fields
         };
         float trigger_time;
         float spacing;      //  mm
         float raw_spacing;  // original spacing as in file
         float slice_location;
         float z;
-        vector<float> AcquisitionMatrix;
+        //vector<float> AcquisitionMatrix;
         float PercentPhaseFieldOfView;
         cv::Point3f pos;
         cv::Point3f ori_row;
         cv::Point3f ori_col;
         float width, height;
-        string cohort;
+        int cohort;
+        //string cohort;
         MetaBase (): spacing(-1), raw_spacing(-1) {
         }
         static char const *FIELDS[];
     };
 
+    // Meta is a POD
     struct Meta: public MetaBase, public std::array<float, MetaBase::SERIES_FIELDS> {
     };
 
@@ -130,6 +132,16 @@ namespace adsb2 {
             vector<cv::Point_<float>> contour;
                                     // contour in polar space
                                     // x, y are ratios
+            void save (std::ostream &os) const {
+                io::write(os, R);
+                io::write(os, C);
+                io::write(os, contour);
+            }
+            void load (std::istream &is) {
+                io::read(is, &R);
+                io::read(is, &C);
+                io::read(is, &contour);
+            }
         };
         virtual int type () const {
             return ANNO_POLY;
@@ -149,6 +161,18 @@ namespace adsb2 {
             cv::Point_<float> C;    // polar center in raw dicom file
             cv::Size size;          // polar image size
             vector<int> contour;    // contour as x value of each row
+            void save (std::ostream &os) const {
+                io::write(os, R);
+                io::write(os, C);
+                io::write(os, size);
+                io::write(os, contour);
+            }
+            void load (std::istream &is) {
+                io::read(is, &R);
+                io::read(is, &C);
+                io::read(is, &size);
+                io::read(is, &contour);
+            }
         };
         virtual int type () const {
             return ANNO_POLY;
@@ -167,6 +191,16 @@ namespace adsb2 {
         BoxAnnoOps::Data box; 
         PolyAnnoOps::Data poly;
         PredAnnoOps::Data pred;
+        void load (std::istream &is) {
+            io::read(is, &box);
+            poly.load(is);
+            pred.load(is);
+        }
+        void save (std::ostream &os) const {
+            io::write(os, box);
+            poly.save(os);
+            pred.save(os);
+        }
     };
 
     extern BoxAnnoOps box_anno_ops;
@@ -210,6 +244,7 @@ namespace adsb2 {
     };
 
     struct Slice {
+        static int constexpr VERSION = 1;
         int id;
         fs::path path;          // must always present
         Meta meta;              // available after load_raw
@@ -246,6 +281,9 @@ namespace adsb2 {
         }
 
         Slice (string const &line);
+
+        void save (std::ostream &os) const;
+        void load (std::istream &os);
 
         void clone (Slice *s) const; 
 
@@ -297,6 +335,24 @@ namespace adsb2 {
         // load from a directory of DCM files
         Series (fs::path const &, bool load = true, bool check = true, bool fix = false);
 
+        void save (std::ostream &os) const  {
+            io::write(os, path);
+            size_t sz = size();
+            io::write(os, sz);
+            for (auto const &s: *this) {
+                s.save(os);
+            }
+        }
+        void load (std::istream &is) {
+            io::read(is, &path);
+            size_t sz;
+            io::read(is, &sz);
+            resize(sz);
+            for (auto &s: *this) {
+                s.load(is);
+            }
+        }
+
         // shrink all slices in the series to given bounding box
         void shrink (cv::Rect const &bb); 
 
@@ -334,6 +390,36 @@ namespace adsb2 {
         Study () {};
         // load from a directory of DCM files
         Study (fs::path const &, bool load = true, bool check = true, bool fix = false);
+
+        void save (fs::path const &path) const {
+            fs::ofstream os(path);
+            save(os);
+        }
+
+        void load (fs::path const &path) {
+            fs::ifstream is(path);
+            load(is);
+        }
+
+        void save (std::ostream &os) const  {
+            io::write(os, path);
+            size_t sz = size();
+            io::write(os, sz);
+            for (auto const &s: *this) {
+                s.save(os);
+            }
+        }
+
+        void load (std::istream &is) {
+            io::read(is, &path);
+            size_t sz;
+            io::read(is, &sz);
+            resize(sz);
+            for (auto &s: *this) {
+                s.load(is);
+            }
+        }
+
         bool detect_topdown (bool fix);
         fs::path dir () const {
             return path;

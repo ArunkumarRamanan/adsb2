@@ -94,9 +94,10 @@ namespace adsb2 {
         meta->at(Meta::SERIES_NUMBER) = dicom_get<int>(ff, DCM_SeriesNumber, path);
         meta->trigger_time = dicom_get<float>(ff, DCM_TriggerTime, path);
         meta->spacing = dicom_get<float>(ff, DCM_PixelSpacing, path);
-        meta->cohort = dicom_get<string>(ff, DCM_PerformedProcedureStepID, path);
+        string cohort = dicom_get<string>(ff, DCM_PerformedProcedureStepID, path);
+        meta->cohort = cohort.size() < 10;
         meta->raw_spacing = meta->spacing;
-        meta->AcquisitionMatrix = dicom_gets<float>(ff, DCM_AcquisitionMatrix, path);
+        //meta->AcquisitionMatrix = dicom_gets<float>(ff, DCM_AcquisitionMatrix, path);
         meta->PercentPhaseFieldOfView = dicom_get<float>(ff, DCM_PercentPhaseFieldOfView, path);
         vector<float> pos = dicom_gets<float>(ff, DCM_ImagePositionPatient, path);
         CHECK(pos.size() == 3);
