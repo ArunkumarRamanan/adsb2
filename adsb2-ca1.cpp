@@ -1,5 +1,9 @@
 #include <limits>
 #include <boost/multi_array.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
 #include "adsb2.h"
 
 namespace adsb2 {
@@ -188,20 +192,26 @@ namespace adsb2 {
             return th;
         }
 
-        float contour_avg (cv::Mat image, vector<int> const &ctr, int delta) const {
-            float sum = 0;
+        float contour_avg (cv::Mat image, vector<int> const &ctr, int delta, float *sigma = nullptr) const {
+            namespace ba = boost::accumulators;
+            typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::variance>> Acc;
             CHECK(ctr.size() == image.rows);
+            Acc acc;
+
             for (unsigned i = 0; i < ctr.size(); ++i) {
                 float const *ptr = image.ptr<float const>(i);
                 int x = ctr[i] + delta;
                 if (x < 0) x = 0;
                 if (x >= image.cols) x = image.cols - 1;
-                sum += ptr[x];
+                acc(ptr[x]);
             }
-            return sum / ctr.size();
+            if (sigma) {
+                *sigma = std::sqrt(ba::variance(acc));
+            }
+            return ba::mean(acc);
         }
 
-        float get_dp2_th (cv::Mat image, vector<int> const &ctr) const {
+        float get_dp2_th (cv::Mat image, vector<int> const &ctr, int bound) const {
             float th = 0;
             {
                 float big_mean = cv::mean(image.colRange(0, margin1))[0];
@@ -212,7 +222,7 @@ namespace adsb2 {
                 th = small_mean + (big_mean - small_mean) * thr;
                 */
                 float small_mean = big_mean;
-                for (int i = 0; i < margin2; ++i) {
+                for (int i = 0; i < bound; ++i) {
                     float x = contour_avg(image, ctr, i);
                     if (x < small_mean) small_mean = x;
                 }
@@ -221,20 +231,54 @@ namespace adsb2 {
             return th;
         }
 
-        void shift (cv::Mat image, vector<int> *ctr) const {
-            static const int L = 10;
-            vector<float> dist(2*L+1);
-            float sum = 0;
-            for (int i = -L; i <= L; ++i) {
-                sum += dist[L+i] = contour_avg(image, *ctr, i);
+        // return absolute bound
+        void find_shift (cv::Mat image, vector<int> const &ctr, int *delta, int *bound) const {
+            static const int W = 2;
+            int L1 = margin1;   // 5
+            int L2 = margin2;   // 40
+            vector<float> avg(L1 + L2 +1);       // array index i <-> delta     i - L1
+                                                 //             0                -L1
+                                                 //             L1                 0
+                                                 //             L1 + L2            L2
+            vector<float> grad(avg.size(), 0);   // actually reverse gradient
+            vector<float> sigma(avg.size());
+            for (int i = -L1; i <= L2; ++i) {
+                float s;
+                avg[L1+i] = contour_avg(image, ctr, i, &s);
+                sigma[L1+i] = s;
             }
+            // compute delta
+            int P1 = 0;
+            for (int i = W; i + W < avg.size(); ++i) {
+                grad[i] = avg[i-W] - avg[i+W];
+                if (grad[i] > grad[P1]) {
+                    P1 = i;
+                }
+            }
+            // P1 is roughly a transition point from white to black
+            int P2 = std::max(P1, L1);
+            for (int i = P2; i < sigma.size(); ++i) {
+                if (sigma[i] < sigma[P2]) {
+                    P2 = i;
+                }
+            }
+            // P2 is the point with deepest black
+            //
+            CHECK(P2 < sigma.size());
+
             float best = -std::numeric_limits<float>::max();
             int best_nleft = 0;
             float left = 0;
-            for (unsigned nleft = 1; nleft < dist.size(); ++nleft) {
-                left += dist[nleft-1];
+
+            float sum = 0;
+            for (unsigned i = 0; i <= P2; ++i) {
+                sum += avg[i];
+            }
+
+            for (unsigned nleft = 1; nleft <= P2; ++nleft) {
+                left += avg[nleft-1];
                 float right = sum - left;
-                float nright = dist.size() - nleft;
+                float nright = P2 + 1 - nleft;
 
                 float gap = left / nleft - right / nright;
                 if (gap > best) {
@@ -242,17 +286,15 @@ namespace adsb2 {
                     best_nleft = nleft;
                 }
             }
-            int delta = best_nleft - L;
-            if (delta < 0) delta = 0;
-            delta += extra_delta;
-            if (delta > 0) {
-                for (auto &p: *ctr) {
-                    p += delta;
-                }
+            *delta = best_nleft - L1 + extra_delta;
+            if (*delta < 0) *delta = 0;
+            *bound = P2 + 1 - L1;
+            if (*delta > *bound - 1) {
+                *delta = *bound - 1;
             }
         }
 
-        void helper (Slice *slice) const {
+        void helper (Slice *slice, vector<int> *plb = nullptr, int *pbound = nullptr) const {
             cv::Mat image = slice->images[IM_POLAR];
             cv::Mat prob = slice->images[IM_POLAR_PROB];
             int rows = image.rows;
@@ -270,14 +312,23 @@ namespace adsb2 {
             }
             if (do_extend) {
                 // extend 1
-                shift(image, &contour);
+                int delta, bound;
+                find_shift(image, contour, &delta, &bound);
+                if (plb) *plb = contour;
+                if (pbound) *pbound = bound;
+                if (delta > 0) {
+                    for (auto &v: contour) {
+                        v += delta;
+                    }
+                }
+                bound -= delta;
                 if (slice->data[SL_TSCORE] < top_th) {
                     vector<std::pair<int, int>> range2(rows);
                     for (int i = 0; i < rows; ++i) {
                         range2[i].first = contour[i] - 0;
-                        range2[i].second = contour[i] + margin2;
+                        range2[i].second = std::min(contour[i] + bound, cols);
                     }
-                    float th = get_dp2_th(image, contour);
+                    float th = get_dp2_th(image, contour, bound);
                     ws.run(range2, &contour, 0, true, th, ndisc, smooth2, gap);
                 }
             }
@@ -299,6 +350,9 @@ namespace adsb2 {
             ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2))
         {
         }
+        void apply_slice (Slice *s, vector<int> *plb, int *pbound) {
+            helper(s, plb, pbound);
+        }
         void apply_slice (Slice *s) {
             helper(s);
         }
@@ -317,7 +371,9 @@ namespace adsb2 {
             slice.polar_box = cv::Rect();
             return;
         }
-        ca1.apply_slice(&slice);
+        vector<int> lb;
+        int bound;
+        ca1.apply_slice(&slice, &lb, &bound);
         if (slice.polar_contour.empty()) {
             slice.data[SL_AREA] = 0;
             return;
@@ -389,6 +445,12 @@ namespace adsb2 {
                 cv::line(vis, cv::Point(cc[i-1], i-1), cv::Point(cc[i], i), cv::Scalar(-0xFF), 2);
             }
             linearPolar(vis, &vis_cart, slice.polar_C, slice.polar_R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS + CV_WARP_INVERSE_MAP);
+            if (lb.size()) { 
+                for (int i = 1; i < cc.size(); ++i) {
+                        cv::line(vis, cv::Point(lb[i-1], i-1), cv::Point(lb[i], i), cv::Scalar(-0xFF), 1);
+                        cv::line(vis, cv::Point(lb[i-1] + bound, i-1), cv::Point(lb[i] + bound, i), cv::Scalar(-0xFF), 1);
+                }
+            }
             hconcat3(slice.images[IM_POLAR] + vis, slice.images[IM_POLAR_PROB] * 255 + vis, slice.images[IM_IMAGE] + vis_cart, &slice._extra);
         }
     }
