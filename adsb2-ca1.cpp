@@ -371,7 +371,7 @@ namespace adsb2 {
         CA1 (Config const &conf)
             : margin1(conf.get<int>("adsb2.ca1.margin1", 5)),
             margin2(conf.get<int>("adsb2.ca1.margin2", 40)),
-            thr1(conf.get<float>("adsb2.ca1.th1", 0.8)),
+            thr1(conf.get<float>("adsb2.ca1.th1", 0.85)),
             thr2(conf.get<float>("adsb2.ca1.th2", 0.05)),
             smooth1(conf.get<float>("adsb2.ca1.smooth1", 10)),
             smooth2(conf.get<float>("adsb2.ca1.smooth2", 255)),
