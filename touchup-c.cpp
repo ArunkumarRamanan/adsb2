@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&paths), "")
     ("scale,s", po::value(&scale)->default_value(1.2), "")
-    ("detail", "")
+    ("keep-tail", "")
     ("method", po::value(&method), "")
     ("train", po::value(&train_path), "")
     ("round1", po::value(&round1)->default_value(2000), "")
@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
-    bool detail = vm.count("detail") > 0;
+    bool detail = !(vm.count("keep-detail") > 0);
     bool clinical = vm.count("clinical") > 0;
 
     if (paths.empty()) {

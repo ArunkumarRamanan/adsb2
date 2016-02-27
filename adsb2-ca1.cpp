@@ -170,6 +170,7 @@ namespace adsb2 {
         bool do_extend;
         float top_th;
         float ndisc;
+        float ctrpct;
 #if 0
         float penalty (float dx) const {
             float v = smooth * dx;
@@ -192,18 +193,47 @@ namespace adsb2 {
             return th;
         }
 
-        float contour_avg (cv::Mat image, vector<int> const &ctr, int delta, float *sigma = nullptr) const {
-            namespace ba = boost::accumulators;
-            typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::variance>> Acc;
+        float contour_avg (cv::Mat image, vector<int> const &ctr, int delta, float pct, int sign, float *sigma = nullptr) const {
             CHECK(ctr.size() == image.rows);
-            Acc acc;
-
+            vector<float> v;
+            // extract color along the contour
             for (unsigned i = 0; i < ctr.size(); ++i) {
                 float const *ptr = image.ptr<float const>(i);
                 int x = ctr[i] + delta;
                 if (x < 0) x = 0;
                 if (x >= image.cols) x = image.cols - 1;
-                acc(ptr[x]);
+                v.push_back(x);
+            }
+            CHECK(v.size() == ctr.size());
+
+            int N = ctr.size() * pct;
+            if (N > ctr.size()) N = ctr.size();
+
+            int best_begin = 0;
+
+            if (N < ctr.size()) {
+                // replicate once
+                for (unsigned i = 0; i < ctr.size(); ++i) {
+                    v.push_back(v[i]);
+                }
+                v.push_back(v.front()); // and add head again
+                vector<float> intv(v.size());
+                std::partial_sum(v.begin(), v.end(), intv.begin());
+                float best_diff = std::numeric_limits<float>::max() * sign;
+                for (unsigned i = 0; i + N < intv.size(); ++i) {
+                    float diff = (intv[i+N] - intv[i]) * sign;
+                    if (diff < best_diff) {
+                        best_begin = i;
+                        best_diff = diff;
+                    }
+                }
+            }
+
+            namespace ba = boost::accumulators;
+            typedef ba::accumulator_set<double, ba::stats<ba::tag::mean, ba::tag::variance>> Acc;
+            Acc acc;
+            for (unsigned i = 0; i < N; ++i) {
+                acc(v[best_begin + i]);
             }
             if (sigma) {
                 *sigma = std::sqrt(ba::variance(acc));
@@ -223,7 +253,7 @@ namespace adsb2 {
                 */
                 float small_mean = big_mean;
                 for (int i = 0; i < bound; ++i) {
-                    float x = contour_avg(image, ctr, i);
+                    float x = contour_avg(image, ctr, i, ctrpct, 1);
                     if (x < small_mean) small_mean = x;
                 }
                 th = small_mean + (big_mean - small_mean) * thr2;
@@ -236,6 +266,7 @@ namespace adsb2 {
             static const int W = 2;
             int L1 = margin1;   // 5
             int L2 = margin2;   // 40
+            vector<float> wavg(L1 + L2 +1);       // array index i <-> delta     i - L1
             vector<float> avg(L1 + L2 +1);       // array index i <-> delta     i - L1
                                                  //             0                -L1
                                                  //             L1                 0
@@ -244,13 +275,14 @@ namespace adsb2 {
             vector<float> sigma(avg.size());
             for (int i = -L1; i <= L2; ++i) {
                 float s;
-                avg[L1+i] = contour_avg(image, ctr, i, &s);
+                wavg[L1+i] = contour_avg(image, ctr, i, 1, -1, &s);
+                avg[L1+i] = contour_avg(image, ctr, i, ctrpct, 1, &s);
                 sigma[L1+i] = s;
             }
             // compute delta
             int P1 = 0;
             for (int i = W; i + W < avg.size(); ++i) {
-                grad[i] = avg[i-W] - avg[i+W];
+                grad[i] = wavg[i-W] - avg[i+W];
                 if (grad[i] > grad[P1]) {
                     P1 = i;
                 }
@@ -347,7 +379,9 @@ namespace adsb2 {
             gap(conf.get<int>("adsb2.ca1.gap", 7)),
             do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0),
             top_th(conf.get<float>("adsb2.ca1.top_th", 0.95)),
-            ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2))
+            ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2)),
+            ctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8))
+
         {
         }
         void apply_slice (Slice *s, vector<int> *plb, int *pbound) {
