@@ -168,7 +168,6 @@ namespace adsb2 {
         float thr2;
         int extra_delta;
         bool do_extend;
-        float top_th;
         float ndisc;
         float wctrpct;
         float bctrpct;
@@ -354,15 +353,13 @@ namespace adsb2 {
                 find_shift(image, contour, &bound);
                 if (plb) *plb = contour;
                 if (pbound) *pbound = bound;
-                if (slice->data[SL_TSCORE] < top_th) {
-                    vector<std::pair<int, int>> range2(rows);
-                    for (int i = 0; i < rows; ++i) {
-                        range2[i].first = contour[i] - 0;
-                        range2[i].second = std::min(contour[i] + bound, cols);
-                    }
-                    float th = get_dp2_th(image, contour, bound);
-                    ws.run(range2, &contour, 0, true, th, ndisc, smooth2, gap);
+                vector<std::pair<int, int>> range2(rows);
+                for (int i = 0; i < rows; ++i) {
+                    range2[i].first = contour[i] - 0;
+                    range2[i].second = std::min(contour[i] + bound, cols);
                 }
+                float th = get_dp2_th(image, contour, bound);
+                ws.run(range2, &contour, 0, true, th, ndisc, smooth2, gap);
             }
             slice->polar_contour.swap(contour);
         }
@@ -378,7 +375,6 @@ namespace adsb2 {
             extra_delta(conf.get<int>("adsb2.ca1.extra", 0)),
             gap(conf.get<int>("adsb2.ca1.gap", 7)),
             do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0),
-            top_th(conf.get<float>("adsb2.ca1.top_th", 0.95)),
             ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2)),
             wctrpct(conf.get<float>("adsb2.ca1.wctrpct", 0.9)),
             bctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8))

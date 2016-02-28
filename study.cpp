@@ -167,6 +167,7 @@ int main(int argc, char **argv) {
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (!snapshot_path.empty()) {
+        fs::create_directories(snapshot_path.parent_path());
         study.save(snapshot_path);
     }
     if (!dir.empty()) {
