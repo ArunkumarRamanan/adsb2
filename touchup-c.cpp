@@ -270,6 +270,7 @@ int main(int argc, char **argv) {
     ("clinical", "")
     ("top", "")
     ("top-th", po::value(&top_th)->default_value(1.0), "")
+    ("cohort", "")
     ;
 
     po::positional_options_description p;
@@ -289,6 +290,7 @@ int main(int argc, char **argv) {
     }
     bool detail = !(vm.count("keep-tail") > 0);
     bool clinical = vm.count("clinical") > 0;
+    bool do_cohort = vm.count("cohort") > 0;
 
     if (paths.empty()) {
         string p;
@@ -318,7 +320,7 @@ int main(int argc, char **argv) {
     }
 
     unordered_map<int, int> cohort;
-    {
+    if (do_cohort) {
         int id, c;
         fs::ifstream is(home_dir/fs::path("cohort"));
         while (is >> id >> c) {
@@ -345,9 +347,11 @@ int main(int argc, char **argv) {
     Classifier *error_dia = 0;
     if (level >= 1) {
         target_sys[0] = Classifier::get("target.sys.0");
-        target_sys[1] = Classifier::get("target.sys.1");
         target_dia[0] = Classifier::get("target.dia.0");
-        target_dia[1] = Classifier::get("target.dia.1");
+        if (do_cohort) {
+            target_sys[1] = Classifier::get("target.sys.1");
+            target_dia[1] = Classifier::get("target.dia.1");
+        }
     }
     if (level >= 2) {
         error_sys = Classifier::get("error.sys");
@@ -389,7 +393,7 @@ int main(int argc, char **argv) {
             sys1, dia1, sys2, dia2,
         };
         int cid = 0;
-        if (cohort.size()) {
+        if (do_cohort && cohort.size()) {
             auto it = cohort.find(s.study);
             CHECK(it != cohort.end());
             cid = it->second;
@@ -436,11 +440,18 @@ int main(int argc, char **argv) {
     }
     if (method == "train1") {
         vector<Sample> c0, c1;
-        split_by_cohort(samples, cohort, &c0, &c1);
+        if (do_cohort) {
+            split_by_cohort(samples, cohort, &c0, &c1);
+        }
+        else {
+            c0 = samples;
+        }
         run_train(c0, 1, 0, root/fs::path("d.target.sys.0"), train_set, root/fs::path("target.sys.0"), round1);
         run_train(c0, 1, 1, root/fs::path("d.target.dia.0"), train_set, root/fs::path("target.dia.0"), round1);
-        run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"), round1);
-        run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"), round1);
+        if (do_cohort) {
+            run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"), round1);
+            run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"), round1);
+        }
     }
     else if (method == "train2") {
         run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set, root/fs::path("error.sys"), round2);

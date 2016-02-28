@@ -189,8 +189,12 @@ namespace adsb2 {
                 float big_mean = cv::mean(image.colRange(0, margin1))[0];
                 float small_mean = cv::mean(image.colRange(image.cols - margin1, image.cols))[0];
                 //cerr << left_mean << ' ' << right_mean << endl;
-                if (!(small_mean < big_mean)) return std::max(small_mean, big_mean);
-                th = small_mean + (big_mean - small_mean) * thr1;
+                if (!(small_mean < big_mean)) {
+                    th = std::max(small_mean, big_mean);
+                }
+                else {
+                    th = small_mean + (big_mean - small_mean) * thr1;
+                }
             }
             ths->resize(image.rows);
             for (auto &v: *ths) {
@@ -269,7 +273,7 @@ namespace adsb2 {
                     if (x >= image.cols) x = image.cols - 1;
                     if (ptr[x] < small) small = ptr[x];
                 }
-                th = small_mean + (big_mean - small) * thr2;
+                th = small + (big_mean - small) * thr2;
                 ths->at(y) = th;
             }
         }
