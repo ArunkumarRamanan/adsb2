@@ -3,6 +3,9 @@
 #include <unordered_map>
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
@@ -14,6 +17,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <snappystream.hpp>
 #include "adsb2.h"
 #include "adsb2-io.h"
 
@@ -875,6 +879,28 @@ namespace adsb2 {
         }
         return topdown;
     }
+
+    void Study::save (fs::path const &path) const {
+        fs::ofstream os(path);
+        if (!os.is_open()) return;
+        snappy::oSnappyStream osnstrm(os);
+        save(osnstrm);
+    }
+
+    void Study::load (fs::path const &path) {
+        //using boost::iostreams;
+        fs::ifstream is(path);
+        if (!is.is_open()) return;
+        snappy::iSnappyStream isnstrm(is);
+        /*
+        filtering_streambuf<input> in;
+        in.push(gzip_decompressor());
+        in.push(is);
+        load(in);
+        */
+        load(isnstrm);
+    }
+
 
     static constexpr float LOCATION_GAP_EPSILON = 0.01;
     static inline bool operator < (Series const &s1, Series const &s2) {

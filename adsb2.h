@@ -395,15 +395,9 @@ namespace adsb2 {
 
         void load_raw (fs::path const &, bool load = true, bool check = true, bool fix = false);
 
-        void save (fs::path const &path) const {
-            fs::ofstream os(path);
-            save(os);
-        }
+        void save (fs::path const &path) const;
 
-        void load (fs::path const &path) {
-            fs::ifstream is(path);
-            load(is);
-        }
+        void load (fs::path const &path);
 
         void save (std::ostream &os) const  {
             io::write(os, path);

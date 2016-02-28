@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
     vector<string> overrides;
     fs::path input_path;
     fs::path dir;
+    fs::path snapshot_path;
     int ca;
     /*
     string output_dir;
@@ -40,6 +41,7 @@ int main(int argc, char **argv) {
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&input_path), "")
     ("snapshot,s", "input is snapshot")
+    ("os", po::value(&snapshot_path), "")
     ("output,o", po::value(&dir), "")
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
@@ -164,10 +166,12 @@ int main(int argc, char **argv) {
     
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
+    if (!snapshot_path.empty()) {
+        study.save(snapshot_path);
+    }
     if (!dir.empty()) {
         cerr << "Saving output..." << endl;
         fs::create_directories(dir);
-        study.save(dir/fs::path("study"));
         {
             fs::ofstream vol(dir/fs::path("volume.txt"));
             vol << min.mean << '\t' << std::sqrt(min.var)

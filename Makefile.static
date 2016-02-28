@@ -4,7 +4,7 @@ OPENMP = -fopenmp
 VERSION=$(shell git describe --always)
 BUILD_INFO=-DADSB2_VERSION=\"$(VERSION)\"
 CXXFLAGS += $(OPENMP) $(BUILD_INFO) -g -O3 -std=c++11 -I/opt/caffe-fcn/include -Icaffex-fcn -DCPU_ONLY=1
-LDFLAGS += $(OPENMP) -L/opt/caffe-fcn/lib -static
+LDFLAGS += $(OPENMP)  -L/opt/caffe-fcn/lib -static
 #LDLIBS = -lopencv_imgproc -lopencv_imgcodecs -lopencv_core -lboost_timer -lboost_chrono -lboost_thread -lboost_system -lboost_program_options -lboost_filesystem 
 LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lxgboost \
@@ -17,6 +17,7 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lprotoc -lprotobuf -lglog -lgflags -lleveldb -llmdb \
 	 -lhdf5_hl -lhdf5 \
 	 -ljson11 \
+	 -lsnappystream \
 	 -ldcmimgle -ldcmdata -loflog -lofstd \
 	 -ljpeg -lpng -ltiff -lgif -ljasper  \
 	 -lsnappy -lz \
