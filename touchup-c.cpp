@@ -3,6 +3,15 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/moment.hpp>
+#include <boost/accumulators/statistics/count.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
+#include <boost/accumulators/statistics/covariance.hpp>
 #include <boost/program_options.hpp>
 #include <glog/logging.h>
 #include "adsb2.h"
@@ -13,6 +22,23 @@ namespace adsb2 {
 
 using namespace std;
 using namespace adsb2;
+
+void eval_v (vector<float> const &v1,
+             vector<float> const &v2,
+             vector<float> *out) {
+    CHECK(v1.size() == v2.size());
+    out->clear();
+    float corr = cv::compareHist(v1, v2, CV_COMP_CORREL);
+    out->push_back(corr);
+    float err = 0;
+    for (unsigned i = 0; i < v1.size(); ++i) {
+        float x = v1[i] - v2[i];
+        err += x * x;
+    }
+    err /= v1.size();
+    err = sqrt(err);
+    out->push_back(err);
+}
 
 float top_th;
 void patch_top_bottom (StudyReport &rep) {
@@ -127,7 +153,8 @@ struct Sample {
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
-    float sys, dia;
+    float sys1, dia1;
+    float sys2, dia2;
     vector<float> sys_v;
     vector<float> dia_v;
 };
@@ -249,6 +276,7 @@ int main(int argc, char **argv) {
     string method;
     string ws;
     fs::path data_root;
+    fs::path buddy;
     int round1, round2;
     float scale;
 
@@ -271,6 +299,7 @@ int main(int argc, char **argv) {
     ("top", "")
     ("top-th", po::value(&top_th)->default_value(1.0), "")
     ("cohort", "")
+    ("buddy", po::value(&buddy), "")
     ;
 
     po::positional_options_description p;
@@ -384,14 +413,35 @@ int main(int argc, char **argv) {
             sys1 = sys2;
             dia1 = dia2;
         }
-        s.sys = sys1;
-        s.dia = dia1;
+        s.sys1 = sys1;
+        s.dia1 = dia1;
+        s.sys2 = sys2;
+        s.dia2 = dia2;
         auto &front = x[0][0];
         //front.reprobe_meta(data_root);
         vector<float> ft{
             front.meta[Meta::SEX], front.meta[Meta::AGE],
             sys1, dia1, sys2, dia2,
         };
+        if (!buddy.empty()) {
+            fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
+            StudyReport bx(buddy_path);
+            float sys1, dia1, sys2, dia2;
+            if (detail) {
+                for (auto &s: bx.back()) {
+                    s.data[SL_AREA] = 0;
+                }
+            }
+            compute2(bx, &sys2, &dia2);
+            if (!compute1(bx, &sys1, &dia1)) {
+                sys1 = sys2;
+                dia1 = dia2;
+            }
+            ft.push_back(sys1);
+            ft.push_back(dia1);
+            ft.push_back(sys2);
+            ft.push_back(dia2);
+        }
         int cid = 0;
         if (do_cohort && cohort.size()) {
             auto it = cohort.find(s.study);
@@ -419,24 +469,69 @@ int main(int argc, char **argv) {
     }
 
     if (method == "show") {
-        float dsys = 0;
-        float ddia = 0;
-        float dall = 0;
+        namespace ba = boost::accumulators;
+        vector<float> sys_1, sys_2, sys_t;
+        vector<float> dia_1, dia_2, dia_t;
         for (auto &s: samples) {
-            float d = s.sys_t - s.sys;
+            sys_1.push_back(s.sys1);
+            sys_2.push_back(s.sys2);
+            sys_t.push_back(s.sys_t);
+
+            dia_1.push_back(s.dia1);
+            dia_2.push_back(s.dia2);
+            dia_t.push_back(s.dia_t);
+
             cout << s.study << "_Systole\t";
-            cout << d << '\t' << s.sys_t << '\t' << s.sys << endl;
-            dsys += d * d;
-            dall += d * d;
-            d = s.dia_t - s.dia;
+            cout << (s.sys_t - s.sys1) << '\t' << (s.sys_t - s.sys2) << '\t' << s.sys_t << '\t' << s.sys1 << '\t' << s.sys2 << endl;
             cout << s.study << "_Diastole\t";
-            cout << d << '\t' << s.dia_t << '\t' << s.dia << endl;
-            ddia += d * d;
-            dall += d * d;
+            cout << (s.dia_t - s.dia1) << '\t' << (s.dia_t - s.dia2) << '\t' << s.dia_t << '\t' << s.dia1 << '\t' << s.dia2 << endl;
         }
-        cout << "sys: " << sqrt(dsys / samples.size()) << endl;
-        cout << "dia: " << sqrt(ddia / samples.size()) << endl;
-        cout << "all: " << sqrt(dall / samples.size()/2) << endl;
+        vector<float> mm;
+        cout << "sys";
+        eval_v(sys_1, sys_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        /*
+        cout << endl;
+        cout << "sys2";
+        */
+        eval_v(sys_2, sys_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        cout << endl;
+        cout << "dia";
+        eval_v(dia_1, dia_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        /*
+        cout << endl;
+        cout << "dia2";
+        */
+        eval_v(dia_2, dia_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        cout << endl;
+        sys_t.insert(sys_t.end(), dia_t.begin(), dia_t.end());
+        sys_1.insert(sys_1.end(), dia_1.begin(), dia_1.end());
+        eval_v(sys_1, sys_t, &mm);
+        cout << "all";
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        /*
+        cout << endl;
+        cout << "all2";
+        */
+        sys_2.insert(sys_2.end(), dia_2.begin(), dia_2.end());
+        eval_v(sys_2, sys_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        cout << endl;
     }
     if (method == "train1") {
         vector<Sample> c0, c1;

@@ -173,6 +173,7 @@ namespace adsb2 {
         float wctrpct;
         float bctrpct;
         int mink;
+        int W;
 #if 0
         float penalty (float dx) const {
             float v = smooth * dx;
@@ -280,7 +281,6 @@ namespace adsb2 {
 
         // return absolute bound
         void find_shift (cv::Mat image, vector<int> const &ctr, int *bound) const {
-            static const int W = 2;
             int L1 = margin1;   // 5
             int L2 = margin2;   // 40
             vector<float> wavg(L1 + L2 +1);       // array index i <-> delta     i - L1
@@ -397,7 +397,8 @@ namespace adsb2 {
             ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2)),
             wctrpct(conf.get<float>("adsb2.ca1.wctrpct", 0.9)),
             bctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8)),
-            mink(conf.get<int>("adsb2.ca1.mink", 3))
+            mink(conf.get<int>("adsb2.ca1.mink", 3)),
+            W(conf.get<int>("adsb2.ca1.W", 2))
         {
         }
         void apply_slice (Slice *s, vector<int> *plb, int *pbound) {
