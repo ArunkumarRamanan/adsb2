@@ -184,7 +184,15 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
 void run_eval (vector<Sample> &ss) {
     Eval eval;
     float sum = 0;
+    float dsys = 0;
+    float ddia = 0;
+    float dall = 0;
     for (auto &s: ss) {
+        dsys += sqr(s.sys_t - s.sys_p);
+        dall += sqr(s.sys_t - s.sys_p);
+        ddia += sqr(s.dia_t - s.dia_p);
+        dall += sqr(s.dia_t - s.dia_p);
+
         float sys_x = eval.score(s.study, 0, s.sys_v);
         float dia_x = eval.score(s.study, 1, s.dia_v);
         sum += sys_x + dia_x;
@@ -192,6 +200,9 @@ void run_eval (vector<Sample> &ss) {
         cout << s.study << "_Diastole" << '\t' << dia_x << '\t' << s.dia_t << '\t' << s.dia_p << '\t' << (s.dia_t - s.dia_p) << '\t' << s.dia_e << endl;
     }
     cout << sum / (ss.size() *2) << endl;
+    cout << "sys: " << sqrt(dsys / ss.size()) << endl;
+    cout << "dia: " << sqrt(ddia / ss.size()) << endl;
+    cout << "all: " << sqrt(dall / ss.size()/2) << endl;
 }
 
 void run_submit (vector<Sample> &ss) {
@@ -276,7 +287,7 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
-    bool detail = !(vm.count("keep-detail") > 0);
+    bool detail = !(vm.count("keep-tail") > 0);
     bool clinical = vm.count("clinical") > 0;
 
     if (paths.empty()) {
