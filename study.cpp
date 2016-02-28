@@ -23,8 +23,8 @@ int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
-    string input_dir;
-    string output_dir;
+    fs::path input_path;
+    fs::path dir;
     int ca;
     /*
     string output_dir;
@@ -38,8 +38,9 @@ int main(int argc, char **argv) {
     ("help,h", "produce help message.")
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
-    ("input,i", po::value(&input_dir), "")
-    ("output,o", po::value(&output_dir), "")
+    ("input,i", po::value(&input_path), "")
+    ("snapshot,s", "input is snapshot")
+    ("output,o", po::value(&dir), "")
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
     ("no-gif", "")
@@ -65,7 +66,7 @@ int main(int argc, char **argv) {
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
-    if (vm.count("help") || input_dir.empty()) {
+    if (vm.count("help") || input_path.empty()) {
         cerr << "ADSB2 VERSION: " << VERSION << endl;
         cerr << desc;
         return 1;
@@ -85,56 +86,62 @@ int main(int argc, char **argv) {
     Cook cook(config);
 
     timer::auto_cpu_timer timer(cerr);
-    Study study(input_dir, true, true, true);
-    cook.apply(&study);
-    cv::Rect bound;
-    /*
-    string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
-    if (vm.count("bound")) {
-        Detector *bb_det = make_caffe_detector(bound_model);
-        Bound(bb_det, &study, &bound, config);
-        delete bb_det;
+    Study study;
+    if (vm.count("snapshot")) {
+        study.load(input_path);
     }
-    */
-    vector<Slice *> slices;
-    study.pool(&slices);
-    if (vm.count("top")) {
-        ComputeTop(&study, config);
-    }
-#ifdef USE_TOP
-    for (auto &ss: study) {
-        float sum = 0;
-        for (auto &s: ss) {
-            sum += s.data[SL_TSCORE];
+    else {
+        study.load_raw(input_path, true, true, true);
+        cook.apply(&study);
+        cv::Rect bound;
+        /*
+        string bound_model = config.get("adsb2.caffe.bound_model", (home_dir/fs::path("bound_model")).native());
+        if (vm.count("bound")) {
+            Detector *bb_det = make_caffe_detector(bound_model);
+            Bound(bb_det, &study, &bound, config);
+            delete bb_det;
         }
-        sum /= ss.size();
-        if (sum > 0.8) {
+        */
+        vector<Slice *> slices;
+        study.pool(&slices);
+        if (vm.count("top")) {
+            ComputeTop(&study, config);
+        }
+#ifdef USE_TOP
+        for (auto &ss: study) {
+            float sum = 0;
             for (auto &s: ss) {
-                s.images[IM_IMAGE2] = s.images[IM_IMAGE];
-                s.images[IM_IMAGE] = cv::Mat();
+                sum += s.data[SL_TSCORE];
+            }
+            sum /= ss.size();
+            if (sum > 0.8) {
+                for (auto &s: ss) {
+                    s.images[IM_IMAGE2] = s.images[IM_IMAGE];
+                    s.images[IM_IMAGE] = cv::Mat();
+                }
             }
         }
-    }
 #endif
-    ComputeBoundProb(&study);
+        ComputeBoundProb(&study);
 #ifdef USE_TOP
-    ApplyDetector("top_bound", &study, IM_IMAGE2, IM_PROB2, 1.0, 0);
-    for (Slice *s: slices) {
-        if (s->images[IM_PROB2].data) {
-            s->images[IM_PROB] = s->images[IM_PROB2];
-            s->images[IM_IMAGE] = s->images[IM_IMAGE2];
+        ApplyDetector("top_bound", &study, IM_IMAGE2, IM_PROB2, 1.0, 0);
+        for (Slice *s: slices) {
+            if (s->images[IM_PROB2].data) {
+                s->images[IM_PROB] = s->images[IM_PROB2];
+                s->images[IM_IMAGE] = s->images[IM_IMAGE2];
+            }
         }
-    }
 #endif
-    cerr << "Filtering..." << endl;
-    ProbFilter(&study, config);
-    cerr << "Finding squares..." << endl;
+        cerr << "Filtering..." << endl;
+        ProbFilter(&study, config);
+        cerr << "Finding squares..." << endl;
 #pragma omp parallel for schedule(dynamic, 1)
-    for (unsigned i = 0; i < slices.size(); ++i) {
-        FindBox(slices[i], config);
-    }
+        for (unsigned i = 0; i < slices.size(); ++i) {
+            FindBox(slices[i], config);
+        }
 
-    ComputeContourProb(&study, config);
+        ComputeContourProb(&study, config);
+    }
     study_CA1(&study, config, true);
     if (vm.count("bottom")) {
         EvalBottom(&study, config);
@@ -157,9 +164,8 @@ int main(int argc, char **argv) {
     
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
-    if (output_dir.size()) {
+    if (!dir.empty()) {
         cerr << "Saving output..." << endl;
-        fs::path dir(output_dir);
         fs::create_directories(dir);
         study.save(dir/fs::path("study"));
         {

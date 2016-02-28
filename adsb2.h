@@ -389,7 +389,11 @@ namespace adsb2 {
         static void probe (fs::path const &, Meta *meta);
         Study () {};
         // load from a directory of DCM files
-        Study (fs::path const &, bool load = true, bool check = true, bool fix = false);
+        Study (fs::path const &path, bool load = true, bool check = true, bool fix = false) {
+            load_raw(path, load, check, fix);
+        }
+
+        void load_raw (fs::path const &, bool load = true, bool check = true, bool fix = false);
 
         void save (fs::path const &path) const {
             fs::ofstream os(path);

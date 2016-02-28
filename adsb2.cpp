@@ -419,7 +419,8 @@ namespace adsb2 {
         io::write(os, line);
 
         int anno_id = 0;
-        if (anno == &box_anno_ops) anno_id = 1;
+        if (anno == nullptr) anno_id = 0;
+        else if (anno == &box_anno_ops) anno_id = 1;
         else if (anno == &poly_anno_ops) anno_id = 2;
         else if (anno == &pred_anno_ops) anno_id = 3;
         else CHECK(0) << "unknown annotation type.";
@@ -451,7 +452,8 @@ namespace adsb2 {
 
         int anno_id = 0;
         io::read(is, &anno_id);
-        if (anno_id == 1) anno = &box_anno_ops;
+        if (anno_id == 0) anno = nullptr;
+        else if (anno_id == 1) anno = &box_anno_ops;
         else if (anno_id == 2) anno = &poly_anno_ops;
         else if (anno_id == 3) anno = &pred_anno_ops;
         else CHECK(0) << "unknown annotation type.";
@@ -819,7 +821,8 @@ namespace adsb2 {
         CHECK(0) << "no DCM file found/loaded.";
     }
 
-    Study::Study (fs::path const &path_, bool load, bool check, bool fix): path(path_) {
+    void Study::load_raw (fs::path const &path_, bool load, bool check, bool fix) {
+        path = path_;
         // enumerate DCM files
         vector<fs::path> paths;
         fs::directory_iterator end_itr;
