@@ -1,5 +1,6 @@
 #include <sstream>
 #include <unordered_set>
+#include <unordered_map>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -12,6 +13,9 @@
 #include <boost/accumulators/statistics/max.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
 #include <boost/accumulators/statistics/covariance.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/program_options.hpp>
 #include <glog/logging.h>
 #include "adsb2.h"
@@ -149,7 +153,8 @@ void dump_ft (vector<float> const &ft, ostream &os) {
 
 struct Sample {
     int study;
-    vector<float> ft;
+    vector<float> tft;
+    vector<float> eft;
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
@@ -157,6 +162,7 @@ struct Sample {
     float sys2, dia2;
     vector<float> sys_v;
     vector<float> dia_v;
+    bool good;
 };
 
 void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, unordered_set<int> const &train,
@@ -172,18 +178,21 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
     int ntest = 0;
     for (auto &s: ss) {
         float target;
+        vector<float> *ft;
         if (level == 1) {
             target = (mode == 0) ? s.sys_t : s.dia_t;
+            ft = &s.tft;
         }
         else if (level == 2) {
             target = (mode == 0) ? fabs(s.sys_t - s.sys_p) : fabs(s.dia_t - s.dia_p);
+            ft = &s.eft;
         }
         else CHECK(0);
         bool is_train = (train.empty() || train.count(s.study));
         ostream &os = is_train ? os_train : os_test;
         if (!is_train) ++ntest;
         os << target;
-        dump_ft(s.ft, os);
+        dump_ft(*ft, os);
         os << endl;
     }
     if (!model.empty()) {
@@ -267,37 +276,134 @@ void split_by_cohort (vector<Sample> const &s,
 }
 
 
+void load_submit_file (fs::path const &path, unordered_map<int, Sample> *data) {
+    data->clear();
+    fs::ifstream is(path);
+    string line;
+    getline(is, line);  // first line
+    while (getline(is, line)) {
+        using namespace boost::algorithm;
+        vector<string> ss;
+        split(ss, line, is_any_of(",_"), token_compress_on);
+        CHECK(ss.size() == Eval::VALUES + 2);
+        int n = lexical_cast<int>(ss[0]);
+        vector<float> x;
+        for (unsigned i = 0; i < Eval::VALUES; ++i) {
+            x.push_back(lexical_cast<float>(ss[2 + i]));
+        }
+        if (ss[1] == "Systole") {
+            data->at(n).sys_v.swap(x);
+        }
+        else if (ss[1] == "Diastole") {
+            data->at(n).dia_v.swap(x);
+        }
+        else CHECK(0);
+    }
+}
+
+class Xtor {
+public:
+    ~Xtor () {}
+    virtual bool apply (StudyReport const &rep,
+                Sample *) const = 0;
+    static Xtor *create (string const &name);
+};
+
+class ClinicalXtor: public Xtor {
+public:
+    bool apply (StudyReport const &rep,
+                Sample *s) const {
+        auto const &front = rep[0][0];
+        s->tft.clear();
+        s->tft.push_back(front.meta[Meta::SEX]);
+        s->tft.push_back(front.meta[Meta::AGE]);
+        s->eft = s->tft;
+        return true;
+    }
+};
+
+class OneSaxXtor: public Xtor {
+public:
+    bool apply (StudyReport const &rep,
+                Sample *s) const {
+        return false;
+    }
+};
+
+
+class FullXtor: public Xtor {
+public:
+    bool apply (StudyReport const &rep,
+                Sample *s) const {
+        if (rep.size() < 4) return false;
+        float sys1, dia1;
+        float sys2, dia2;
+        compute2(rep, &sys2, &dia2);
+        if (!compute1(rep, &sys1, &dia1)) {
+            sys1 = sys2;
+            dia1 = dia2;
+        }
+        auto const &front = rep[0][0];
+        vector<float> ft{
+            front.meta[Meta::SEX], front.meta[Meta::AGE],
+            sys1, dia1, sys2, dia2,
+        };
+        s->sys1 = sys1;
+        s->dia1 = dia1;
+        s->sys2 = sys2;
+        s->dia2 = dia2;
+        s->tft = ft;
+        s->eft = ft;
+        return true;
+    }
+};
+
+Xtor *Xtor::create (string const &name) {
+    if (name == "cli") return new ClinicalXtor;
+    if (name == "one") return new OneSaxXtor;
+    if (name == "full") return new FullXtor;
+    CHECK(0);
+    return nullptr;
+}
+
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
     vector<string> paths;
-    string train_path;
+    string train_path;  // only use IDs in this file for training
     string method;
-    string ws;
+    string xtor_name;
+    fs::path root;  //working directory
+    string algo;
     fs::path data_root;
     fs::path buddy;
+    fs::path fallback_path;
     int round1, round2;
     float scale;
+    
 
     po::options_description desc("Allowed options");
     desc.add_options()
     ("help,h", "produce help message.")
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
-    ("input,i", po::value(&paths), "")
+    ("input,i", po::value(&paths), "report files")
     ("scale,s", po::value(&scale)->default_value(1.2), "")
     ("keep-tail", "")
     ("method", po::value(&method), "")
-    ("train", po::value(&train_path), "")
+    ("train", po::value(&train_path), "limit training in these study IDs")
     ("round1", po::value(&round1)->default_value(2000), "")
     ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
     ("root", po::value(&data_root), "")
-    ("ws,w", po::value(&ws), "")
-    ("clinical", "")
+    ("ws,w", po::value(&root), "working directory")
+    ("fallback", po::value(&fallback_path), "")
+    ("xtor", po::value(&xtor_name)->default_value("full"), "")
+    /*
     ("top", "")
     ("top-th", po::value(&top_th)->default_value(1.0), "")
+    */
     ("cohort", "")
     ("buddy", po::value(&buddy), "")
     ;
@@ -312,13 +418,12 @@ int main(int argc, char **argv) {
                      options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
-    if (vm.count("help") || ws.empty() || method.empty()) {
+    if (vm.count("help") || root.empty() || method.empty()) {
         cerr << "ADSB2 VERSION: " << VERSION << endl;
         cerr << desc;
         return 1;
     }
     bool detail = !(vm.count("keep-tail") > 0);
-    bool clinical = vm.count("clinical") > 0;
     bool do_cohort = vm.count("cohort") > 0;
 
     if (paths.empty()) {
@@ -335,7 +440,7 @@ int main(int argc, char **argv) {
         cerr << "Failed to load config file: " << config_path << ", using defaults." << endl;
     }
     OverrideConfig(overrides, &config);
-    config.put("adsb2.models", ws); // find models in workspace
+    config.put("adsb2.models", root.native()); // find models in workspace
 
     GlobalInit(argv[0], config);
     unordered_set<int> train_set;
@@ -357,7 +462,15 @@ int main(int argc, char **argv) {
         }
     }
 
+    unordered_map<int, Sample> fallback;
+    if (!fallback_path.empty()) {
+        load_submit_file(fallback_path, &fallback);
+    }
+
+
     Eval eval;
+    Xtor *xtor = Xtor::create(xtor_name);
+    CHECK(xtor);
     vector<Sample> samples;
     int level = 0;
     //  level 0:    no model
@@ -387,79 +500,89 @@ int main(int argc, char **argv) {
         error_dia = Classifier::get("error.dia");
     }
 
-    fs::path root(ws);
     fs::create_directories(root);
     for (auto const &p: paths) {
         fs::path path(p);
         StudyReport x(path);
         if (x.empty()) {
+            // !!!TODO: load default
             LOG(ERROR) << "Cannot load " << path;
             continue;
         }
         if (vm.count("top")) {
             patch_top_bottom(x);
         }
-        Sample s;
-        float sys1, dia1;
-        float sys2, dia2;
-        s.study = x.front().front().study_id;
         if (detail) {
             for (auto &s: x.back()) {
                 s.data[SL_AREA] = 0;
             }
         }
-        compute2(x, &sys2, &dia2);
-        if (!compute1(x, &sys1, &dia1)) {
-            sys1 = sys2;
-            dia1 = dia2;
-        }
-        s.sys1 = sys1;
-        s.dia1 = dia1;
-        s.sys2 = sys2;
-        s.dia2 = dia2;
-        auto &front = x[0][0];
-        //front.reprobe_meta(data_root);
-        vector<float> ft{
-            front.meta[Meta::SEX], front.meta[Meta::AGE],
-            sys1, dia1, sys2, dia2,
-        };
+        Sample s;
+        s.good = true;
+        s.study = x.front().front().study_id;
+        s.good = s.good && xtor->apply(x, &s);
         if (!buddy.empty()) {
             fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
             StudyReport bx(buddy_path);
-            float sys1, dia1, sys2, dia2;
+            if (vm.count("top")) {
+                patch_top_bottom(bx);
+            }
             if (detail) {
                 for (auto &s: bx.back()) {
                     s.data[SL_AREA] = 0;
                 }
             }
-            compute2(bx, &sys2, &dia2);
-            if (!compute1(bx, &sys1, &dia1)) {
-                sys1 = sys2;
-                dia1 = dia2;
-            }
-            ft.push_back(sys1);
-            ft.push_back(dia1);
-            ft.push_back(sys2);
-            ft.push_back(dia2);
+            Sample bs;
+            s.good = s.good && xtor->apply(bx, &bs);
+            s.tft.insert(s.tft.end(), bs.tft.begin(), bs.tft.end());
+            s.eft.insert(s.eft.end(), bs.eft.begin(), bs.eft.end());
         }
-        int cid = 0;
-        if (do_cohort && cohort.size()) {
+        int cid = 0; //
+        if (do_cohort) {
             auto it = cohort.find(s.study);
-            CHECK(it != cohort.end());
-            cid = it->second;
+            if (it != cohort.end()) {
+                cid = it->second;
+            }
+            else {
+                cid = int(x[0][0].data[SL_COHORT]);
+            }
         }
-        s.ft = ft;
         s.sys_t = eval.get(s.study, 0);
         s.dia_t = eval.get(s.study, 1);
         if (level >= 1) {
-            s.sys_p = target_sys[cid]->apply(s.ft);
-            s.dia_p = target_dia[cid]->apply(s.ft);
+            s.sys_p = target_sys[cid]->apply(s.tft);
+            s.dia_p = target_dia[cid]->apply(s.tft);
         }
         if (level >= 2) {
-            s.sys_e = error_sys->apply(s.ft) * scale;
-            s.dia_e = error_dia->apply(s.ft) * scale;
-            GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
-            GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
+            s.sys_e = error_sys->apply(s.eft) * scale;
+            s.dia_e = error_dia->apply(s.eft) * scale;
+            if (s.good) {
+                GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
+                GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
+            }
+            else {
+                LOG(WARNING) << "Study " << s.study << " not good, using fallback";
+                auto it = fallback.find(s.study);
+                if (it == fallback.end()) {
+                    LOG(WARNING) << "Cannot find fallback for study " << s.study;
+                }
+                else {
+                    if (it->second.sys_v.size() == Eval::VALUES) {
+                        s.sys_v = it->second.sys_v;
+                    }
+                    else {
+                        LOG(WARNING) << "Cannot find sys fallback for study, you are doomed " << s.study;
+                        GaussianAcc(200, 100, &s.sys_v);
+                    }
+                    if (it->second.dia_v.size() == Eval::VALUES) {
+                        s.dia_v = it->second.dia_v;
+                    }
+                    else {
+                        LOG(WARNING) << "Cannot find dia fallback for study, you are doomed " << s.study;
+                        GaussianAcc(400, 100, &s.sys_v);
+                    }
+                }
+            }
         }
         samples.push_back(s);
     }
