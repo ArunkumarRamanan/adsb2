@@ -57,13 +57,23 @@ namespace adsb2 {
                   vector<float> th,
                   float nd,
                   float smooth,
-                  int max_gap) {
+                  int max_gap,
+                  float scost) {
             size_t rows = shape()[0];
             size_t cols = shape()[1];
             CHECK(th.size() == rows);
             int best_cc = 0;
             for (int y = 0; y < rows; ++y) {
                 auto *e = &((*this)[y][0]);
+                // disable out of range items
+                /*
+                for (int x = 0; x < range[y].first; ++x) {
+                    e[x].opt = -std::numeric_limits<float>::max();
+                }
+                for (int x = range[y].second; x < cols; ++x) {
+                    e[x].opt = -std::numeric_limits<float>::max();
+                }
+                */
                 if (y == 0) {   // first row, no connection to previous
                     float acc = 0;
                     float last_delta = std::numeric_limits<float>::max();
@@ -78,7 +88,7 @@ namespace adsb2 {
                                 last_delta = delta;
                             }
                         }
-                        acc += delta;
+                        acc += delta - scost;
                         e[x].opt = acc;
                         e[x].prev = -1;
                     }
@@ -100,7 +110,7 @@ namespace adsb2 {
                             last_delta = delta;
                         }
                     }
-                    acc += delta;
+                    acc += delta - scost;
                     int lb = std::max(x - max_gap, range[y-1].first);
                     int ub = std::min(x + max_gap + 1, range[y-1].second);
                     float best_score = -std::numeric_limits<float>::max();
@@ -110,6 +120,7 @@ namespace adsb2 {
                         if (y + 1 == rows) {  // need to consider connection to 0
                             score -= smooth * distance(prev[p].prev0, e[x].pt);
                         }
+                        CHECK((score >= best_score) || (score <= best_score));
                         if (score > best_score) {
                             best_score = score;
                             best_prev = p;
@@ -168,12 +179,15 @@ namespace adsb2 {
         float thr1;
         float thr2;
         int extra_delta;
+        int extra_minus;
+        float extra_th;
         bool do_extend;
         float ndisc;
         float wctrpct;
         float bctrpct;
         int mink;
         int W;
+        float scost2;
 #if 0
         float penalty (float dx) const {
             float v = smooth * dx;
@@ -252,7 +266,7 @@ namespace adsb2 {
             return ba::mean(acc);
         }
 
-        void get_dp2_th (cv::Mat image, vector<int> const &ctr, int bound, vector<float> *ths) const {
+        void get_dp2_th (cv::Mat image, vector<int> const &ctr, int lbb, int bound, vector<float> *ths) const {
             ths->resize(image.rows);
             float big_mean = cv::mean(image.colRange(0, margin1))[0];
             cv::Mat kernel = cv::Mat::ones(mink, mink, CV_8U);
@@ -267,20 +281,40 @@ namespace adsb2 {
                 if (!(small_mean < big_mean)) return std::max(small_mean, big_mean);
                 th = small_mean + (big_mean - small_mean) * thr;
                 */
+#if 0
+                float small = 0; // big_mean;
+                float last = std::numeric_limits<float>::max();
+                for (int i = 0; i < lbb; ++i) {
+                    int x = ctr[y] + i;
+                    if (x < 0) x = 0;
+                    if (x >= image.cols) x = image.cols - 1;
+                    if (ptr[x] < last) last = ptr[x];
+                }
+                for (int i = lbb; i < bound; ++i) {
+                    int x = ctr[y] + i;
+                    if (x < 0) x = 0;
+                    if (x >= image.cols) x = image.cols - 1;
+                    if (ptr[x] < last) last = ptr[x];
+                    small += last;
+                    //if (ptr[x] < small) small = ptr[x];
+                }
+                small /= (bound - lbb);
+#else
                 float small = big_mean;
-                for (int i = 0; i < bound; ++i) {
+                for (int i = -lbb; i < bound; ++i) {
                     int x = ctr[y] + i;
                     if (x < 0) x = 0;
                     if (x >= image.cols) x = image.cols - 1;
                     if (ptr[x] < small) small = ptr[x];
                 }
+#endif
                 th = small + (big_mean - small) * thr2;
                 ths->at(y) = th;
             }
         }
 
         // return absolute bound
-        void find_shift (cv::Mat image, vector<int> const &ctr, int *bound) const {
+        void find_shift (cv::Mat image, vector<int> const &ctr, int *bound, int *xx) const {
             int L1 = margin1;   // 5
             int L2 = margin2;   // 40
             vector<float> wavg(L1 + L2 +1);       // array index i <-> delta     i - L1
@@ -304,12 +338,17 @@ namespace adsb2 {
                     P1 = i;
                 }
             }
+            *xx = P1 + W - L1;
             // P1 is roughly a transition point from white to black
             int P2 = std::max(P1, L1);
             for (int i = P2; i < sigma.size(); ++i) {
                 if (sigma[i] < sigma[P2]) {
                     P2 = i;
                 }
+            }
+            float max_sigma = sigma[P2] + extra_th;
+            for (; P2 + 1 < sigma.size(); ++P2) {
+                if (sigma[P2 + 1] > max_sigma) break;
             }
             // P2 is the point with deepest black
             //
@@ -339,7 +378,7 @@ namespace adsb2 {
             *delta = best_nleft - L1 + extra_delta;
             if (*delta < 0) *delta = 0;
             */
-            *bound = P2 + 1 - L1;
+            *bound = P2 + 1 - L1 + extra_delta;
             /*
             if (*delta > *bound - 1) {
                 *delta = *bound - 1;
@@ -363,22 +402,22 @@ namespace adsb2 {
                 }
                 vector<float> th;
                 get_dp1_th(prob, &th);
-                ws.run(range1, &contour, 1, false, th, 1.0, smooth1, gap);
+                ws.run(range1, &contour, 1, false, th, 1.0, smooth1, gap, 0);
             }
             if (do_extend) {
                 // extend 1
-                int bound;
-                find_shift(image, contour, &bound);
+                int bound, lbb;
+                find_shift(image, contour, &bound, &lbb);
                 if (plb) *plb = contour;
                 if (pbound) *pbound = bound;
                 vector<std::pair<int, int>> range2(rows);
                 for (int i = 0; i < rows; ++i) {
-                    range2[i].first = std::max(contour[i] - 0,0);
+                    range2[i].first = std::max(0, contour[i] - extra_minus);
                     range2[i].second = std::min(contour[i] + bound, cols);
                 }
                 vector<float> th;
-                get_dp2_th(image, contour, bound, &th);
-                ws.run(range2, &contour, 0, true, th, ndisc, smooth2, gap);
+                get_dp2_th(image, contour, extra_minus, bound, &th);
+                ws.run(range2, &contour, 0, true, th, ndisc, smooth2, gap, scost2);
             }
             slice->polar_contour.swap(contour);
         }
@@ -386,19 +425,22 @@ namespace adsb2 {
     public:
         CA1 (Config const &conf)
             : margin1(conf.get<int>("adsb2.ca1.margin1", 5)),
-            margin2(conf.get<int>("adsb2.ca1.margin2", 40)),
-            thr1(conf.get<float>("adsb2.ca1.th1", 0.85)),
-            thr2(conf.get<float>("adsb2.ca1.th2", 0.05)),
+            margin2(conf.get<int>("adsb2.ca1.margin2", 30)),
+            thr1(conf.get<float>("adsb2.ca1.th1", 0.7)),
+            thr2(conf.get<float>("adsb2.ca1.th2", 0.04)),
             smooth1(conf.get<float>("adsb2.ca1.smooth1", 10)),
-            smooth2(conf.get<float>("adsb2.ca1.smooth2", 255)),
+            smooth2(conf.get<float>("adsb2.ca1.smooth2", 30)),
             extra_delta(conf.get<int>("adsb2.ca1.extra", 0)),
+            extra_minus(conf.get<int>("adsb2.ca1.minus", 0)),
+            extra_th(conf.get<float>("adsb2.ca1.eth", 0)),
             gap(conf.get<int>("adsb2.ca1.gap", 7)),
             do_extend(conf.get<int>("adsb2.ca1.extend", 1) > 0),
-            ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.2)),
+            ndisc(conf.get<float>("adsb2.ca1.ndisc", 0.4)),
             wctrpct(conf.get<float>("adsb2.ca1.wctrpct", 0.9)),
             bctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8)),
             mink(conf.get<int>("adsb2.ca1.mink", 3)),
-            W(conf.get<int>("adsb2.ca1.W", 2))
+            W(conf.get<int>("adsb2.ca1.W", 2)),
+            scost2(conf.get<float>("adsb2.ca1.scost2", 0))
         {
         }
         void apply_slice (Slice *s, vector<int> *plb, int *pbound) {
@@ -434,6 +476,7 @@ namespace adsb2 {
         cv::Mat polar(slice.images[IM_IMAGE].size(), CV_32F, cv::Scalar(0));
         for (int y = 0; y < polar.rows; ++y) {
             float *row = polar.ptr<float>(y);
+            //for (int x = 0; x <= cc[y]; ++x) {
             for (int x = 0; x < cc[y]; ++x) {
                 row[x] = 1;
             }
