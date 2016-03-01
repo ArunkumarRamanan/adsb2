@@ -373,7 +373,7 @@ namespace adsb2 {
                 if (pbound) *pbound = bound;
                 vector<std::pair<int, int>> range2(rows);
                 for (int i = 0; i < rows; ++i) {
-                    range2[i].first = contour[i] - 0;
+                    range2[i].first = std::max(contour[i] - 0,0);
                     range2[i].second = std::min(contour[i] + bound, cols);
                 }
                 vector<float> th;
