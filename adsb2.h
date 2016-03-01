@@ -240,6 +240,7 @@ namespace adsb2 {
         SL_CCOLOR,  // inside color / color
         SL_ARATE,
         SL_BOTTOM_PATCH,
+        SL_COHORT,  // for compatibility
         SL_SIZE
     };
 
@@ -289,6 +290,7 @@ namespace adsb2 {
 
         void load_raw () {
             cv::Mat raw = load_dicom(path, &meta);
+            data[SL_COHORT] = meta.cohort;
 #if 1       // Yuanfang's annotation assume images are all in landscape position
             if ((raw.rows > raw.cols)
 #if 0
