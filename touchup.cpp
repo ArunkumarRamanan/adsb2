@@ -3,6 +3,15 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/moment.hpp>
+#include <boost/accumulators/statistics/count.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
+#include <boost/accumulators/statistics/covariance.hpp>
 #include <boost/program_options.hpp>
 #include <glog/logging.h>
 #include "adsb2.h"
@@ -14,6 +23,48 @@ namespace adsb2 {
 using namespace std;
 using namespace adsb2;
 
+void eval_v (vector<float> const &v1,
+             vector<float> const &v2,
+             vector<float> *out) {
+    CHECK(v1.size() == v2.size());
+    out->clear();
+    float corr = cv::compareHist(v1, v2, CV_COMP_CORREL);
+    out->push_back(corr);
+    float err = 0;
+    for (unsigned i = 0; i < v1.size(); ++i) {
+        float x = v1[i] - v2[i];
+        err += x * x;
+    }
+    err /= v1.size();
+    err = sqrt(err);
+    out->push_back(err);
+}
+
+float top_th;
+void patch_top_bottom (StudyReport &rep) {
+    for (unsigned xx = 0;; ++xx) {
+        vector<SliceReport *> ss;
+        for (auto &sax: rep) {
+            if (xx < sax.size()) {
+                ss.push_back(&sax[xx]);
+            }
+        }
+        if (ss.empty()) break;
+        // find first non-top
+        for (unsigned i = 0; i < ss.size(); ++i) {
+            if (ss[i]->data[SL_TSCORE] < top_th) {
+                for (int j = i-1; j >= 0; --j) {
+                    if (ss[j]->data[SL_AREA] > ss[j+1]->data[SL_AREA]) {
+                        ss[j]->data[SL_AREA] = ss[j+1]->data[SL_AREA];
+                    }
+                }
+                break;
+            }
+        }
+
+
+    }
+}
 // models:
 //      sys
 //      dia
@@ -24,7 +75,6 @@ using namespace adsb2;
 //      test set
 //      script
 //
-
 bool compute1 (StudyReport const &rep, float *sys, float *dia) {
     vector<float> all(rep[0].size(), 0);
     for (unsigned i = 1; i < rep.size(); ++i) {
@@ -38,7 +88,7 @@ bool compute1 (StudyReport const &rep, float *sys, float *dia) {
             float b = rep[sax+1][sl].data[SL_AREA] * sqr(rep[sax+1][sl].meta.spacing);
             float gap = fabs(rep[sax+1][sl].meta.slice_location
                       - rep[sax][sl].meta.slice_location);
-            if ((gap > 25)) gap = 10;
+            if ((gap > 25)) gap = 0;
             v += (a + b + sqrt(a*b)) * gap / 3;
         }
         all[sl] = v / 1000;
@@ -103,6 +153,8 @@ struct Sample {
     float sys_t, dia_t; // target
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
+    float sys1, dia1;
+    float sys2, dia2;
     vector<float> sys_v;
     vector<float> dia_v;
 };
@@ -159,7 +211,15 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
 void run_eval (vector<Sample> &ss) {
     Eval eval;
     float sum = 0;
+    float dsys = 0;
+    float ddia = 0;
+    float dall = 0;
     for (auto &s: ss) {
+        dsys += sqr(s.sys_t - s.sys_p);
+        dall += sqr(s.sys_t - s.sys_p);
+        ddia += sqr(s.dia_t - s.dia_p);
+        dall += sqr(s.dia_t - s.dia_p);
+
         float sys_x = eval.score(s.study, 0, s.sys_v);
         float dia_x = eval.score(s.study, 1, s.dia_v);
         sum += sys_x + dia_x;
@@ -167,6 +227,9 @@ void run_eval (vector<Sample> &ss) {
         cout << s.study << "_Diastole" << '\t' << dia_x << '\t' << s.dia_t << '\t' << s.dia_p << '\t' << (s.dia_t - s.dia_p) << '\t' << s.dia_e << endl;
     }
     cout << sum / (ss.size() *2) << endl;
+    cout << "sys: " << sqrt(dsys / ss.size()) << endl;
+    cout << "dia: " << sqrt(ddia / ss.size()) << endl;
+    cout << "all: " << sqrt(dall / ss.size()/2) << endl;
 }
 
 void run_submit (vector<Sample> &ss) {
@@ -185,6 +248,24 @@ void run_submit (vector<Sample> &ss) {
     }
 }
 
+void split_by_cohort (vector<Sample> const &s, 
+                      unordered_map<int, int> const &cohort,
+                      vector<Sample> *s1,
+                      vector<Sample> *s2) {
+    s1->clear();
+    s2->clear();
+    for (auto const &x: s) {
+        auto it = cohort.find(x.study);
+        CHECK(it != cohort.end());
+        if (it->second == 0) {
+            s1->push_back(x);
+        }
+        else {
+            s2->push_back(x);
+        }
+    }
+}
+
 
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
@@ -192,11 +273,12 @@ int main(int argc, char **argv) {
     vector<string> overrides;
     vector<string> paths;
     string train_path;
-    string cohort_path;
     string method;
     string ws;
-    float scale;
+    fs::path data_root;
+    fs::path buddy;
     int round1, round2;
+    float scale;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -205,14 +287,19 @@ int main(int argc, char **argv) {
     ("override,D", po::value(&overrides), "override configuration.")
     ("input,i", po::value(&paths), "")
     ("scale,s", po::value(&scale)->default_value(1.2), "")
-    ("detail", "")
+    ("keep-tail", "")
     ("method", po::value(&method), "")
     ("train", po::value(&train_path), "")
-    ("cohort", po::value(&cohort_path), "")
     ("round1", po::value(&round1)->default_value(2000), "")
     ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
+    ("root", po::value(&data_root), "")
     ("ws,w", po::value(&ws), "")
+    ("clinical", "")
+    ("top", "")
+    ("top-th", po::value(&top_th)->default_value(1.0), "")
+    ("cohort", "")
+    ("buddy", po::value(&buddy), "")
     ;
 
     po::positional_options_description p;
@@ -230,7 +317,10 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
-    bool detail = vm.count("detail") > 0;
+    bool detail = !(vm.count("keep-tail") > 0);
+    bool clinical = vm.count("clinical") > 0;
+    bool do_cohort = vm.count("cohort") > 0;
+
     if (paths.empty()) {
         string p;
         while (cin >> p) {
@@ -259,9 +349,9 @@ int main(int argc, char **argv) {
     }
 
     unordered_map<int, int> cohort;
-    if (cohort_path.size()) {
+    if (do_cohort) {
         int id, c;
-        ifstream is(cohort_path.c_str());
+        fs::ifstream is(home_dir/fs::path("cohort"));
         while (is >> id >> c) {
             cohort[id] = c;
         }
@@ -273,19 +363,24 @@ int main(int argc, char **argv) {
     //  level 0:    no model
     //  level 1:    target model
     //  level 2:    target model & error model
-    if (method == "train1") level = 0;
+    if (method == "show") level = 0;
+    else if (method == "train1") level = 0;
     else if (method == "train2") level = 1;
     else if (method == "eval") level = 2;
     else if (method == "submit") level = 2;
     else CHECK(0) << "method " << method << " not supported";
 
-    Classifier *target_sys = 0;
-    Classifier *target_dia = 0;
+    Classifier *target_sys[2] = {0, 0};
+    Classifier *target_dia[2] = {0, 0};
     Classifier *error_sys = 0;
     Classifier *error_dia = 0;
     if (level >= 1) {
-        target_sys = Classifier::get("target.sys");
-        target_dia = Classifier::get("target.dia");
+        target_sys[0] = Classifier::get("target.sys.0");
+        target_dia[0] = Classifier::get("target.dia.0");
+        if (do_cohort) {
+            target_sys[1] = Classifier::get("target.sys.1");
+            target_dia[1] = Classifier::get("target.dia.1");
+        }
     }
     if (level >= 2) {
         error_sys = Classifier::get("error.sys");
@@ -301,6 +396,9 @@ int main(int argc, char **argv) {
             LOG(ERROR) << "Cannot load " << path;
             continue;
         }
+        if (vm.count("top")) {
+            patch_top_bottom(x);
+        }
         Sample s;
         float sys1, dia1;
         float sys2, dia2;
@@ -315,26 +413,47 @@ int main(int argc, char **argv) {
             sys1 = sys2;
             dia1 = dia2;
         }
+        s.sys1 = sys1;
+        s.dia1 = dia1;
+        s.sys2 = sys2;
+        s.dia2 = dia2;
         auto &front = x[0][0];
-        vector<float> ft{sys1, dia1, sys2, dia2, front.meta[Meta::SEX], front.meta[Meta::AGE], front.meta[Meta::SLICE_THICKNESS], front.meta.raw_spacing}; //, front.meta.PercentPhaseFieldOfView};
-        if (cohort.size()) {
+        //front.reprobe_meta(data_root);
+        vector<float> ft{
+            front.meta[Meta::SEX], front.meta[Meta::AGE],
+            sys1, dia1, sys2, dia2,
+        };
+        if (!buddy.empty()) {
+            fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
+            StudyReport bx(buddy_path);
+            float sys1, dia1, sys2, dia2;
+            if (detail) {
+                for (auto &s: bx.back()) {
+                    s.data[SL_AREA] = 0;
+                }
+            }
+            compute2(bx, &sys2, &dia2);
+            if (!compute1(bx, &sys1, &dia1)) {
+                sys1 = sys2;
+                dia1 = dia2;
+            }
+            ft.push_back(sys1);
+            ft.push_back(dia1);
+            ft.push_back(sys2);
+            ft.push_back(dia2);
+        }
+        int cid = 0;
+        if (do_cohort && cohort.size()) {
             auto it = cohort.find(s.study);
             CHECK(it != cohort.end());
-            if (it->second) {
-                ft.push_back(0);
-                ft.push_back(1);
-            }
-            else {
-                ft.push_back(1);
-                ft.push_back(0);
-            }
+            cid = it->second;
         }
         s.ft = ft;
         s.sys_t = eval.get(s.study, 0);
         s.dia_t = eval.get(s.study, 1);
         if (level >= 1) {
-            s.sys_p = target_sys->apply(s.ft);
-            s.dia_p = target_dia->apply(s.ft);
+            s.sys_p = target_sys[cid]->apply(s.ft);
+            s.dia_p = target_dia[cid]->apply(s.ft);
         }
         if (level >= 2) {
             s.sys_e = error_sys->apply(s.ft) * scale;
@@ -349,9 +468,85 @@ int main(int argc, char **argv) {
         random_shuffle(samples.begin(), samples.end());
     }
 
+    if (method == "show") {
+        namespace ba = boost::accumulators;
+        vector<float> sys_1, sys_2, sys_t;
+        vector<float> dia_1, dia_2, dia_t;
+        for (auto &s: samples) {
+            sys_1.push_back(s.sys1);
+            sys_2.push_back(s.sys2);
+            sys_t.push_back(s.sys_t);
+
+            dia_1.push_back(s.dia1);
+            dia_2.push_back(s.dia2);
+            dia_t.push_back(s.dia_t);
+
+            cout << s.study << "_Systole\t";
+            cout << (s.sys_t - s.sys1) << '\t' << (s.sys_t - s.sys2) << '\t' << s.sys_t << '\t' << s.sys1 << '\t' << s.sys2 << endl;
+            cout << s.study << "_Diastole\t";
+            cout << (s.dia_t - s.dia1) << '\t' << (s.dia_t - s.dia2) << '\t' << s.dia_t << '\t' << s.dia1 << '\t' << s.dia2 << endl;
+        }
+        vector<float> mm;
+        cout << "sys";
+        eval_v(sys_1, sys_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        /*
+        cout << endl;
+        cout << "sys2";
+        */
+        eval_v(sys_2, sys_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        cout << endl;
+        cout << "dia";
+        eval_v(dia_1, dia_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        /*
+        cout << endl;
+        cout << "dia2";
+        */
+        eval_v(dia_2, dia_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        cout << endl;
+        sys_t.insert(sys_t.end(), dia_t.begin(), dia_t.end());
+        sys_1.insert(sys_1.end(), dia_1.begin(), dia_1.end());
+        eval_v(sys_1, sys_t, &mm);
+        cout << "all";
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        /*
+        cout << endl;
+        cout << "all2";
+        */
+        sys_2.insert(sys_2.end(), dia_2.begin(), dia_2.end());
+        eval_v(sys_2, sys_t, &mm);
+        for (auto x: mm) {
+            cout << "\t" << x;
+        }
+        cout << endl;
+    }
     if (method == "train1") {
-        run_train(samples, 1, 0, root/fs::path("d.target.sys"), train_set, root/fs::path("target.sys"), round1);
-        run_train(samples, 1, 1, root/fs::path("d.target.dia"), train_set, root/fs::path("target.dia"), round1);
+        vector<Sample> c0, c1;
+        if (do_cohort) {
+            split_by_cohort(samples, cohort, &c0, &c1);
+        }
+        else {
+            c0 = samples;
+        }
+        run_train(c0, 1, 0, root/fs::path("d.target.sys.0"), train_set, root/fs::path("target.sys.0"), round1);
+        run_train(c0, 1, 1, root/fs::path("d.target.dia.0"), train_set, root/fs::path("target.dia.0"), round1);
+        if (do_cohort) {
+            run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"), round1);
+            run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"), round1);
+        }
     }
     else if (method == "train2") {
         run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set, root/fs::path("error.sys"), round2);
