@@ -244,6 +244,72 @@ void run_eval (vector<Sample> &ss, unordered_set<int> const &train) {
     cout << "all: " << sqrt(dall / count/2) << endl;
 }
 
+void run_show (vector<Sample> const &samples) {
+    namespace ba = boost::accumulators;
+    vector<float> sys_1, sys_2, sys_t;
+    vector<float> dia_1, dia_2, dia_t;
+    for (auto &s: samples) {
+        sys_1.push_back(s.sys1);
+        sys_2.push_back(s.sys2);
+        sys_t.push_back(s.sys_t);
+
+        dia_1.push_back(s.dia1);
+        dia_2.push_back(s.dia2);
+        dia_t.push_back(s.dia_t);
+
+        cout << s.study << "_Systole\t";
+        cout << (s.sys_t - s.sys1) << '\t' << (s.sys_t - s.sys2) << '\t' << s.sys_t << '\t' << s.sys1 << '\t' << s.sys2 << endl;
+        cout << s.study << "_Diastole\t";
+        cout << (s.dia_t - s.dia1) << '\t' << (s.dia_t - s.dia2) << '\t' << s.dia_t << '\t' << s.dia1 << '\t' << s.dia2 << endl;
+    }
+    vector<float> mm;
+    cout << "sys";
+    eval_v(sys_1, sys_t, &mm);
+    for (auto x: mm) {
+        cout << "\t" << x;
+    }
+    /*
+    cout << endl;
+    cout << "sys2";
+    */
+    eval_v(sys_2, sys_t, &mm);
+    for (auto x: mm) {
+        cout << "\t" << x;
+    }
+    cout << endl;
+    cout << "dia";
+    eval_v(dia_1, dia_t, &mm);
+    for (auto x: mm) {
+        cout << "\t" << x;
+    }
+    /*
+    cout << endl;
+    cout << "dia2";
+    */
+    eval_v(dia_2, dia_t, &mm);
+    for (auto x: mm) {
+        cout << "\t" << x;
+    }
+    cout << endl;
+    sys_t.insert(sys_t.end(), dia_t.begin(), dia_t.end());
+    sys_1.insert(sys_1.end(), dia_1.begin(), dia_1.end());
+    eval_v(sys_1, sys_t, &mm);
+    cout << "all";
+    for (auto x: mm) {
+        cout << "\t" << x;
+    }
+    /*
+    cout << endl;
+    cout << "all2";
+    */
+    sys_2.insert(sys_2.end(), dia_2.begin(), dia_2.end());
+    eval_v(sys_2, sys_t, &mm);
+    for (auto x: mm) {
+        cout << "\t" << x;
+    }
+    cout << endl;
+}
+
 void run_submit (vector<Sample> &ss) {
     cout << adsb2::HEADER << endl;
     for (auto &s: ss) {
@@ -261,15 +327,12 @@ void run_submit (vector<Sample> &ss) {
 }
 
 void split_by_cohort (vector<Sample> const &s, 
-                      unordered_map<int, int> const &cohort,
                       vector<Sample> *s1,
                       vector<Sample> *s2) {
     s1->clear();
     s2->clear();
     for (auto const &x: s) {
-        auto it = cohort.find(x.study);
-        CHECK(it != cohort.end());
-        if (it->second == 0) {
+        if (x.cohort == 0) {
             s1->push_back(x);
         }
         else {
@@ -370,23 +433,34 @@ Xtor *Xtor::create (string const &name) {
     return nullptr;
 }
 
+void preprocess (StudyReport *rep, bool detail, bool top) {
+    if (top) {
+        patch_top_bottom(*rep);
+    }
+    if (detail) {
+        for (auto &s: rep->back()) {
+            s.data[SL_AREA] = 0;
+        }
+    }
+}
+
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
     vector<int> studies;
     string train_path;  // only use IDs in this file for training
+                        // exclude these for validation
+                        // do not affect show & submit
     string method;
     string xtor_name;
-    fs::path root;  //working directory
-    string algo;
-    fs::path data_root;
-    fs::path raw_root;
+    fs::path root;      // working directory
+    fs::path data_root; // report directory
+    fs::path raw_root;  // raw data directory
     fs::path buddy;
     fs::path fallback_path;
     int round1, round2;
     float scale;
-    
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -406,10 +480,6 @@ int main(int argc, char **argv) {
     ("ws,w", po::value(&root), "working directory")
     ("fallback", po::value(&fallback_path), "")
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
-    /*
-    ("top", "")
-    ("top-th", po::value(&top_th)->default_value(1.0), "")
-    */
     ("cohort", "")
     ("buddy", po::value(&buddy), "")
     ;
@@ -430,7 +500,8 @@ int main(int argc, char **argv) {
         cerr << desc;
         return 1;
     }
-    bool detail = !(vm.count("keep-tail") > 0);
+    bool do_detail = !(vm.count("keep-tail") > 0);
+    bool do_top = (vm.count("top") > 0);
     bool do_cohort = vm.count("cohort") > 0;
 
     if (studies.empty()) {
@@ -450,8 +521,9 @@ int main(int argc, char **argv) {
     config.put("adsb2.models", root.native()); // find models in workspace
 
     GlobalInit(argv[0], config);
-    unordered_set<int> train_set;
 
+    // load training set
+    unordered_set<int> train_set;
     if (train_path.size()) {
         int x;
         ifstream is(train_path.c_str());
@@ -460,20 +532,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    unordered_map<int, int> cohort;
-    if (do_cohort) {
-        int id, c;
-        fs::ifstream is(home_dir/fs::path("cohort"));
-        while (is >> id >> c) {
-            cohort[id] = c;
-        }
-    }
-
+    // load fallback data
     unordered_map<int, Sample> fallback;
     if (!fallback_path.empty()) {
         load_submit_file(fallback_path, &fallback);
     }
-
 
     Eval eval;
     Xtor *xtor = Xtor::create(xtor_name);
@@ -494,7 +557,7 @@ int main(int argc, char **argv) {
     Classifier *target_dia[2] = {0, 0};
     Classifier *error_sys = 0;
     Classifier *error_dia = 0;
-    if (level >= 1) {
+    if (level >= 1) {   // target model
         target_sys[0] = Classifier::get("target.sys.0");
         target_dia[0] = Classifier::get("target.dia.0");
         if (do_cohort) {
@@ -502,58 +565,47 @@ int main(int argc, char **argv) {
             target_dia[1] = Classifier::get("target.dia.1");
         }
     }
-    if (level >= 2) {
+    if (level >= 2) {   // error model
         error_sys = Classifier::get("error.sys");
         error_dia = Classifier::get("error.dia");
     }
 
     fs::create_directories(root);
     for (auto const &study: studies) {
+        Sample s;
+        s.study = study;
+        s.good = true;
+
         fs::path path(data_root / fs::path(lexical_cast<string>(study))/ fs::path("report.txt"));
         StudyReport x(path);
         if (x.empty()) {
-            // !!!TODO: load default
-            LOG(ERROR) << "Cannot load " << path;
-            continue;
+            LOG(ERROR) << "Fail to load data file: " << path.native();
+            s.good = false;
+            // probe ...
         }
-        if (vm.count("top")) {
-            patch_top_bottom(x);
+        else {
+            s.cohort = x[0][0].data[SL_COHORT];
         }
-        if (detail) {
-            for (auto &s: x.back()) {
-                s.data[SL_AREA] = 0;
-            }
-        }
-        Sample s;
-        s.good = true;
-        s.study = study;
+        preprocess(&x, do_detail, do_top);
         s.good = s.good && xtor->apply(x, &s);
         if (!buddy.empty()) {
             fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
             StudyReport bx(buddy_path);
-            if (vm.count("top")) {
-                patch_top_bottom(bx);
+            if (bx.empty()) {
+                LOG(ERROR) << "Fail to load data file: " << buddy_path.native();
             }
-            if (detail) {
-                for (auto &s: bx.back()) {
-                    s.data[SL_AREA] = 0;
-                }
-            }
+            preprocess(&bx, do_detail, do_top);
             Sample bs;
             s.good = s.good && xtor->apply(bx, &bs);
             s.tft.insert(s.tft.end(), bs.tft.begin(), bs.tft.end());
             s.eft.insert(s.eft.end(), bs.eft.begin(), bs.eft.end());
         }
+
         int cid = 0; //
         if (do_cohort) {
-            auto it = cohort.find(s.study);
-            if (it != cohort.end()) {
-                cid = it->second;
-            }
-            else {
-                cid = int(x[0][0].data[SL_COHORT]);
-            }
+            cid = int(s.cohort);
         }
+
         s.sys_t = eval.get(s.study, 0);
         s.dia_t = eval.get(s.study, 1);
         if (level >= 1) {
@@ -599,74 +651,12 @@ int main(int argc, char **argv) {
     }
 
     if (method == "show") {
-        namespace ba = boost::accumulators;
-        vector<float> sys_1, sys_2, sys_t;
-        vector<float> dia_1, dia_2, dia_t;
-        for (auto &s: samples) {
-            sys_1.push_back(s.sys1);
-            sys_2.push_back(s.sys2);
-            sys_t.push_back(s.sys_t);
-
-            dia_1.push_back(s.dia1);
-            dia_2.push_back(s.dia2);
-            dia_t.push_back(s.dia_t);
-
-            cout << s.study << "_Systole\t";
-            cout << (s.sys_t - s.sys1) << '\t' << (s.sys_t - s.sys2) << '\t' << s.sys_t << '\t' << s.sys1 << '\t' << s.sys2 << endl;
-            cout << s.study << "_Diastole\t";
-            cout << (s.dia_t - s.dia1) << '\t' << (s.dia_t - s.dia2) << '\t' << s.dia_t << '\t' << s.dia1 << '\t' << s.dia2 << endl;
-        }
-        vector<float> mm;
-        cout << "sys";
-        eval_v(sys_1, sys_t, &mm);
-        for (auto x: mm) {
-            cout << "\t" << x;
-        }
-        /*
-        cout << endl;
-        cout << "sys2";
-        */
-        eval_v(sys_2, sys_t, &mm);
-        for (auto x: mm) {
-            cout << "\t" << x;
-        }
-        cout << endl;
-        cout << "dia";
-        eval_v(dia_1, dia_t, &mm);
-        for (auto x: mm) {
-            cout << "\t" << x;
-        }
-        /*
-        cout << endl;
-        cout << "dia2";
-        */
-        eval_v(dia_2, dia_t, &mm);
-        for (auto x: mm) {
-            cout << "\t" << x;
-        }
-        cout << endl;
-        sys_t.insert(sys_t.end(), dia_t.begin(), dia_t.end());
-        sys_1.insert(sys_1.end(), dia_1.begin(), dia_1.end());
-        eval_v(sys_1, sys_t, &mm);
-        cout << "all";
-        for (auto x: mm) {
-            cout << "\t" << x;
-        }
-        /*
-        cout << endl;
-        cout << "all2";
-        */
-        sys_2.insert(sys_2.end(), dia_2.begin(), dia_2.end());
-        eval_v(sys_2, sys_t, &mm);
-        for (auto x: mm) {
-            cout << "\t" << x;
-        }
-        cout << endl;
+        run_show(samples);
     }
     if (method == "train1") {
         vector<Sample> c0, c1;
         if (do_cohort) {
-            split_by_cohort(samples, cohort, &c0, &c1);
+            split_by_cohort(samples, &c0, &c1);
         }
         else {
             c0 = samples;
