@@ -217,13 +217,15 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
     }
 }
 
-void run_eval (vector<Sample> &ss) {
+void run_eval (vector<Sample> &ss, unordered_set<int> const &train) {
     Eval eval;
+    int count = 0;
     float sum = 0;
     float dsys = 0;
     float ddia = 0;
     float dall = 0;
     for (auto &s: ss) {
+        if (train.size() && train.count(s.study)) continue;
         dsys += sqr(s.sys_t - s.sys_p);
         dall += sqr(s.sys_t - s.sys_p);
         ddia += sqr(s.dia_t - s.dia_p);
@@ -234,11 +236,12 @@ void run_eval (vector<Sample> &ss) {
         sum += sys_x + dia_x;
         cout << s.study << "_Systole" << '\t' << sys_x << '\t' << s.sys_t << '\t' << s.sys_p << '\t' << (s.sys_t - s.sys_p) << '\t' << s.sys_e << endl;
         cout << s.study << "_Diastole" << '\t' << dia_x << '\t' << s.dia_t << '\t' << s.dia_p << '\t' << (s.dia_t - s.dia_p) << '\t' << s.dia_e << endl;
+        ++count;
     }
-    cout << sum / (ss.size() *2) << endl;
-    cout << "sys: " << sqrt(dsys / ss.size()) << endl;
-    cout << "dia: " << sqrt(ddia / ss.size()) << endl;
-    cout << "all: " << sqrt(dall / ss.size()/2) << endl;
+    cout << sum / (count *2) << endl;
+    cout << "sys: " << sqrt(dsys / count) << endl;
+    cout << "dia: " << sqrt(ddia / count) << endl;
+    cout << "all: " << sqrt(dall / count/2) << endl;
 }
 
 void run_submit (vector<Sample> &ss) {
@@ -317,6 +320,7 @@ public:
         s->tft.clear();
         s->tft.push_back(front.meta[Meta::SEX]);
         s->tft.push_back(front.meta[Meta::AGE]);
+        s->tft.push_back(front.meta.raw_spacing);
         s->eft = s->tft;
         return true;
     }
@@ -370,13 +374,14 @@ int main(int argc, char **argv) {
     namespace po = boost::program_options; 
     string config_path;
     vector<string> overrides;
-    vector<string> paths;
+    vector<int> studies;
     string train_path;  // only use IDs in this file for training
     string method;
     string xtor_name;
     fs::path root;  //working directory
     string algo;
     fs::path data_root;
+    fs::path raw_root;
     fs::path buddy;
     fs::path fallback_path;
     int round1, round2;
@@ -388,7 +393,7 @@ int main(int argc, char **argv) {
     ("help,h", "produce help message.")
     ("config", po::value(&config_path)->default_value("adsb2.xml"), "config file")
     ("override,D", po::value(&overrides), "override configuration.")
-    ("input,i", po::value(&paths), "report files")
+    ("input,i", po::value(&studies), "report files")
     ("scale,s", po::value(&scale)->default_value(1.2), "")
     ("keep-tail", "")
     ("method", po::value(&method), "")
@@ -396,7 +401,8 @@ int main(int argc, char **argv) {
     ("round1", po::value(&round1)->default_value(2000), "")
     ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
-    ("root", po::value(&data_root), "")
+    ("data", po::value(&data_root), "dir containing report files")
+    ("raw", po::value(&raw_root), "dir containing raw images")
     ("ws,w", po::value(&root), "working directory")
     ("fallback", po::value(&fallback_path), "")
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
@@ -409,6 +415,7 @@ int main(int argc, char **argv) {
     ;
 
     po::positional_options_description p;
+    p.add("data", 1);
     p.add("ws", 1);
     p.add("method", 1);
     p.add("input", -1);
@@ -426,10 +433,10 @@ int main(int argc, char **argv) {
     bool detail = !(vm.count("keep-tail") > 0);
     bool do_cohort = vm.count("cohort") > 0;
 
-    if (paths.empty()) {
-        string p;
-        while (cin >> p) {
-            paths.push_back(p);
+    if (studies.empty()) {
+        int study;
+        while (cin >> study) {
+            studies.push_back(study);
         }
     }
 
@@ -501,8 +508,8 @@ int main(int argc, char **argv) {
     }
 
     fs::create_directories(root);
-    for (auto const &p: paths) {
-        fs::path path(p);
+    for (auto const &study: studies) {
+        fs::path path(data_root / fs::path(lexical_cast<string>(study))/ fs::path("report.txt"));
         StudyReport x(path);
         if (x.empty()) {
             // !!!TODO: load default
@@ -519,7 +526,7 @@ int main(int argc, char **argv) {
         }
         Sample s;
         s.good = true;
-        s.study = x.front().front().study_id;
+        s.study = study;
         s.good = s.good && xtor->apply(x, &s);
         if (!buddy.empty()) {
             fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
@@ -676,7 +683,7 @@ int main(int argc, char **argv) {
         run_train(samples, 2, 1, root/fs::path("d.error.dia"), train_set, root/fs::path("error.dia"), round2);
     }
     else if (method == "eval") {
-        run_eval(samples);
+        run_eval(samples, train_set);
     }
     else if (method == "submit") {
         run_submit(samples);

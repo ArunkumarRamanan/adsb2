@@ -101,10 +101,9 @@ void import (Sampler &sampler,
             if (polar) {
                 cv::Point_<float> C;
                 float R;
-                FindBoundingCircle(sample->images[IM_LABEL], &C, &R);
+                cv::Rect box;
                 sampler.polar(sample->images[IM_IMAGE],
                               sample->images[IM_LABEL],
-                              C, R,
                               &image, &label, do_not_perturb);
             }
             else {

@@ -529,8 +529,8 @@ namespace adsb2 {
             max_linear_scale(config.get<float>("adsb2.aug.scale", 0.25)),
             linear_angle(-max_linear_angle, max_linear_angle),
             linear_scale(-max_linear_scale, max_linear_scale),
-            polar_R(config.get<float>("adsb2.aug.min_polar_R", 0.75),
-                    config.get<float>("adsb2.aug.max_polar_R", 1.5)),
+            polar_R(config.get<float>("adsb2.aug.min_polar_R", 1.5),
+                    config.get<float>("adsb2.aug.max_polar_R", 3.5)),
             polar_C(0, config.get<float>("adsb2.aug.max_polar_C", 0.3)),
             polar_phi(0, M_PI * 2),
             polar_kernel_size(config.get<int>("adsb2.aug.polar_kernel", 3)),
@@ -572,40 +572,10 @@ namespace adsb2 {
 
         void polar (cv::Mat from_image,
                           cv::Mat from_label,
-                          cv::Point_<float> C,
-                          float R,
                           cv::Mat *to_image,
                           cv::Mat *to_label,
-                          bool no_perturb = false) {
-            // randomization
-            float color = 0;
-            bool flip = false;
-            if (!no_perturb) {
-#pragma omp critical
-                {
-                    float cr = polar_C(e) * R;  // center perturb
-                    float phi = polar_phi(e);
-                    flip = ((e() % 2) == 1);
-                    R *= polar_R(e);
-                    color = delta_color(e);
-                    C.x += cr * std::cos(phi);
-                    C.y += cr * std::sin(phi);
-                }
-            }
-            linearPolar(from_image, to_image, C, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
-            linearPolar(from_label, to_label, C, R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS);
-            /*
-            imageF.convertTo(image, CV_8UC1);
-            cv::equalizeHist(image, image);
-            labelF.convertTo(label, CV_8UC1);
-            */
-            *to_image += color;
-            cv::morphologyEx(*to_label, *to_label, cv::MORPH_CLOSE, polar_kernel);
-            if (flip) {
-                cv::flip(*to_image, *to_image, 0);
-                cv::flip(*to_label, *to_label, 0);
-            }
-        }
+                          bool no_perturb = false);
+
     };
 
     class CA {

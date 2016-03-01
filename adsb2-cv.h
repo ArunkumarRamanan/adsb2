@@ -184,32 +184,6 @@ namespace adsb2 {
         *v = tmp;
     }
 
-    static inline void bound_box (cv::Mat const &m, cv::Rect *bb) {
-        CHECK(m.type() == CV_32F);
-        int min_x = m.cols;
-        int max_x = -1;
-        int min_y = m.rows;
-        int max_y = -1;
-        for (int y = 0; y < m.rows; ++y) {
-            float const *row = m.ptr<float const>(y);
-            for (int x = 0; x < m.cols; ++x) {
-                if (row[x]) { 
-                    min_x = std::min(min_x, x);
-                    max_x = std::max(max_x, x);
-                    min_y = std::min(min_y, y);
-                    max_y = std::max(max_y, y);
-                }
-            }
-        }
-        if ((min_x > max_x) || (min_y > max_y)) *bb = cv::Rect();
-        else {
-            bb->x = min_x;
-            bb->y = min_y;
-            bb->width = max_x - min_x + 1;
-            bb->height = max_y - min_y + 1;
-        }
-    }
-
     static inline void loop_check (cv::Mat &m, uint16_t) {
         CHECK(m.type() == CV_16U);
     }
@@ -278,4 +252,32 @@ namespace adsb2 {
     }
 
     cv::Point_<float> weighted_box_center (cv::Mat &prob, cv::Rect box);
+
+    template <typename T = float>
+    static inline void bound_box (cv::Mat &m, cv::Rect *bb) {
+        loop_check(m, T());
+        int min_x = m.cols;
+        int max_x = -1;
+        int min_y = m.rows;
+        int max_y = -1;
+        for (int y = 0; y < m.rows; ++y) {
+            T const *row = m.ptr<T const>(y);
+            for (int x = 0; x < m.cols; ++x) {
+                if (row[x]) { 
+                    min_x = std::min(min_x, x);
+                    max_x = std::max(max_x, x);
+                    min_y = std::min(min_y, y);
+                    max_y = std::max(max_y, y);
+                }
+            }
+        }
+        if ((min_x > max_x) || (min_y > max_y)) *bb = cv::Rect();
+        else {
+            bb->x = min_x;
+            bb->y = min_y;
+            bb->width = max_x - min_x + 1;
+            bb->height = max_y - min_y + 1;
+        }
+    }
+
 }
