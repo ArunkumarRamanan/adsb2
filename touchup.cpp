@@ -153,6 +153,7 @@ void dump_ft (vector<float> const &ft, ostream &os) {
 
 struct Sample {
     int study;
+    int cohort;
     vector<float> tft;
     vector<float> eft;
     float sys_t, dia_t; // target
@@ -538,6 +539,16 @@ int main(int argc, char **argv) {
         load_submit_file(fallback_path, &fallback);
     }
 
+    // load cohort data
+    unordered_map<int, int> cohort;
+    if (do_cohort) {
+        int id, c;
+        fs::ifstream is(home_dir/fs::path("cohort"));
+        while (is >> id >> c) {
+            cohort[id] = c;
+        }
+    }
+
     Eval eval;
     Xtor *xtor = Xtor::create(xtor_name);
     CHECK(xtor);
@@ -575,16 +586,24 @@ int main(int argc, char **argv) {
         Sample s;
         s.study = study;
         s.good = true;
+        s.cohort = 0;
 
         fs::path path(data_root / fs::path(lexical_cast<string>(study))/ fs::path("report.txt"));
         StudyReport x(path);
+        if (do_cohort) {
+            if (cohort.size()) {
+                auto it = cohort.find(s.study);
+                CHECK(it != cohort.end());
+                s.cohort = it->second;
+            }
+            else if (x.size() && x[0].size()) {
+                s.cohort = x[0][0].data[SL_COHORT];
+            }
+        }
         if (x.empty()) {
             LOG(ERROR) << "Fail to load data file: " << path.native();
             s.good = false;
             // probe ...
-        }
-        else {
-            s.cohort = x[0][0].data[SL_COHORT];
         }
         preprocess(&x, do_detail, do_top);
         s.good = s.good && xtor->apply(x, &s);
@@ -597,20 +616,15 @@ int main(int argc, char **argv) {
             preprocess(&bx, do_detail, do_top);
             Sample bs;
             s.good = s.good && xtor->apply(bx, &bs);
-            s.tft.insert(s.tft.end(), bs.tft.begin(), bs.tft.end());
-            s.eft.insert(s.eft.end(), bs.eft.begin(), bs.eft.end());
-        }
-
-        int cid = 0; //
-        if (do_cohort) {
-            cid = int(s.cohort);
+            s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+            s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
         }
 
         s.sys_t = eval.get(s.study, 0);
         s.dia_t = eval.get(s.study, 1);
         if (level >= 1) {
-            s.sys_p = target_sys[cid]->apply(s.tft);
-            s.dia_p = target_dia[cid]->apply(s.tft);
+            s.sys_p = target_sys[s.cohort]->apply(s.tft);
+            s.dia_p = target_dia[s.cohort]->apply(s.tft);
         }
         if (level >= 2) {
             s.sys_e = error_sys->apply(s.eft) * scale;
