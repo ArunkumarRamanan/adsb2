@@ -256,6 +256,7 @@ namespace adsb2 {
                 p = cv::max(p, ss.images[IM_PROB]);
             }
             pv = cv::max(pv, s.front().images[IM_VAR]);
+            //pv += s.front().images[IM_VAR];
         }
         cv::normalize(p, p, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         cv::threshold(p, p, 255 * bin_th, 255, cv::THRESH_BINARY);
