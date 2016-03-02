@@ -136,6 +136,22 @@ void compute2 (StudyReport const &rep, float *sys, float *dia) {
     *dia = M/1000;
 }
 
+float compute_xa (StudyReport const &rep) {
+    float vol = 0;
+    for (unsigned i = 0; i + 1 < rep.size(); ++i) {
+        float ss = 0;
+        for (auto const &s: rep[i]) {
+            ss += s.data[SL_XA];
+        }
+        ss /= rep[i].size();
+        ss *= sqr(rep[i][0].meta.spacing);
+        float gap = abs(rep[i][0].meta.slice_location - rep[i+1][0].meta.slice_location);
+        if ((gap > 25)) gap = 10;
+        vol += ss *gap;
+    }
+    return vol;
+}
+
 void join (vector<string> const &v, string *acc) {
     ostringstream os;
     for (unsigned i = 0; i < v.size(); ++i) {
@@ -414,7 +430,7 @@ public:
         auto const &front = rep[0][0];
         vector<float> ft{
             front.meta[Meta::SEX], front.meta[Meta::AGE],
-            sys1, dia1, sys2, dia2,
+            sys1, dia1, sys2, dia2, compute_xa(rep)
         };
         s->sys1 = sys1;
         s->dia1 = dia1;
@@ -616,8 +632,8 @@ int main(int argc, char **argv) {
             preprocess(&bx, do_detail, do_top);
             Sample bs;
             s.good = s.good && xtor->apply(bx, &bs);
-            s.tft.back() = insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
-            s.eft.back() = insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
+            s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+            s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
         }
 
         s.sys_t = eval.get(s.study, 0);

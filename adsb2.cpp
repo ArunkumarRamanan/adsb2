@@ -450,7 +450,7 @@ namespace adsb2 {
         for (unsigned i = 0; i < IM_SIZE; ++i) {
             io::read(is, &images[i]);
         }
-        if (VERSION == 1) {
+        if (v == 1) {
             is.read(reinterpret_cast<char *>(&data[0]),
                     sizeof(data[0]) * (SL_SIZE -1));
             data[SL_XA] = 0;
@@ -535,6 +535,7 @@ namespace adsb2 {
         draw_text(images[IM_VISUAL], fmt::format("BT: {:1.2f}", data[SL_BOTTOM]), org, 6);
         draw_text(images[IM_VISUAL], fmt::format("CS: {:2.1f}", data[SL_CCOLOR]), org, 7);
         draw_text(images[IM_VISUAL], fmt::format("BP: {:1.1f}", data[SL_BOTTOM_PATCH]), org, 8);
+        draw_text(images[IM_VISUAL], fmt::format("XA: {:3.2f}", data[SL_XA]), org, 9);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
