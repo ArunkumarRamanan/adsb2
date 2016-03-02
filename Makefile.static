@@ -47,7 +47,7 @@ em:	em.cpp em.h
 release:	study touchup
 	rm -rf release
 	mkdir release
-	cp study touchup xgboost train.csv xglinear.conf release/
+	cp study touchup xgboost train.csv xglinear.conf dicom.dic run-submit.sh release/
 
 clean:
 	rm *.o $(PROGS)

@@ -40,6 +40,7 @@ struct Sample {
     bool good;          // if not good, DO not use for training
                         // and use fallback's prediction
     int cohort;
+    float age;
     vector<float> tft;  // target feature
     vector<float> eft;  // error feature
 
@@ -129,6 +130,7 @@ public:
         */
         s->eft = s->tft;
         s->cohort = meta.cohort;
+        s->age = meta[Meta::AGE];
         return true;
     }
 };
@@ -182,7 +184,8 @@ public:
         s->tft.push_back(std::max(meta.AcquisitionMatrix[0], meta.AcquisitionMatrix[3]));
         */
         s->eft = s->tft;
-        s->cohort = meta.cohort;
+        s->cohort = rep[0][0].data[SL_COHORT];
+        s->age = rep[0][0].meta[Meta::AGE];
         return true;
     }
 };
@@ -288,7 +291,8 @@ public:
         s->dia2 = dia2;
         s->tft = ft;
         s->eft = ft;
-        s->cohort = meta.cohort;
+        s->cohort = rep[0][0].data[SL_COHORT];
+        s->age = rep[0][0].meta[Meta::AGE];
         return true;
     }
 };
@@ -635,13 +639,13 @@ void preprocess (StudyReport *rep, bool detail, bool top) {
 bool check_fallback (Sample &s) {
     bool good = true;;
     if (s.sys_p < s.fb.sys_p / 2) {
-        LOG(ERROR) << "study " << s.study << " sys outlier: " << s.sys_p << " " << s.fb.sys_p;
+        LOG(ERROR) << "study " << s.study << " outlier sys " << s.sys_p << " => " << s.fb.sys_p << "/" << s.fb.sys_e << " sys:" << s.sys_t << " age: " << s.age;
         s.sys_p = s.fb.sys_p;
         s.sys_e = s.fb.sys_e;
         good = false;
     }
-    if (s.dia_p < s.fb.dia_p * 3) {
-        LOG(ERROR) << "study " << s.study << " dia outlier: " << s.dia_p << " " << s.fb.dia_p;
+    if (s.dia_p > s.fb.dia_p * 3) {
+        LOG(ERROR) << "study " << s.study << " outlier dia " << s.dia_p << " => " << s.fb.dia_p << "/" << s.fb.dia_e <<  " dia:" << s.dia_t << " age: " << s.age;
         s.dia_p = s.fb.dia_p;
         s.dia_e = s.fb.dia_e;
         good = false;
