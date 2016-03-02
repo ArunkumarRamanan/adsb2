@@ -414,8 +414,7 @@ public:
         auto const &front = rep[0][0];
         vector<float> ft{
             front.meta[Meta::SEX], front.meta[Meta::AGE],
-            //sys1, dia1, sys2, dia2,
-            sys2, dia1
+            sys1, dia1, sys2, dia2,
         };
         s->sys1 = sys1;
         s->dia1 = dia1;
@@ -617,8 +616,8 @@ int main(int argc, char **argv) {
             preprocess(&bx, do_detail, do_top);
             Sample bs;
             s.good = s.good && xtor->apply(bx, &bs);
-            s.tft.back() = bs.tft.back(); //insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
-            s.eft.back() = bs.eft.back();
+            s.tft.back() = insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+            s.eft.back() = insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
         }
 
         s.sys_t = eval.get(s.study, 0);
