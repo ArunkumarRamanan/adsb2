@@ -443,14 +443,21 @@ namespace adsb2 {
     void Slice::load (std::istream &is) {
         int v;
         io::read(is, &v);
-        CHECK(v == VERSION);
+        CHECK(v <= VERSION);
         io::read(is, &id);
         io::read(is, &path);
         io::read(is, &meta);
         for (unsigned i = 0; i < IM_SIZE; ++i) {
             io::read(is, &images[i]);
         }
-        io::read(is, &data);
+        if (VERSION == 1) {
+            is.read(reinterpret_cast<char *>(&data[0]),
+                    sizeof(data[0]) * (SL_SIZE -1));
+            data[SL_XA] = 0;
+        }
+        else {
+            io::read(is, &data);
+        }
         io::read(is, &do_not_cook);
         io::read(is, &line);
 

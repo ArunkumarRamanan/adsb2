@@ -241,11 +241,12 @@ namespace adsb2 {
         SL_ARATE,
         SL_BOTTOM_PATCH,
         SL_COHORT,  // for compatibility
+        SL_XA,
         SL_SIZE
     };
 
     struct Slice {
-        static int constexpr VERSION = 1;
+        static int constexpr VERSION = 2;
         int id;
         fs::path path;          // must always present
         Meta meta;              // available after load_raw
