@@ -404,8 +404,8 @@ namespace adsb2 {
                 get_dp1_th(prob, &th);
                 ws.run(range1, &contour, 1, false, th, 1.0, smooth1, gap, 0);
             }
-            int bound;
-            find_shift(image, contour, &bound);
+            int bound, lbb;
+            find_shift(image, contour, &bound, &lbb);
             {
                 cv::Mat xv(image.size(), CV_32F, cv::Scalar(0));
                 for (int y = 0; y < xv.rows; ++y) {
@@ -422,9 +422,6 @@ namespace adsb2 {
             }
             if (do_extend) {
                 // extend 1
-                int bound, lbb;
-                find_shift(image, contour, &bound, &lbb);
-
                 if (plb) *plb = contour;
                 if (pbound) *pbound = bound;
                 vector<std::pair<int, int>> range2(rows);

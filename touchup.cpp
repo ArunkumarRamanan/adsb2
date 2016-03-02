@@ -283,7 +283,7 @@ void run_show (vector<Sample> const &samples) {
     cout << "sys";
     eval_v(sys_1, sys_t, &mm);
     for (auto x: mm) {
-        cout << "\t" << x;
+        cout << "\t" << fmt::format("{:2.6f}", x);
     }
     /*
     cout << endl;
@@ -291,13 +291,13 @@ void run_show (vector<Sample> const &samples) {
     */
     eval_v(sys_2, sys_t, &mm);
     for (auto x: mm) {
-        cout << "\t" << x;
+        cout << "\t" << fmt::format("{:2.6f}", x);
     }
     cout << endl;
     cout << "dia";
     eval_v(dia_1, dia_t, &mm);
     for (auto x: mm) {
-        cout << "\t" << x;
+        cout << "\t" << fmt::format("{:2.6f}", x);
     }
     /*
     cout << endl;
@@ -305,7 +305,7 @@ void run_show (vector<Sample> const &samples) {
     */
     eval_v(dia_2, dia_t, &mm);
     for (auto x: mm) {
-        cout << "\t" << x;
+        cout << "\t" << fmt::format("{:2.6f}", x);
     }
     cout << endl;
     sys_t.insert(sys_t.end(), dia_t.begin(), dia_t.end());
@@ -313,7 +313,7 @@ void run_show (vector<Sample> const &samples) {
     eval_v(sys_1, sys_t, &mm);
     cout << "all";
     for (auto x: mm) {
-        cout << "\t" << x;
+        cout << "\t" << fmt::format("{:2.6f}", x);
     }
     /*
     cout << endl;
