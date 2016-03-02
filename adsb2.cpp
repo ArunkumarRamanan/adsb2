@@ -443,14 +443,21 @@ namespace adsb2 {
     void Slice::load (std::istream &is) {
         int v;
         io::read(is, &v);
-        CHECK(v == VERSION);
+        CHECK(v <= VERSION);
         io::read(is, &id);
         io::read(is, &path);
         io::read(is, &meta);
         for (unsigned i = 0; i < IM_SIZE; ++i) {
             io::read(is, &images[i]);
         }
-        io::read(is, &data);
+        if (v == 1) {
+            is.read(reinterpret_cast<char *>(&data[0]),
+                    sizeof(data[0]) * (SL_SIZE -1));
+            data[SL_XA] = 0;
+        }
+        else {
+            io::read(is, &data);
+        }
         io::read(is, &do_not_cook);
         io::read(is, &line);
 
@@ -528,6 +535,7 @@ namespace adsb2 {
         draw_text(images[IM_VISUAL], fmt::format("BT: {:1.2f}", data[SL_BOTTOM]), org, 6);
         draw_text(images[IM_VISUAL], fmt::format("CS: {:2.1f}", data[SL_CCOLOR]), org, 7);
         draw_text(images[IM_VISUAL], fmt::format("BP: {:1.1f}", data[SL_BOTTOM_PATCH]), org, 8);
+        draw_text(images[IM_VISUAL], fmt::format("XA: {:3.2f}", data[SL_XA]), org, 9);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {

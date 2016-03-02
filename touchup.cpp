@@ -136,6 +136,22 @@ void compute2 (StudyReport const &rep, float *sys, float *dia) {
     *dia = M/1000;
 }
 
+float compute_xa (StudyReport const &rep) {
+    float vol = 0;
+    for (unsigned i = 0; i + 1 < rep.size(); ++i) {
+        float ss = 0;
+        for (auto const &s: rep[i]) {
+            ss += s.data[SL_XA];
+        }
+        ss /= rep[i].size();
+        ss *= sqr(rep[i][0].meta.spacing);
+        float gap = abs(rep[i][0].meta.slice_location - rep[i+1][0].meta.slice_location);
+        if ((gap > 25)) gap = 10;
+        vol += ss *gap;
+    }
+    return vol;
+}
+
 void join (vector<string> const &v, string *acc) {
     ostringstream os;
     for (unsigned i = 0; i < v.size(); ++i) {
@@ -399,6 +415,7 @@ public:
 };
 
 
+bool do_xa = false;
 class FullXtor: public Xtor {
 public:
     bool apply (StudyReport const &rep,
@@ -414,8 +431,11 @@ public:
         auto const &front = rep[0][0];
         vector<float> ft{
             front.meta[Meta::SEX], front.meta[Meta::AGE],
-            sys1, dia1, sys2, dia2,
+            sys1, dia1, sys2, dia2//, compute_xa(rep)
         };
+        if (do_xa) {
+            ft.push_back(compute_xa(rep));
+        }
         s->sys1 = sys1;
         s->dia1 = dia1;
         s->sys2 = sys2;
@@ -483,6 +503,7 @@ int main(int argc, char **argv) {
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
     ("cohort", "")
     ("buddy", po::value(&buddy), "")
+    ("xa", "")
     ;
 
     po::positional_options_description p;
@@ -504,6 +525,7 @@ int main(int argc, char **argv) {
     bool do_detail = !(vm.count("keep-tail") > 0);
     bool do_top = (vm.count("top") > 0);
     bool do_cohort = vm.count("cohort") > 0;
+    do_xa = vm.count("xa") > 0;
 
     if (studies.empty()) {
         int study;
@@ -620,6 +642,10 @@ int main(int argc, char **argv) {
             //       dia1      dia2
             s.tft[3] = bs.tft[3];
             s.tft[5] = bs.tft[5];
+            /*
+            s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+            s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
+            */
         }
 
         s.sys_t = eval.get(s.study, 0);
