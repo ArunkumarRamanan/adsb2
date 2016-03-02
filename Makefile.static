@@ -1,4 +1,4 @@
-.PHONY:	all clean caffex
+.PHONY:	all clean caffex release
 CXX = g++
 OPENMP = -fopenmp
 VERSION=$(shell git describe --always)
@@ -43,6 +43,11 @@ caffex-fcn/caffex.o:	caffex-fcn/caffex.cpp
 
 em:	em.cpp em.h
 	g++ -std=c++11 -O3 -o em em.cpp -lboost_program_options -lm
+
+release:	study touchup
+	rm -rf release
+	mkdir release
+	cp study touchup xgboost train.csv xglinear.conf release/
 
 clean:
 	rm *.o $(PROGS)
