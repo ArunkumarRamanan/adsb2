@@ -67,7 +67,7 @@ namespace adsb2 {
         float raw_spacing;  // original spacing as in file
         float slice_location;
         float z;
-        //vector<float> AcquisitionMatrix;
+        vector<float> AcquisitionMatrix;
         float PercentPhaseFieldOfView;
         cv::Point3f pos;
         cv::Point3f ori_row;
@@ -672,16 +672,17 @@ namespace adsb2 {
 
     class Eval {
     public:
-        static unsigned constexpr CASES = 500;
+        typedef array<float,2> E;
     private:
-        float volumes[CASES][2];
+        unordered_map<int, E> volumes;
         static float crps (float v, vector<float> const &x);
     public:
         static constexpr unsigned VALUES = 600;
         Eval ();
         float get (unsigned n1, unsigned n2) const {
-            if (n1 > 500) return 0;
-            return volumes[n1-1][n2];
+            auto it = volumes.find(n1);
+            if (it == volumes.end()) return -1;
+            return it->second[n2];
         }
         float score (fs::path const &, vector<std::pair<string, float>> *);
         float score (unsigned n1, unsigned n2, vector<float> const &x);

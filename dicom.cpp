@@ -104,7 +104,7 @@ namespace adsb2 {
         string cohort = dicom_get<string>(ff, DCM_PerformedProcedureStepID, path);
         meta->cohort = cohort.size() < 10;
         meta->raw_spacing = meta->spacing;
-        //meta->AcquisitionMatrix = dicom_gets<float>(ff, DCM_AcquisitionMatrix, path);
+        meta->AcquisitionMatrix = dicom_gets<float>(ff, DCM_AcquisitionMatrix, path);
         meta->PercentPhaseFieldOfView = dicom_get<float>(ff, DCM_PercentPhaseFieldOfView, path);
         vector<float> pos = dicom_gets<float>(ff, DCM_ImagePositionPatient, path);
         CHECK(pos.size() == 3);

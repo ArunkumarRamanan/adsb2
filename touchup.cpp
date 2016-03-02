@@ -27,23 +27,282 @@ namespace adsb2 {
 using namespace std;
 using namespace adsb2;
 
-void eval_v (vector<float> const &v1,
-             vector<float> const &v2,
-             vector<float> *out) {
-    CHECK(v1.size() == v2.size());
-    out->clear();
-    float corr = cv::compareHist(v1, v2, CV_COMP_CORREL);
-    out->push_back(corr);
-    float err = 0;
-    for (unsigned i = 0; i < v1.size(); ++i) {
-        float x = v1[i] - v2[i];
-        err += x * x;
+struct Fallback {
+    bool found;
+    float sys_p, dia_p; // prediction
+    float sys_e, dia_e; // error
+};
+
+Fallback global_fb = { true, 50, 50, 100, 50};
+
+struct Sample {
+    int study;
+    bool good;          // if not good, DO not use for training
+                        // and use fallback's prediction
+    int cohort;
+    vector<float> tft;  // target feature
+    vector<float> eft;  // error feature
+
+    float sys_p, dia_p; // prediction
+    float sys_t, dia_t; // target
+    float sys_e, dia_e; // error
+    vector<float> sys_v;
+    vector<float> dia_v;
+
+    // only using full extractor
+    float sys1, dia1;   // computed with method1
+    float sys2, dia2;   // computed with method2
+    Fallback fb;
+};
+
+
+class Xtor {
+public:
+    ~Xtor () {}
+    virtual bool apply (StudyReport const &rep, Sample *) const = 0;
+    static Xtor *create (string const &name, Config const &conf);
+};
+
+#if 0
+float xage (float age, float a, float b, float c) {
+    float x = log(age) - log(25);
+    return a * exp(- x * x / b) + c;
+}
+#endif
+
+class ClinicalXtor: public Xtor {
+    fs::path raw;
+    int sample;
+public:
+    ClinicalXtor (Config const &conf):
+        raw(conf.get<string>("adsb2.raw", "raw")),
+        sample(conf.get<int>("adsb2.cli.sample", -1)) 
+    {
     }
-    err /= v1.size();
-    err = sqrt(err);
-    out->push_back(err);
+
+    bool apply (StudyReport const &rep,
+                Sample *s) const {
+        Study study(raw/fs::path(lexical_cast<string>(s->study))/fs::path("study"), false);
+        vector<Slice *> slices;
+        study.pool(&slices);
+        if (slices.empty()) {
+            LOG(ERROR) << "fail to load study " << s->study;
+            return false;
+        }
+        if ((sample > 0) && (sample < slices.size())) {
+            random_shuffle(slices.begin(), slices.end());
+            slices.resize(sample);
+        }
+        Meta meta;
+        cv::Mat mat;
+        for (auto sl: slices) {
+            mat = load_dicom(sl->path, &meta);
+            if (mat.data) break;
+            LOG(ERROR) << "fail to load DICOM: " << sl->path;
+        }
+        if (!mat.data) {
+            LOG(ERROR) << "all DICOM paths failed for study " << s->study;
+            return false;
+        }
+        s->tft.clear();
+        s->tft.push_back(meta[Meta::SEX]);
+        s->tft.push_back(meta[Meta::AGE]);
+        /*
+        s->tft.push_back(xage(meta[Meta::AGE], 181.712,6.073,1.821));
+        s->tft.push_back(xage(meta[Meta::AGE], 83.676,10.871,-6.782));
+        */
+        //s->tft.push_back(meta[Meta::AGE]);
+        s->tft.push_back(meta[Meta::SLICE_THICKNESS]);
+        s->tft.push_back(meta.raw_spacing);
+        s->tft.push_back(meta.PercentPhaseFieldOfView);
+        /*
+        s->tft.push_back(meta.width);
+        s->tft.push_back(meta.height);
+        */
+        s->tft.push_back(meta.pos.x);
+        s->tft.push_back(meta.pos.y);
+        /*
+        s->tft.push_back(meta.pos.z);
+        */
+        /*
+        s->tft.push_back(std::max(meta.AcquisitionMatrix[0], meta.AcquisitionMatrix[3]));
+        */
+        s->eft = s->tft;
+        s->cohort = meta.cohort;
+        return true;
+    }
+};
+
+class OneSaxXtor: public Xtor {
+    static void minmax (vector<SliceReport> const &sr, float *pm, float *pM) {
+        float m = sr[0].data[SL_AREA];
+        float M = m;
+        for (unsigned i = 1; i < sr.size(); ++i){
+            float v = sr[i].data[SL_AREA];
+            if (v < m) v = m;
+            if (v > M) v = M;
+        }
+        *pm = m;
+        *pM = M;
+    }
+public:
+    OneSaxXtor (Config const &conf) {
+    }
+    bool apply (StudyReport const &rep,
+                Sample *s) const {
+        if (rep.empty()) return false;
+        auto const &sr = rep[rep.size()/2];
+        auto meta = sr[0].meta;
+        float min, max;
+        minmax(sr, &min, &max);
+
+        s->tft.clear();
+        s->tft.push_back(meta[Meta::SEX]);
+        s->tft.push_back(meta[Meta::AGE]);
+        /*
+        s->tft.push_back(xage(meta[Meta::AGE], 181.712,6.073,1.821));
+        s->tft.push_back(xage(meta[Meta::AGE], 83.676,10.871,-6.782));
+        */
+        //s->tft.push_back(meta[Meta::AGE]);
+        s->tft.push_back(meta[Meta::SLICE_THICKNESS]);
+        s->tft.push_back(meta.raw_spacing);
+        s->tft.push_back(meta.PercentPhaseFieldOfView);
+        /*
+        s->tft.push_back(meta.width);
+        s->tft.push_back(meta.height);
+        */
+        s->tft.push_back(meta.pos.x);
+        s->tft.push_back(meta.pos.y);
+        s->tft.push_back(min);
+        s->tft.push_back(max);
+        /*
+        s->tft.push_back(meta.pos.z);
+        */
+        /*
+        s->tft.push_back(std::max(meta.AcquisitionMatrix[0], meta.AcquisitionMatrix[3]));
+        */
+        s->eft = s->tft;
+        s->cohort = meta.cohort;
+        return true;
+    }
+};
+
+bool do_xa = false;
+class FullXtor: public Xtor {
+    static bool compute1 (StudyReport const &rep, float *sys, float *dia) {
+        vector<float> all(rep[0].size(), 0);
+        for (unsigned i = 1; i < rep.size(); ++i) {
+            if (rep[i].size() != rep[0].size()) return false;
+        }
+        for (unsigned sl = 0; sl < all.size(); ++sl) {
+            float v = 0;
+            for (unsigned sax = 0; sax + 1 < rep.size(); ++sax) {
+
+                float a = rep[sax][sl].data[SL_AREA] * sqr(rep[sax][sl].meta.spacing);
+                float b = rep[sax+1][sl].data[SL_AREA] * sqr(rep[sax+1][sl].meta.spacing);
+                float gap = fabs(rep[sax+1][sl].meta.slice_location
+                          - rep[sax][sl].meta.slice_location);
+                if ((gap > 25)) gap = 0;
+                v += (a + b + sqrt(a*b)) * gap / 3;
+            }
+            all[sl] = v / 1000;
+        }
+        float m = all[0];
+        float M = all[0];
+        for (unsigned i = 1; i < all.size(); ++i) {
+            if (all[i] < m) m = all[i];
+            if (all[i] > M) M = all[i];
+        }
+        if (M < all[0] * 1.2) M = all[0];
+        *dia = M;
+        *sys = m;
+        return true;
+    }
+
+    static void compute2 (StudyReport const &rep, float *sys, float *dia) {
+        float oma = 0, oMa = 0, ol = 0;
+        float m = 0, M = 0;
+        for (unsigned i = 0; i < rep.size(); ++i) {
+            auto const &ss = rep[i];
+            float ma = ss[0].data[SL_AREA] * sqr(ss[0].meta.spacing);
+            float Ma = ma;
+            for (auto const &s: ss) {
+                float x = s.data[SL_AREA] * sqr(s.meta.spacing);
+                if (x < ma) ma = x;
+                if (x > Ma) Ma = x;
+            }
+            float l = ss[0].meta.slice_location;
+            if (i > 0) {
+                float gap = abs(ol - l);
+                if ((gap > 25)) gap = 10;
+                m += (oma + ma + sqrt(oma * ma)) * gap/3;
+                M += (oMa + Ma + sqrt(oMa * Ma)) * gap/3;
+            }
+            oma = ma;
+            oMa = Ma;
+            ol = l;
+        }
+        *sys = m/1000;
+        *dia = M/1000;
+    }
+
+    static float compute_xa (StudyReport const &rep) {
+        float vol = 0;
+        for (unsigned i = 0; i + 1 < rep.size(); ++i) {
+            float ss = 0;
+            for (auto const &s: rep[i]) {
+                ss += s.data[SL_XA];
+            }
+            ss /= rep[i].size();
+            ss *= sqr(rep[i][0].meta.spacing);
+            float gap = abs(rep[i][0].meta.slice_location - rep[i+1][0].meta.slice_location);
+            if ((gap > 25)) gap = 10;
+            vol += ss *gap;
+        }
+        return vol;
+    }
+public:
+    FullXtor (Config const &conf) {
+    }
+    bool apply (StudyReport const &rep,
+                Sample *s) const {
+        if (rep.size() < 4) return false;
+        float sys1, dia1;
+        float sys2, dia2;
+        compute2(rep, &sys2, &dia2);
+        if (!compute1(rep, &sys1, &dia1)) {
+            sys1 = sys2;
+            dia1 = dia2;
+        }
+        auto const &meta = rep[0][0].meta;
+        vector<float> ft{
+            meta[Meta::SEX], meta[Meta::AGE],
+            sys1, dia1, sys2, dia2//, compute_xa(rep)
+        };
+        if (do_xa) {
+            ft.push_back(compute_xa(rep));
+        }
+        s->sys1 = sys1;
+        s->dia1 = dia1;
+        s->sys2 = sys2;
+        s->dia2 = dia2;
+        s->tft = ft;
+        s->eft = ft;
+        s->cohort = meta.cohort;
+        return true;
+    }
+};
+
+Xtor *Xtor::create (string const &name, Config const &conf) {
+    if (name == "cli") return new ClinicalXtor(conf);
+    if (name == "one") return new OneSaxXtor(conf);
+    if (name == "full") return new FullXtor(conf);
+    CHECK(0);
+    return nullptr;
 }
 
+
+#if 0
 float top_th;
 void patch_top_bottom (StudyReport &rep) {
     for (unsigned xx = 0;; ++xx) {
@@ -69,6 +328,7 @@ void patch_top_bottom (StudyReport &rep) {
 
     }
 }
+#endif
 // models:
 //      sys
 //      dia
@@ -79,77 +339,11 @@ void patch_top_bottom (StudyReport &rep) {
 //      test set
 //      script
 //
-bool compute1 (StudyReport const &rep, float *sys, float *dia) {
-    vector<float> all(rep[0].size(), 0);
-    for (unsigned i = 1; i < rep.size(); ++i) {
-        if (rep[i].size() != rep[0].size()) return false;
+// train xgboost
+void dump_ft (vector<float> const &ft, ostream &os) {
+    for (unsigned i = 0; i < ft.size(); ++i) {
+        os << " " << i << ":" << ft[i];
     }
-    for (unsigned sl = 0; sl < all.size(); ++sl) {
-        float v = 0;
-        for (unsigned sax = 0; sax + 1 < rep.size(); ++sax) {
-
-            float a = rep[sax][sl].data[SL_AREA] * sqr(rep[sax][sl].meta.spacing);
-            float b = rep[sax+1][sl].data[SL_AREA] * sqr(rep[sax+1][sl].meta.spacing);
-            float gap = fabs(rep[sax+1][sl].meta.slice_location
-                      - rep[sax][sl].meta.slice_location);
-            if ((gap > 25)) gap = 0;
-            v += (a + b + sqrt(a*b)) * gap / 3;
-        }
-        all[sl] = v / 1000;
-    }
-    float m = all[0];
-    float M = all[0];
-    for (unsigned i = 1; i < all.size(); ++i) {
-        if (all[i] < m) m = all[i];
-        if (all[i] > M) M = all[i];
-    }
-    if (M < all[0] * 1.2) M = all[0];
-    *dia = M;
-    *sys = m;
-    return true;
-}
-
-void compute2 (StudyReport const &rep, float *sys, float *dia) {
-    float oma = 0, oMa = 0, ol = 0;
-    float m = 0, M = 0;
-    for (unsigned i = 0; i < rep.size(); ++i) {
-        auto const &ss = rep[i];
-        float ma = ss[0].data[SL_AREA] * sqr(ss[0].meta.spacing);
-        float Ma = ma;
-        for (auto const &s: ss) {
-            float x = s.data[SL_AREA] * sqr(s.meta.spacing);
-            if (x < ma) ma = x;
-            if (x > Ma) Ma = x;
-        }
-        float l = ss[0].meta.slice_location;
-        if (i > 0) {
-            float gap = abs(ol - l);
-            if ((gap > 25)) gap = 10;
-            m += (oma + ma + sqrt(oma * ma)) * gap/3;
-            M += (oMa + Ma + sqrt(oMa * Ma)) * gap/3;
-        }
-        oma = ma;
-        oMa = Ma;
-        ol = l;
-    }
-    *sys = m/1000;
-    *dia = M/1000;
-}
-
-float compute_xa (StudyReport const &rep) {
-    float vol = 0;
-    for (unsigned i = 0; i + 1 < rep.size(); ++i) {
-        float ss = 0;
-        for (auto const &s: rep[i]) {
-            ss += s.data[SL_XA];
-        }
-        ss /= rep[i].size();
-        ss *= sqr(rep[i][0].meta.spacing);
-        float gap = abs(rep[i][0].meta.slice_location - rep[i+1][0].meta.slice_location);
-        if ((gap > 25)) gap = 10;
-        vol += ss *gap;
-    }
-    return vol;
 }
 
 void join (vector<string> const &v, string *acc) {
@@ -161,26 +355,6 @@ void join (vector<string> const &v, string *acc) {
     *acc = os.str();
 }
 
-void dump_ft (vector<float> const &ft, ostream &os) {
-    for (unsigned i = 0; i < ft.size(); ++i) {
-        os << " " << i << ":" << ft[i];
-    }
-}
-
-struct Sample {
-    int study;
-    int cohort;
-    vector<float> tft;
-    vector<float> eft;
-    float sys_t, dia_t; // target
-    float sys_p, dia_p; // prediction
-    float sys_e, dia_e; // error
-    float sys1, dia1;
-    float sys2, dia2;
-    vector<float> sys_v;
-    vector<float> dia_v;
-    bool good;
-};
 
 void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, unordered_set<int> const &train,
         fs::path const &model, int round) {
@@ -194,6 +368,15 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
     fs::ofstream os_test(test_path);
     int ntest = 0;
     for (auto &s: ss) {
+        if (!s.good) continue;
+        if (s.sys_t < 0) {
+            LOG(ERROR) << "study " << s.study << " does not have groud truth sys but used for training";
+            continue;
+        }
+        if (s.dia_t < 0) {
+            LOG(ERROR) << "study " << s.study << " does not have groud truth dia but used for training";
+            continue;
+        }
         float target;
         vector<float> *ft;
         if (level == 1) {
@@ -213,9 +396,10 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
         os << endl;
     }
     if (!model.empty()) {
+        LOG(INFO) << "RUNNING XGBOOST";
         vector<string> cmd;
-        cmd.push_back((home_dir/fs::path("data/xgboost")).native());
-        cmd.push_back((home_dir/fs::path("data/xglinear.conf")).native());
+        cmd.push_back((home_dir/fs::path("xgboost")).native());
+        cmd.push_back((home_dir/fs::path("xglinear.conf")).native());
         cmd.push_back(fmt::format("data={}", train_path.native()));
         if (ntest) {
             cmd.push_back(fmt::format("eval[test]={}", test_path.native()));
@@ -223,8 +407,7 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
         cmd.push_back(fmt::format("num_round={}", round));
         cmd.push_back(fmt::format("model_out={}", model.native()));
         cmd.push_back("2>&1");
-        cmd.push_back("|");
-        cmd.push_back("tee");
+        cmd.push_back(">");
         cmd.push_back((dir/fs::path("log")).native());
         string x;
         join(cmd, &x);
@@ -234,6 +417,26 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
     }
 }
 
+// v1 is true values
+// v2 is predicted values
+// evaluate RMSE & correlation
+void eval_v (vector<float> const &v1,
+             vector<float> const &v2,
+             vector<float> *out) {
+    CHECK(v1.size() == v2.size());
+    out->clear();
+    float corr = cv::compareHist(v1, v2, CV_COMP_CORREL);
+    out->push_back(corr);
+    float err = 0;
+    for (unsigned i = 0; i < v1.size(); ++i) {
+        float x = v1[i] - v2[i];
+        err += x * x;
+    }
+    err /= v1.size();
+    err = sqrt(err);
+    out->push_back(err);
+}
+
 void run_eval (vector<Sample> &ss, unordered_set<int> const &train) {
     Eval eval;
     int count = 0;
@@ -241,6 +444,8 @@ void run_eval (vector<Sample> &ss, unordered_set<int> const &train) {
     float dsys = 0;
     float ddia = 0;
     float dall = 0;
+    vector<float> sys_1, sys_2, sys_t;
+    vector<float> dia_1, dia_2, dia_t;
     for (auto &s: ss) {
         if (train.size() && train.count(s.study)) continue;
         dsys += sqr(s.sys_t - s.sys_p);
@@ -327,6 +532,12 @@ void run_show (vector<Sample> const &samples) {
     cout << endl;
 }
 
+void run_pred (vector<Sample> &ss) {
+    for (auto &s: ss) {
+        cout << s.study << '\t' << s.sys_p << '\t' << s.sys_e << '\t' << s.dia_p << '\t' << s.dia_e << endl;
+    }
+}
+
 void run_submit (vector<Sample> &ss) {
     cout << adsb2::HEADER << endl;
     for (auto &s: ss) {
@@ -358,7 +569,7 @@ void split_by_cohort (vector<Sample> const &s,
     }
 }
 
-
+#if 0
 void load_submit_file (fs::path const &path, unordered_map<int, Sample> *data) {
     data->clear();
     fs::ifstream is(path);
@@ -375,94 +586,67 @@ void load_submit_file (fs::path const &path, unordered_map<int, Sample> *data) {
             x.push_back(lexical_cast<float>(ss[2 + i]));
         }
         if (ss[1] == "Systole") {
-            data->at(n).sys_v.swap(x);
+            (*data)[n].sys_v.swap(x);
         }
         else if (ss[1] == "Diastole") {
-            data->at(n).dia_v.swap(x);
+            (*data)[n].dia_v.swap(x);
         }
         else CHECK(0);
     }
 }
+#endif
 
-class Xtor {
-public:
-    ~Xtor () {}
-    virtual bool apply (StudyReport const &rep,
-                Sample *) const = 0;
-    static Xtor *create (string const &name);
-};
-
-class ClinicalXtor: public Xtor {
-public:
-    bool apply (StudyReport const &rep,
-                Sample *s) const {
-        auto const &front = rep[0][0];
-        s->tft.clear();
-        s->tft.push_back(front.meta[Meta::SEX]);
-        s->tft.push_back(front.meta[Meta::AGE]);
-        s->tft.push_back(front.meta.raw_spacing);
-        s->eft = s->tft;
-        return true;
-    }
-};
-
-class OneSaxXtor: public Xtor {
-public:
-    bool apply (StudyReport const &rep,
-                Sample *s) const {
-        return false;
-    }
-};
-
-
-bool do_xa = false;
-class FullXtor: public Xtor {
-public:
-    bool apply (StudyReport const &rep,
-                Sample *s) const {
-        if (rep.size() < 4) return false;
-        float sys1, dia1;
-        float sys2, dia2;
-        compute2(rep, &sys2, &dia2);
-        if (!compute1(rep, &sys1, &dia1)) {
-            sys1 = sys2;
-            dia1 = dia2;
+void load_fallback (fs::path const &path, unordered_map<int, Fallback> *data) {
+    data->clear();
+    fs::ifstream is(path);
+    string line;
+    getline(is, line);  // first line
+    while (getline(is, line)) {
+        using namespace boost::algorithm;
+        vector<string> ss;
+        split(ss, line, is_any_of("\t"), token_compress_on);
+        if (ss.size() != 5) {
+            LOG(ERROR) << "Bad line: " << line;
         }
-        auto const &front = rep[0][0];
-        vector<float> ft{
-            front.meta[Meta::SEX], front.meta[Meta::AGE],
-            sys1, dia1, sys2, dia2//, compute_xa(rep)
-        };
-        if (do_xa) {
-            ft.push_back(compute_xa(rep));
-        }
-        s->sys1 = sys1;
-        s->dia1 = dia1;
-        s->sys2 = sys2;
-        s->dia2 = dia2;
-        s->tft = ft;
-        s->eft = ft;
-        return true;
+        int n = lexical_cast<int>(ss[0]);
+        Fallback fb;
+        fb.found = true;
+        fb.sys_p = lexical_cast<float>(ss[1]);
+        fb.sys_e = lexical_cast<float>(ss[2]);
+        fb.dia_p = lexical_cast<float>(ss[3]);
+        fb.dia_e = lexical_cast<float>(ss[4]);
+        (*data)[n] = fb;
     }
-};
-
-Xtor *Xtor::create (string const &name) {
-    if (name == "cli") return new ClinicalXtor;
-    if (name == "one") return new OneSaxXtor;
-    if (name == "full") return new FullXtor;
-    CHECK(0);
-    return nullptr;
 }
 
 void preprocess (StudyReport *rep, bool detail, bool top) {
+#if  0
     if (top) {
         patch_top_bottom(*rep);
     }
+#endif
     if (detail) {
         for (auto &s: rep->back()) {
             s.data[SL_AREA] = 0;
         }
     }
+}
+
+bool check_fallback (Sample &s) {
+    bool good = true;;
+    if (s.sys_p < s.fb.sys_p / 2) {
+        LOG(ERROR) << "study " << s.study << " sys outlier: " << s.sys_p << " " << s.fb.sys_p;
+        s.sys_p = s.fb.sys_p;
+        s.sys_e = s.fb.sys_e;
+        good = false;
+    }
+    if (s.dia_p < s.fb.dia_p * 3) {
+        LOG(ERROR) << "study " << s.study << " dia outlier: " << s.dia_p << " " << s.fb.dia_p;
+        s.dia_p = s.fb.dia_p;
+        s.dia_e = s.fb.dia_e;
+        good = false;
+    }
+    return good;
 }
 
 int main(int argc, char **argv) {
@@ -477,8 +661,7 @@ int main(int argc, char **argv) {
     string xtor_name;
     fs::path root;      // working directory
     fs::path data_root; // report directory
-    fs::path raw_root;  // raw data directory
-    fs::path buddy;
+    fs::path buddy_root;
     fs::path fallback_path;
     int round1, round2;
     float scale;
@@ -497,12 +680,11 @@ int main(int argc, char **argv) {
     ("round2", po::value(&round2)->default_value(1500), "")
     ("shuffle", "")
     ("data", po::value(&data_root), "dir containing report files")
-    ("raw", po::value(&raw_root), "dir containing raw images")
     ("ws,w", po::value(&root), "working directory")
     ("fallback", po::value(&fallback_path), "")
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
     ("cohort", "")
-    ("buddy", po::value(&buddy), "")
+    ("buddy", po::value(&buddy_root), "")
     ("xa", "")
     ;
 
@@ -556,11 +738,12 @@ int main(int argc, char **argv) {
     }
 
     // load fallback data
-    unordered_map<int, Sample> fallback;
+    unordered_map<int, Fallback> fallback;
     if (!fallback_path.empty()) {
-        load_submit_file(fallback_path, &fallback);
+        load_fallback(fallback_path, &fallback);
     }
 
+#if 0
     // load cohort data
     unordered_map<int, int> cohort;
     if (do_cohort) {
@@ -570,9 +753,10 @@ int main(int argc, char **argv) {
             cohort[id] = c;
         }
     }
+#endif
 
     Eval eval;
-    Xtor *xtor = Xtor::create(xtor_name);
+    Xtor *xtor = Xtor::create(xtor_name, config);
     CHECK(xtor);
     vector<Sample> samples;
     int level = 0;
@@ -583,6 +767,7 @@ int main(int argc, char **argv) {
     else if (method == "train1") level = 0;
     else if (method == "train2") level = 1;
     else if (method == "eval") level = 2;
+    else if (method == "pred") level = 2;
     else if (method == "submit") level = 2;
     else CHECK(0) << "method " << method << " not supported";
 
@@ -609,9 +794,19 @@ int main(int argc, char **argv) {
         s.study = study;
         s.good = true;
         s.cohort = 0;
+        s.fb.found = false;
+        // check and load fallback
+        auto it = fallback.find(s.study);
+        if (it != fallback.end()) {
+            s.fb = it->second;
+        }
 
         fs::path path(data_root / fs::path(lexical_cast<string>(study))/ fs::path("report.txt"));
         StudyReport x(path);
+        if (x.empty()) {
+            LOG(ERROR) << "Fail to load data file: " << path.native();
+        }
+#if 0
         if (do_cohort) {
             if (cohort.size()) {
                 auto it = cohort.find(s.study);
@@ -622,15 +817,11 @@ int main(int argc, char **argv) {
                 s.cohort = x[0][0].data[SL_COHORT];
             }
         }
-        if (x.empty()) {
-            LOG(ERROR) << "Fail to load data file: " << path.native();
-            s.good = false;
-            // probe ...
-        }
+#endif
         preprocess(&x, do_detail, do_top);
         s.good = s.good && xtor->apply(x, &s);
-        if (!buddy.empty()) {
-            fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
+        if (!buddy_root.empty()) {
+            fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
             StudyReport bx(buddy_path);
             if (bx.empty()) {
                 LOG(ERROR) << "Fail to load data file: " << buddy_path.native();
@@ -650,40 +841,39 @@ int main(int argc, char **argv) {
 
         s.sys_t = eval.get(s.study, 0);
         s.dia_t = eval.get(s.study, 1);
-        if (level >= 1) {
-            s.sys_p = target_sys[s.cohort]->apply(s.tft);
-            s.dia_p = target_dia[s.cohort]->apply(s.tft);
+        if (s.good) {
+            if (level >= 1) {
+                s.sys_p = target_sys[s.cohort]->apply(s.tft);
+                s.dia_p = target_dia[s.cohort]->apply(s.tft);
+            }
+            if (level >= 2) {
+                s.sys_e = error_sys->apply(s.eft) * scale;
+                s.dia_e = error_dia->apply(s.eft) * scale;
+            }
+            // check fallback
+            if (s.fb.found) {
+                s.good &= check_fallback(s);
+            }
         }
-        if (level >= 2) {
-            s.sys_e = error_sys->apply(s.eft) * scale;
-            s.dia_e = error_dia->apply(s.eft) * scale;
-            if (s.good) {
-                GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
-                GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
+        else {
+            LOG(WARNING) << "Study " << s.study << " not good, using fallback";
+            if (s.fb.found) {
+                s.sys_p = s.fb.sys_p;
+                s.sys_e = s.fb.sys_e;
+                s.dia_p = s.fb.dia_p;
+                s.dia_e = s.fb.dia_e;
             }
             else {
-                LOG(WARNING) << "Study " << s.study << " not good, using fallback";
-                auto it = fallback.find(s.study);
-                if (it == fallback.end()) {
-                    LOG(WARNING) << "Cannot find fallback for study " << s.study;
-                }
-                else {
-                    if (it->second.sys_v.size() == Eval::VALUES) {
-                        s.sys_v = it->second.sys_v;
-                    }
-                    else {
-                        LOG(WARNING) << "Cannot find sys fallback for study, you are doomed " << s.study;
-                        GaussianAcc(200, 100, &s.sys_v);
-                    }
-                    if (it->second.dia_v.size() == Eval::VALUES) {
-                        s.dia_v = it->second.dia_v;
-                    }
-                    else {
-                        LOG(WARNING) << "Cannot find dia fallback for study, you are doomed " << s.study;
-                        GaussianAcc(400, 100, &s.sys_v);
-                    }
-                }
+                LOG(WARNING) << "Study " << s.study << " doesn not have fallback, using global value.";
+                s.sys_p = global_fb.sys_p;
+                s.sys_e = global_fb.sys_e;
+                s.dia_p = global_fb.dia_p;
+                s.dia_e = global_fb.dia_e;
             }
+        }
+        if (level >= 2) {
+            GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
+            GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
         }
         samples.push_back(s);
     }
@@ -717,9 +907,13 @@ int main(int argc, char **argv) {
     else if (method == "eval") {
         run_eval(samples, train_set);
     }
+    else if (method == "pred") {
+        run_pred(samples);
+    }
     else if (method == "submit") {
         run_submit(samples);
     }
+    delete xtor;
     return 0;
 }
 

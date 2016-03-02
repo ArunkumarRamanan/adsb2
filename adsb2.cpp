@@ -1303,17 +1303,18 @@ namespace adsb2 {
     }
 
     Eval::Eval () {
-        ifstream is("data/train.csv");
+        fs::ifstream is(home_dir/fs::path("train.csv"));
         CHECK(is);
         string dummy;
         getline(is, dummy);
         int a;
         char d1, d2;
-        for (unsigned i = 0; i < 500; ++i) {
-            is >> a >> d1 >> volumes[i][0] >> d2 >> volumes[i][1];
-            CHECK(a == i+1);
+        E e;
+        while (is >> a >> d1 >> e[0] >> d2 >> e[1]) {
+            //CHECK(a == i+1);
             CHECK(d1 == ',');
             CHECK(d2 == ',');
+            volumes[a] = e;
         }
     }
 
@@ -1353,8 +1354,7 @@ namespace adsb2 {
             split(ss, line, is_any_of(",_"), token_compress_on);
             CHECK(ss.size() == VALUES + 2);
             string name = ss[0] + "_" + ss[1];
-            int n = lexical_cast<int>(ss[0]) - 1;
-            CHECK(n >= 0 && n < CASES);
+            int n = lexical_cast<int>(ss[0]);
             int m;
             if (ss[1] == "Systole") {
                 m = 0;
@@ -1363,7 +1363,8 @@ namespace adsb2 {
                 m = 1;
             }
             else CHECK(0);
-            float v = volumes[n][m];
+            float v = get(n,m);
+            if (v < 0) LOG(ERROR) << "Cannot find training data for " << name;
             vector<float> x;
             for (unsigned i = 0; i < VALUES; ++i) {
                 x.push_back(lexical_cast<float>(ss[2 + i]));
@@ -1376,9 +1377,8 @@ namespace adsb2 {
         return sum / s->size();
     }
     float Eval::score (unsigned n1, unsigned n2, vector<float> const &x) {
-        --n1;
-        CHECK(n1 >= 0 && n1 < CASES);
-        float v = volumes[n1][n2];
+        float v = get(n1, n2); //volumes[n1][n2];
+        CHECK(v >= 0);
         return crps(v, x);
     }
 
