@@ -93,7 +93,14 @@ namespace adsb2 {
         meta->at(Meta::NUMBER_OF_IMAGES) = dicom_get<int>(ff, DCM_CardiacNumberOfImages, path);
         meta->at(Meta::SERIES_NUMBER) = dicom_get<int>(ff, DCM_SeriesNumber, path);
         meta->trigger_time = dicom_get<float>(ff, DCM_TriggerTime, path);
-        meta->spacing = dicom_get<float>(ff, DCM_PixelSpacing, path);
+        vector<float> spacing = dicom_gets<float>(ff, DCM_PixelSpacing, path);
+        meta->spacing = spacing[0];//dicom_get<float>(ff, DCM_PixelSpacing, path);
+        if (spacing.size() != 2) {
+            LOG(ERROR) << "spacing length > 2: " << path;
+        }
+        if (spacing[1] != spacing[0]) {
+            LOG(ERROR) << "spacing x != y: " << path;
+        }
         string cohort = dicom_get<string>(ff, DCM_PerformedProcedureStepID, path);
         meta->cohort = cohort.size() < 10;
         meta->raw_spacing = meta->spacing;

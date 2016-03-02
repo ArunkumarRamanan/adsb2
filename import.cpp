@@ -65,8 +65,6 @@ void import (Sampler &sampler,
             if (polar) {
                 sampler.polar(sample->images[IM_IMAGE],
                               sample->images[IM_LABEL],
-                              sample->anno_data.poly.C,
-                              sample->anno_data.poly.R,
                               &image, &label, do_not_perturb);
             }
             else {

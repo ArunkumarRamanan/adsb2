@@ -404,10 +404,27 @@ namespace adsb2 {
                 get_dp1_th(prob, &th);
                 ws.run(range1, &contour, 1, false, th, 1.0, smooth1, gap, 0);
             }
+            int bound;
+            find_shift(image, contour, &bound);
+            {
+                cv::Mat xv(image.size(), CV_32F, cv::Scalar(0));
+                for (int y = 0; y < xv.rows; ++y) {
+                    float *row = xv.ptr<float>(y);
+                    int lb = std::max(0, contour[y]);
+                    int ub = std::min(contour[y] + bound, xv.cols);
+                    for (int x = lb; x < ub; ++x) {
+                        row[x] = 1;
+                    }
+                }
+                cv::Mat xc;
+                linearPolar(xv, &xc, slice->polar_C, slice->polar_R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+                slice->data[SL_XA] = cv::sum(xc)[0];
+            }
             if (do_extend) {
                 // extend 1
                 int bound, lbb;
                 find_shift(image, contour, &bound, &lbb);
+
                 if (plb) *plb = contour;
                 if (pbound) *pbound = bound;
                 vector<std::pair<int, int>> range2(rows);

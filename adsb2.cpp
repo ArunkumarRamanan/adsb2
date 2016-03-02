@@ -443,14 +443,21 @@ namespace adsb2 {
     void Slice::load (std::istream &is) {
         int v;
         io::read(is, &v);
-        CHECK(v == VERSION);
+        CHECK(v <= VERSION);
         io::read(is, &id);
         io::read(is, &path);
         io::read(is, &meta);
         for (unsigned i = 0; i < IM_SIZE; ++i) {
             io::read(is, &images[i]);
         }
-        io::read(is, &data);
+        if (v == 1) {
+            is.read(reinterpret_cast<char *>(&data[0]),
+                    sizeof(data[0]) * (SL_SIZE -1));
+            data[SL_XA] = 0;
+        }
+        else {
+            io::read(is, &data);
+        }
         io::read(is, &do_not_cook);
         io::read(is, &line);
 
@@ -528,6 +535,7 @@ namespace adsb2 {
         draw_text(images[IM_VISUAL], fmt::format("BT: {:1.2f}", data[SL_BOTTOM]), org, 6);
         draw_text(images[IM_VISUAL], fmt::format("CS: {:2.1f}", data[SL_CCOLOR]), org, 7);
         draw_text(images[IM_VISUAL], fmt::format("BP: {:1.1f}", data[SL_BOTTOM_PATCH]), org, 8);
+        draw_text(images[IM_VISUAL], fmt::format("XA: {:3.2f}", data[SL_XA]), org, 9);
     }
 
     void Slice::update_polar (cv::Point_<float> const &C, float R) {
@@ -1652,6 +1660,59 @@ namespace adsb2 {
         for (auto &v: *s) {
             acc += v;
             v = acc / sum;
+        }
+    }
+
+    void Sampler::polar (cv::Mat from_image,
+                      cv::Mat from_label,
+                      cv::Mat *to_image,
+                      cv::Mat *to_label,
+                      bool) {
+        cv::Rect box;
+        cv::Mat shrink;
+        cv::erode(from_label, shrink, polar_kernel);
+        bound_box<uint8_t>(from_label, &box);
+        CHECK(box.width > 0);
+        CHECK(box.height > 0);
+        // randomization
+        float color = 0;
+        cv::Point_<float> C(box.x + box.width/2, box.y + box.height/2);
+        float R = std::min(box.width, box.height)/2;
+        bool flip = false;
+        {
+            float dx, dy, dr;
+            for (;;) {
+#pragma omp critical
+                {
+                    float cr = polar_C(e) * R;  // center perturb
+                    float phi = polar_phi(e);
+                    flip = ((e() % 2) == 1);
+                    color = delta_color(e);
+                    dr = polar_R(e);
+                    dx = cr * std::cos(phi);
+                    dy = cr * std::sin(phi);
+                }
+                cv::Point p(std::round(C.x + dx), std::round(C.y + dy));
+                uint8_t v = shrink.at<uint8_t>(p);
+                if (v > 0) break;
+                // otherwise we found a center out side of circle, retry
+            }
+            C.x += dx;
+            C.y += dy;
+            R = max_R(C, box) * dr;
+        }
+        linearPolar(from_image, to_image, C, R, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
+        linearPolar(from_label, to_label, C, R, CV_INTER_NN+CV_WARP_FILL_OUTLIERS);
+        /*
+        imageF.convertTo(image, CV_8UC1);
+        cv::equalizeHist(image, image);
+        labelF.convertTo(label, CV_8UC1);
+        */
+        *to_image += color;
+        cv::morphologyEx(*to_label, *to_label, cv::MORPH_CLOSE, polar_kernel);
+        if (flip) {
+            cv::flip(*to_image, *to_image, 0);
+            cv::flip(*to_label, *to_label, 0);
         }
     }
 
