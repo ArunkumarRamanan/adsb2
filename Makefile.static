@@ -28,7 +28,7 @@ HEADERS = adsb2.h
 COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o bottom-detector.o
 
 
-PROGS = import_many sample_db propose touchup touchup-c study #touchup dump-error dump-target detect-bottom dump-bottom-feature report score swap propose regroup check make_gif dump-1245 study-color import dump-2ch top dump-bottom submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
+PROGS = import_many sample_db propose touchup study #touchup dump-error dump-target detect-bottom dump-bottom-feature report score swap propose regroup check make_gif dump-1245 study-color import dump-2ch top dump-bottom submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
 
 all:	$(PROGS)
 

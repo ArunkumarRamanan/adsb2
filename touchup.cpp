@@ -608,7 +608,6 @@ int main(int argc, char **argv) {
         preprocess(&x, do_detail, do_top);
         s.good = s.good && xtor->apply(x, &s);
         if (!buddy.empty()) {
-#if 0
             fs::path buddy_path = buddy / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
             StudyReport bx(buddy_path);
             if (bx.empty()) {
@@ -621,7 +620,6 @@ int main(int argc, char **argv) {
             //       dia1      dia2
             s.tft[3] = bs.tft[3];
             s.tft[5] = bs.tft[5];
-#endif
         }
 
         s.sys_t = eval.get(s.study, 0);
