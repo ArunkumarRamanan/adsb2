@@ -20,6 +20,10 @@ raw/700/study/2ch_15/..
 raw/700/study/sax_10/..
 ....
 
+There is a train.csv file in the directory, which contains the
+groundtruth data.  When validation set is released, the groundtruth
+data should be merged into this file.
+
 2. Process all the study files.
 
 Run command like below for each study

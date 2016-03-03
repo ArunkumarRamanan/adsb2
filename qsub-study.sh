@@ -2,7 +2,7 @@
 
 BASE=$PWD
 
-seq TRAIN TEST | while read ID
+cat TRAIN TEST | while read ID
 do
 
 mkdir -p sum_study/$ID

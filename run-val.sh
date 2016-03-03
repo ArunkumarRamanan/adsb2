@@ -20,5 +20,5 @@ do
     echo train2
     seq 1 500 | ./touchup sum_study val$i train2 $* --cohort --shuffle --train TRAIN$i >& val$i/train2.log
     echo eval
-    seq 1 500 | ./touchup sum_study val$i eval $* --cohort | tee val$i/eval.log | tail -n 4
+    seq 1 500 | ./touchup sum_study val$i eval $* --cohort --train TRAIN$i | tee val$i/eval.log | tail -n 4
 done
