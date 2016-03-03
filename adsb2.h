@@ -539,22 +539,22 @@ namespace adsb2 {
         {
         }
 
-        void linear (cv::Mat from_image,
+        bool linear (cv::Mat from_image,
                     cv::Mat from_label,
                     cv::Mat *to_image,
                     cv::Mat *to_label, bool no_perturb = false) {
             if (no_perturb) {
                 *to_image = from_image;
                 *to_label = from_label;
-                return;
+                return true;
             }
-            float color, angle, scale, flip;
+            float color, angle, scale, flip = false;
 #pragma omp critical
             {
                 color = delta_color(e);
                 angle = linear_angle(e);
                 scale = std::exp(linear_scale(e));
-                flip = ((e() % 2) == 1);
+                //flip = ((e() % 2) == 1);
             }
             cv::Mat image, label;
             if (flip) {
@@ -569,9 +569,10 @@ namespace adsb2 {
             cv::warpAffine(image, *to_image, rot, image.size());
             cv::warpAffine(label, *to_label, rot, label.size(), cv::INTER_NEAREST); // cannot interpolate labels
             *to_image += color;
+            return true;
         }
 
-        void polar (cv::Mat from_image,
+        bool polar (cv::Mat from_image,
                           cv::Mat from_label,
                           cv::Mat *to_image,
                           cv::Mat *to_label,

@@ -1681,22 +1681,20 @@ namespace adsb2 {
         bool flip = false;
         {
             float dx, dy, dr;
-            for (;;) {
 #pragma omp critical
-                {
-                    float cr = polar_C(e) * R;  // center perturb
-                    float phi = polar_phi(e);
-                    flip = ((e() % 2) == 1);
-                    color = delta_color(e);
-                    dr = polar_R(e);
-                    dx = cr * std::cos(phi);
-                    dy = cr * std::sin(phi);
-                }
-                cv::Point p(std::round(C.x + dx), std::round(C.y + dy));
-                uint8_t v = shrink.at<uint8_t>(p);
-                if (v > 0) break;
-                // otherwise we found a center out side of circle, retry
+            {
+                float cr = polar_C(e) * R;  // center perturb
+                float phi = polar_phi(e);
+                flip = ((e() % 2) == 1);
+                color = delta_color(e);
+                dr = polar_R(e);
+                dx = cr * std::cos(phi);
+                dy = cr * std::sin(phi);
             }
+            cv::Point p(std::round(C.x + dx), std::round(C.y + dy));
+            uint8_t v = shrink.at<uint8_t>(p);
+            if (v == 0) return false;
+                // otherwise we found a center out side of circle, retry
             C.x += dx;
             C.y += dy;
             R = max_R(C, box) * dr;
@@ -1714,6 +1712,7 @@ namespace adsb2 {
             cv::flip(*to_image, *to_image, 0);
             cv::flip(*to_label, *to_label, 0);
         }
+        return true;
     }
 
     //unsigned Eval::CASES = 500;

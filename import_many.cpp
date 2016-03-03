@@ -102,13 +102,17 @@ void import (Sampler &sampler,
                 cv::Point_<float> C;
                 float R;
                 cv::Rect box;
-                sampler.polar(sample->images[IM_IMAGE],
+                if (!sampler.polar(sample->images[IM_IMAGE],
                               sample->images[IM_LABEL],
-                              &image, &label, do_not_perturb);
+                              &image, &label, do_not_perturb)) {
+                    continue;
+                }
             }
             else {
-                sampler.linear(sample->images[IM_IMAGE], sample->images[IM_LABEL],
-                        &image, &label, do_not_perturb);
+                if (!sampler.linear(sample->images[IM_IMAGE], sample->images[IM_LABEL],
+                        &image, &label, do_not_perturb)) {
+                    continue;
+                }
 
             }
             {
