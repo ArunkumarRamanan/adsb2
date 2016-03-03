@@ -27,6 +27,8 @@ namespace adsb2 {
 using namespace std;
 using namespace adsb2;
 
+void Smooth (StudyReport *study, Config const &conf);
+
 struct Fallback {
     bool found;
     float sys_p, dia_p; // prediction
@@ -635,12 +637,14 @@ void load_fallback (fs::path const &path, unordered_map<int, Fallback> *data) {
     }
 }
 
-void preprocess (StudyReport *rep, bool detail, bool top) {
+void preprocess (StudyReport *rep, bool detail, bool top, Config const &conf) {
 #if  0
     if (top) {
         patch_top_bottom(*rep);
     }
 #endif
+    //void Smooth (StudyReport *study, Config const &conf) {
+    if (top) Smooth(rep, conf);
     if (detail) {
         for (auto &s: rep->back()) {
             s.data[SL_AREA] = 0;
@@ -748,6 +752,7 @@ int main(int argc, char **argv) {
     ("cohort", "")
     ("buddy", po::value(&buddy_root), "")
     ("xa", "")
+    ("top", "")
     ;
 
     po::positional_options_description p;
@@ -882,7 +887,7 @@ int main(int argc, char **argv) {
             }
         }
 #endif
-        preprocess(&x, do_detail, do_top);
+        preprocess(&x, do_detail, do_top, config);
         s.good = s.good && xtor->apply(x, &s);
         if (!buddy_root.empty()) {
             fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
@@ -890,7 +895,7 @@ int main(int argc, char **argv) {
             if (bx.empty()) {
                 LOG(ERROR) << "Fail to load data file: " << buddy_path.native();
             }
-            preprocess(&bx, do_detail, do_top);
+            preprocess(&bx, do_detail, do_top, config);
             Sample bs;
             s.good = s.good && xtor->apply(bx, &bs);
             // 0 1 2 3     4   5
@@ -981,3 +986,39 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+void SmoothHelper (vector<SliceReport> *sax, 
+        float mr, float mg, float Mr, float Mg) {
+    vector<float> a;
+    for (auto &s: *sax) {
+        a.push_back(s.data[SL_AREA]);
+    }
+    if (a.size() < 5) return;
+    sort(a.begin(), a.end());
+    a.pop_back();
+    float smax = a.back();
+    float max = std::max(smax + Mg, smax * (1 + Mr));
+    //float min = a[1];
+    float smin = a[1];
+    float min = std::min(smin - mg, smin * (1 - mr));
+    
+    for (auto &s: *sax) {
+        if (s.data[SL_AREA] > max) {
+            s.data[SL_AREA] = max;
+        }
+        if (s.data[SL_AREA] < min) {
+            s.data[SL_AREA] = min;
+        }
+    }
+}
+
+void Smooth (StudyReport *study, Config const &conf) {
+    float Mr = conf.get<float>("adsb2.smooth.Mr", 0);
+    float Mg = conf.get<float>("adsb2.smooth.Mg", 0);
+    float mr = conf.get<float>("adsb2.smooth.mr", 0);
+    float mg = conf.get<float>("adsb2.smooth.mg", 90);
+#pragma omp parallel for
+    for (unsigned i = 0; i < study->size(); ++i) {
+        SmoothHelper(&study->at(i), mr, mg, Mr, Mg);
+    }
+
+}

@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
             }
             if (v.size() < 4) continue;
             sort(v.begin(), v.end());
-            cout << v[0] << '\t' << v[1] << '\t' << v[v.size()-2] << '\t' << v[v.size()-1] << endl;
+            cout << v[0] << '\t' << v[1] << '\t' << v[v.size()-3] << '\t' << v[v.size()-1] << endl;
 
         }
     }
