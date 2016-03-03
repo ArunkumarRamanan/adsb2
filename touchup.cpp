@@ -677,7 +677,7 @@ public:
             s.sys_e = s.fb.sys_e;
             good = false;
         }
-        else if (s.sys_p > sys_ub) {
+        if ((s.fb.sys_p > 0) && (sys_ub > 0) && (s.sys_p > sys_ub)) {
             float gain = numeric_limits<float>::quiet_NaN();
             if (s.sys_t > 0) {
                 gain = fabs(s.sys_t - s.sys_p) - fabs(s.sys_t - sys_ub);
@@ -697,7 +697,7 @@ public:
             s.dia_e = s.fb.dia_e;
             good = false;
         }
-        else if (s.dia_p > dia_ub) {
+        if ((s.fb.dia_p > 0) && (dia_ub>0)&& (s.dia_p > dia_ub)) {
             float gain = numeric_limits<float>::quiet_NaN();
             if (s.dia_t > 0) {
                 gain = fabs(s.dia_t - s.dia_p) - fabs(s.dia_t - dia_ub);
