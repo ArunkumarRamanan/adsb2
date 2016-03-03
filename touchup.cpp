@@ -637,14 +637,14 @@ void load_fallback (fs::path const &path, unordered_map<int, Fallback> *data) {
     }
 }
 
-void preprocess (StudyReport *rep, bool detail, bool top, Config const &conf) {
+void preprocess (StudyReport *rep, bool detail, bool smooth, Config const &conf) {
 #if  0
     if (top) {
         patch_top_bottom(*rep);
     }
 #endif
     //void Smooth (StudyReport *study, Config const &conf) {
-    if (top) Smooth(rep, conf);
+    if (smooth) Smooth(rep, conf);
     if (detail) {
         for (auto &s: rep->back()) {
             s.data[SL_AREA] = 0;
@@ -752,7 +752,7 @@ int main(int argc, char **argv) {
     ("cohort", "")
     ("buddy", po::value(&buddy_root), "")
     ("xa", "")
-    ("top", "")
+    ("smooth", "")
     ;
 
     po::positional_options_description p;
@@ -772,7 +772,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     bool do_detail = !(vm.count("keep-tail") > 0);
-    bool do_top = (vm.count("top") > 0);
+    bool do_smooth = (vm.count("smooth") > 0);
     bool do_cohort = vm.count("cohort") > 0;
     do_xa = vm.count("xa") > 0;
 
@@ -887,7 +887,7 @@ int main(int argc, char **argv) {
             }
         }
 #endif
-        preprocess(&x, do_detail, do_top, config);
+        preprocess(&x, do_detail, do_smooth, config);
         s.good = s.good && xtor->apply(x, &s);
         if (!buddy_root.empty()) {
             fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
@@ -992,7 +992,7 @@ void SmoothHelper (vector<SliceReport> *sax,
     for (auto &s: *sax) {
         a.push_back(s.data[SL_AREA]);
     }
-    if (a.size() < 5) return;
+    if (a.size() < 4) return;
     sort(a.begin(), a.end());
     a.pop_back();
     float smax = a.back();
