@@ -83,7 +83,7 @@ namespace adsb2 {
         caffe_batch = config.get<int>("adsb2.caffe.batch", 32);
 #endif
         FLAGS_logtostderr = 1;
-        FLAGS_minloglevel = 1;
+        FLAGS_minloglevel = config.get<int>("adsb2.log.level",1);
         home_dir = fs::path(path).parent_path();
         temp_dir = fs::path(config.get("adsb2.tmp_dir", "/tmp"));
         model_dir = fs::path(config.get("adsb2.models", (home_dir/fs::path("models")).native()));
@@ -1663,7 +1663,7 @@ namespace adsb2 {
         }
     }
 
-    void Sampler::polar (cv::Mat from_image,
+    bool Sampler::polar (cv::Mat from_image,
                       cv::Mat from_label,
                       cv::Mat *to_image,
                       cv::Mat *to_label,
