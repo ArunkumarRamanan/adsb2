@@ -153,10 +153,22 @@ public:
     bool apply (StudyReport const &rep,
                 Sample *s) const {
         if (rep.empty()) return false;
-        auto const &sr = rep[rep.size()/2];
-        auto meta = sr[0].meta;
+        auto meta = rep[0][0].meta;
+#if 0
+        float min = 0, max = 0;
+        for (auto const &sr: rep) {
+            float m, M;
+            minmax(sr, &m, &M);
+            if (M > max) {
+                min = m;
+                max = M;
+            }
+        }
+#else
         float min, max;
+        auto const &sr = rep[rep.size()/2];
         minmax(sr, &min, &max);
+#endif
 
         s->tft.clear();
         s->tft.push_back(meta[Meta::SEX]);
@@ -636,22 +648,68 @@ void preprocess (StudyReport *rep, bool detail, bool top) {
     }
 }
 
-bool check_fallback (Sample &s) {
-    bool good = true;;
-    if (s.sys_p < s.fb.sys_p / 2) {
-        LOG(ERROR) << "study " << s.study << " outlier sys " << s.sys_p << " => " << s.fb.sys_p << "/" << s.fb.sys_e << " sys:" << s.sys_t << " age: " << s.age;
-        s.sys_p = s.fb.sys_p;
-        s.sys_e = s.fb.sys_e;
-        good = false;
+class FallbackChecker {
+    float r1, r2, r3, r4;
+public:
+    FallbackChecker (Config const &conf)
+        : r1(conf.get<float>("adsb2.fc.r1", 100)),
+        r2(conf.get<float>("adsb2.fc.r2", 100)),
+        r3(conf.get<float>("adsb2.fc.r3", 100)),
+        r4(conf.get<float>("adsb2.fc.r4", 100))
+    {
+
     }
-    if (s.dia_p > s.fb.dia_p * 3) {
-        LOG(ERROR) << "study " << s.study << " outlier dia " << s.dia_p << " => " << s.fb.dia_p << "/" << s.fb.dia_e <<  " dia:" << s.dia_t << " age: " << s.age;
-        s.dia_p = s.fb.dia_p;
-        s.dia_e = s.fb.dia_e;
-        good = false;
+    bool apply (Sample &s) {
+        bool good = true;;
+        if (!s.fb.found) return true;
+        if (s.age < 10) return true;
+        float sys_lb = s.fb.sys_p - s.fb.sys_e * r1;
+        float sys_ub = s.fb.sys_p + s.fb.sys_e * r2;
+        float dia_lb = s.fb.dia_p - s.fb.dia_e * r3;
+        float dia_ub = s.fb.dia_p + s.fb.dia_e * r4;
+        if (s.sys_p < sys_lb) {
+            float gain = numeric_limits<float>::quiet_NaN();
+            if (s.sys_t > 0) {
+                gain = fabs(s.sys_t - s.sys_p) - fabs(s.sys_t - sys_lb);
+            }
+            LOG(ERROR) << "study " << s.study << " sys " << s.sys_p << " => " << sys_lb << " age: " << s.age << " gain: " << gain << " type 1";
+            s.sys_p = sys_lb;
+            s.sys_e = s.fb.sys_e;
+            good = false;
+        }
+        else if (s.sys_p > sys_ub) {
+            float gain = numeric_limits<float>::quiet_NaN();
+            if (s.sys_t > 0) {
+                gain = fabs(s.sys_t - s.sys_p) - fabs(s.sys_t - sys_ub);
+            }
+            LOG(ERROR) << "study " << s.study << " sys " << s.sys_p << " => " << sys_ub << " age: " << s.age << " gain: " << gain << " type 2";
+            s.sys_p = sys_ub;
+            s.sys_e = s.fb.sys_e;
+            good = false;
+        }
+        if (s.dia_p < dia_lb) {
+            float gain = numeric_limits<float>::quiet_NaN();
+            if (s.dia_t > 0) {
+                gain = fabs(s.dia_t - s.dia_p) - fabs(s.dia_t - dia_lb);
+            }
+            LOG(ERROR) << "study " << s.study << " dia " << s.dia_p << " => " << dia_lb << " age: " << s.age << " gain: " << gain << " type 3";
+            s.dia_p = dia_lb;
+            s.dia_e = s.fb.dia_e;
+            good = false;
+        }
+        else if (s.dia_p > dia_ub) {
+            float gain = numeric_limits<float>::quiet_NaN();
+            if (s.dia_t > 0) {
+                gain = fabs(s.dia_t - s.dia_p) - fabs(s.dia_t - dia_ub);
+            }
+            LOG(ERROR) << "study " << s.study << " dia " << s.dia_p << " => " << dia_ub << " age: " << s.age << " gain: " << gain << " type 4";
+            s.dia_p = dia_ub;
+            s.dia_e = s.fb.dia_e;
+            good = false;
+        }
+        return good;
     }
-    return good;
-}
+};
 
 int main(int argc, char **argv) {
     namespace po = boost::program_options; 
@@ -792,6 +850,8 @@ int main(int argc, char **argv) {
         error_dia = Classifier::get("error.dia");
     }
 
+    FallbackChecker fbcheck(config);
+
     fs::create_directories(root);
     for (auto const &study: studies) {
         Sample s;
@@ -856,7 +916,7 @@ int main(int argc, char **argv) {
             }
             // check fallback
             if (s.fb.found) {
-                s.good &= check_fallback(s);
+                s.good &= fbcheck.apply(s);
             }
         }
         else {
