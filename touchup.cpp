@@ -667,7 +667,7 @@ public:
         float sys_ub = s.fb.sys_p + s.fb.sys_e * r2;
         float dia_lb = s.fb.dia_p - s.fb.dia_e * r3;
         float dia_ub = s.fb.dia_p + s.fb.dia_e * r4;
-        if (s.sys_p < sys_lb) {
+        if ((s.sys_p < sys_lb) && (s.fb.sys_e > 0)) {
             float gain = numeric_limits<float>::quiet_NaN();
             if (s.sys_t > 0) {
                 gain = fabs(s.sys_t - s.sys_p) - fabs(s.sys_t - sys_lb);
@@ -687,7 +687,7 @@ public:
             s.sys_e = s.fb.sys_e;
             good = false;
         }
-        if (s.dia_p < dia_lb) {
+        if ((s.dia_p < dia_lb) && (s.fb.dia_e > 0)) {
             float gain = numeric_limits<float>::quiet_NaN();
             if (s.dia_t > 0) {
                 gain = fabs(s.dia_t - s.dia_p) - fabs(s.dia_t - dia_lb);
