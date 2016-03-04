@@ -366,7 +366,7 @@ void dump_ft (vector<float> const &ft, ostream &os) {
 }
 
 void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, unordered_set<int> const &train,
-        fs::path const &model, int round) {
+        fs::path const &model, int round, Config const &conf) {
     fs::create_directories(dir);
     CHECK(mode == 0 || mode == 1);
     CHECK(level == 1 || level == 2);
@@ -408,10 +408,10 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
         if (round <= 0) {
             xg::TuneParams tp;
             xg::TuneResult tr;
-            tp.max_it = 10;
-            tp.max_round = 3000;
-            tp.tolerate = 0.2;
-            tp.seed = 2016;
+            tp.max_it = conf.get<int>("adsb2.xg.max_it", 10);
+            tp.max_round = conf.get<int>("adsb2.xg.max_round", 1500);
+            tp.tolerate = conf.get<int>("adsb2.xg.tolerate", 0.2);
+            tp.seed = conf.get<int>("adsb2.xg.seed", 2016);
             xg::tune(train_path, tp, &tr);
             round = (tr.round1 + tr.round2) / 2;
         }
@@ -961,16 +961,16 @@ int main(int argc, char **argv) {
         else {
             c0 = samples;
         }
-        run_train(c0, 1, 0, root/fs::path("d.target.sys.0"), train_set, root/fs::path("target.sys.0"), round1);
-        run_train(c0, 1, 1, root/fs::path("d.target.dia.0"), train_set, root/fs::path("target.dia.0"), round1);
+        run_train(c0, 1, 0, root/fs::path("d.target.sys.0"), train_set, root/fs::path("target.sys.0"), round1, config);
+        run_train(c0, 1, 1, root/fs::path("d.target.dia.0"), train_set, root/fs::path("target.dia.0"), round1, config);
         if (do_cohort) {
-            run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"), round1);
-            run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"), round1);
+            run_train(c1, 1, 0, root/fs::path("d.target.sys.1"), train_set, root/fs::path("target.sys.1"), round1, config);
+            run_train(c1, 1, 1, root/fs::path("d.target.dia.1"), train_set, root/fs::path("target.dia.1"), round1, config);
         }
     }
     else if (method == "train2") {
-        run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set, root/fs::path("error.sys"), round2);
-        run_train(samples, 2, 1, root/fs::path("d.error.dia"), train_set, root/fs::path("error.dia"), round2);
+        run_train(samples, 2, 0, root/fs::path("d.error.sys"), train_set, root/fs::path("error.sys"), round2, config);
+        run_train(samples, 2, 1, root/fs::path("d.error.dia"), train_set, root/fs::path("error.dia"), round2, config);
     }
     else if (method == "eval") {
         run_eval(samples, train_set);

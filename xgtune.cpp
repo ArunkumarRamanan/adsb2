@@ -76,6 +76,7 @@ namespace adsb2 { namespace xg {
             }
         }
         CHECK(n == params.round);
+        fs::remove(log_path);
     }
 
     void train (fs::path const &train,
@@ -158,6 +159,8 @@ namespace adsb2 { namespace xg {
                 sum[i] += ptr[i];
             }
         }
+        fs::remove(temp_train);
+        fs::remove(temp_test);
         sort(opts.begin(), opts.end());
         for (auto const &p: opts) {
             std::cout << p.begin << '\t' << p.opt << '\t' << p.end << '\t' << p.rmse << '\t' << p.max << std::endl;
