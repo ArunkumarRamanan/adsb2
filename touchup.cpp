@@ -294,17 +294,18 @@ public:
         auto const &meta = rep[0][0].meta;
         vector<float> ft{
             meta[Meta::SEX], meta[Meta::AGE],
-            sys1, dia1, sys2, dia2//, compute_xa(rep)
+            //sys1, dia1, sys2, dia2//, compute_xa(rep)
+            sys1, dia1, sys2,dia2
         };
-        if (do_xa) {
-            ft.push_back(compute_xa(rep));
-        }
         s->sys1 = sys1;
         s->dia1 = dia1;
         s->sys2 = sys2;
         s->dia2 = dia2;
         s->tft = ft;
         s->eft = ft;
+        if (do_xa) {
+            s->eft.push_back(compute_xa(rep));
+        }
         s->cohort = rep[0][0].data[SL_COHORT];
         s->age = rep[0][0].meta[Meta::AGE];
         return true;
@@ -739,6 +740,7 @@ int main(int argc, char **argv) {
     ("fallback", po::value(&fallback_path), "")
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
     ("cohort", "")
+    ("patch-cohort", "")
     ("buddy", po::value(&buddy_root), "")
     ("xa", "")
     ("smooth", "")
@@ -799,17 +801,15 @@ int main(int argc, char **argv) {
         load_fallback(fallback_path, &fallback);
     }
 
-#if 0
     // load cohort data
-    unordered_map<int, int> cohort;
-    if (do_cohort) {
+    unordered_map<int, int> patch_cohort;
+    if (vm.count("patch-cohort")) {
         int id, c;
         fs::ifstream is(home_dir/fs::path("cohort"));
         while (is >> id >> c) {
-            cohort[id] = c;
+            patch_cohort[id] = c;
         }
     }
-#endif
 
     Eval eval;
     GaussianAcc gacc(config);
@@ -900,10 +900,19 @@ int main(int argc, char **argv) {
 
         s.sys_t = eval.get(s.study, 0);
         s.dia_t = eval.get(s.study, 1);
+        int c_id = 0;
+        if (do_cohort) {
+            c_id = s.cohort;
+            if (patch_cohort.size()) {
+                auto it = patch_cohort.find(s.study);
+                CHECK(it != patch_cohort.end());
+                c_id = it->second;
+            }
+        }
         if (s.good) {
             if (level >= 1) {
-                s.sys_p = target_sys[s.cohort]->apply(s.tft);
-                s.dia_p = target_dia[s.cohort]->apply(s.tft);
+                s.sys_p = target_sys[c_id]->apply(s.tft);
+                s.dia_p = target_dia[c_id]->apply(s.tft);
             }
             if (level >= 2) {
                 s.sys_e = error_sys->apply(s.eft) * scale;
