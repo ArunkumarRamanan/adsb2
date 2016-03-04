@@ -905,7 +905,7 @@ int main(int argc, char **argv) {
 #endif
         preprocess(&x, do_detail, do_smooth, config);
         s.good = s.good && xtor->apply(x, &s);
-        if (!buddy_root.empty()) {
+        if (s.good && (!buddy_root.empty())) {
             fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
             StudyReport bx(buddy_path);
             if (bx.empty()) {
@@ -916,12 +916,12 @@ int main(int argc, char **argv) {
             s.good = s.good && xtor->apply(bx, &bs);
             // 0 1 2 3     4   5
             //       dia1      dia2
+            /*
             s.tft[3] = bs.tft[3];
             s.tft[5] = bs.tft[5];
-            /*
+            */
             s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
             s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
-            */
         }
 
         s.sys_t = eval.get(s.study, 0);
@@ -932,7 +932,7 @@ int main(int argc, char **argv) {
             if (patch_cohort.size()) {
                 auto it = patch_cohort.find(s.study);
                 CHECK(it != patch_cohort.end());
-                c_id = it->second;
+                c_id = s.cohort = it->second;
             }
         }
         if (s.good) {

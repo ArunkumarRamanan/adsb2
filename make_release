@@ -10,4 +10,4 @@ mv adsb2 src
 cd src
 git submodule init
 git submodule update
-find . -type d -name .git -exec rm -rf {} \;
+find . -type d -name '.git*' -exec rm -rf {} \;
