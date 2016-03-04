@@ -410,7 +410,7 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
             xg::TuneResult tr;
             tp.max_it = conf.get<int>("adsb2.xg.max_it", 10);
             tp.max_round = conf.get<int>("adsb2.xg.max_round", 1500);
-            tp.tolerate = conf.get<int>("adsb2.xg.tolerate", 0.2);
+            tp.tolerate = conf.get<int>("adsb2.xg.tolerate", 0.5);
             tp.seed = conf.get<int>("adsb2.xg.seed", 2016);
             xg::tune(train_path, tp, &tr);
             round = (tr.round1 + tr.round2) / 2;
@@ -732,8 +732,8 @@ int main(int argc, char **argv) {
     ("keep-tail", "")
     ("method", po::value(&method), "")
     ("train", po::value(&train_path), "limit training in these study IDs")
-    ("round1", po::value(&round1)->default_value(2000), "")
-    ("round2", po::value(&round2)->default_value(1500), "")
+    ("round1", po::value(&round1)->default_value(-1), "")
+    ("round2", po::value(&round2)->default_value(-1), "")
     ("shuffle", "")
     ("data", po::value(&data_root), "dir containing report files")
     ("ws,w", po::value(&root), "working directory")

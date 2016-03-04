@@ -181,8 +181,8 @@ namespace adsb2 { namespace xg {
                 ub = i;
             }
         }
-        result->round1 = (lb + ub)/2;
-        result->round2 = std::min_element(sum.begin(), sum.end()) - sum.begin();
+        result->round1 = std::max((lb + ub)/2, 2);
+        result->round2 = std::max(int(std::min_element(sum.begin(), sum.end()) - sum.begin()),2);
         std::cout << lb << '\t' << ub << '\t' << result->round1 << '\t' << result->round2 << std::endl;
     }
 
