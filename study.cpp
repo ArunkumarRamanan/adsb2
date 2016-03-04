@@ -17,6 +17,29 @@ using namespace boost;
 using namespace cv;
 using namespace adsb2;
 
+map<string, vector<pair<string, float>>> presets = {
+    {"sys", {
+        {"adsb2.ca1.margin", 40},
+        {"adsb2.ca1.th1", 0.80},
+        {"adsb2.ca1.th2", 0.05},
+        {"adsb2.ca1.smooth1", 10},
+        {"adsb2.ca1.smooth2", 30},
+        {"adsb2.ca1.ndisc", 0.2},
+        {"adsb2.ca1.wctrpct", 1.0},
+        {"adsb2.ca1.ctrpct", 1.0}
+    }},
+    {"dia", {
+        {"adsb2.ca1.margin", 40},
+        {"adsb2.ca1.th1", 0.83},
+        {"adsb2.ca1.th2", 0.05},
+        {"adsb2.ca1.smooth1", 10},
+        {"adsb2.ca1.smooth2", 30},
+        {"adsb2.ca1.ndisc", 0.2},
+        {"adsb2.ca1.wctrpct", 1.0},
+        {"adsb2.ca1.ctrpct", 1.0}
+    }}
+};
+
 int main(int argc, char **argv) {
     nice(10);
     //Series stack("sax", "tmp");
@@ -27,6 +50,7 @@ int main(int argc, char **argv) {
     fs::path dir;
     fs::path snapshot_path;
     int ca;
+    string preset;
     /*
     string output_dir;
     string gif;
@@ -48,6 +72,7 @@ int main(int argc, char **argv) {
     ("no-gif", "")
     ("top", "")
     ("bottom", "")
+    ("preset", po::value(&preset), "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -82,6 +107,15 @@ int main(int argc, char **argv) {
     } catch (...) {
         cerr << "Failed to load config file: " << config_path << ", using defaults." << endl;
     }
+
+    if (preset.size()) {
+        auto it = presets.find(preset);
+        CHECK(it != presets.end()) << "preset " << preset << " not found.";
+        for (auto const &p: it->second) {
+            config.put(p.first, p.second);
+        }
+    }
+
     OverrideConfig(overrides, &config);
 
     GlobalInit(argv[0], config);
