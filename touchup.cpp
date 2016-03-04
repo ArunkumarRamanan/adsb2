@@ -790,6 +790,7 @@ int main(int argc, char **argv) {
     bool do_detail = !(vm.count("keep-tail") > 0);
     bool do_smooth = !(vm.count("no-smooth") > 0);
     bool do_cohort = vm.count("cohort") > 0;
+    bool is_one = (xtor_name == "one");
     do_xa = vm.count("xa") > 0;
 
     if (studies.empty()) {
@@ -947,6 +948,17 @@ int main(int argc, char **argv) {
             if (s.fb.found) {
                 s.good &= fbcheck.apply(s);
             }
+            if (is_one && s.fb.found) {
+                if ((s.dia_p * 2 <= s.fb.dia_p)
+                     || (s.sys_e < 0) || (s.dia_e < 0) || (s.sys_p < 0)) {
+                    LOG(WARNING) << "Study " << s.study << " (one) not good, using fallback";
+                    s.sys_p = s.fb.sys_p;
+                    s.sys_e = s.fb.sys_e;
+                    s.dia_p = s.fb.dia_p;
+                    s.dia_e = s.fb.dia_e;
+                    s.good = false;
+                }
+            }
         }
         else {
             LOG(WARNING) << "Study " << s.study << " not good, using fallback";
@@ -1038,7 +1050,7 @@ void SmoothHelper (vector<SliceReport> *sax,
 void Smooth (StudyReport *study, Config const &conf) {
     //float Mr = conf.get<float>("adsb2.smooth.Mr", 0);
     float Mg = conf.get<float>("adsb2.smooth.Mg", 20);
-    float MM = conf.get<float>("adsb2.smooth.MM", 4000);
+    float MM = conf.get<float>("adsb2.smooth.MM", 3200);
     //float mr = conf.get<float>("adsb2.smooth.mr", 0);
     float mg = conf.get<float>("adsb2.smooth.mg", 90);
 #pragma omp parallel for
