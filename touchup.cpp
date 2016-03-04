@@ -642,6 +642,10 @@ void preprocess (StudyReport *rep, bool detail, bool smooth, Config const &conf)
     }
 }
 
+static inline bool check_normal (float v) {
+    return (v > -1000) && (v < 1000);
+}
+
 class FallbackChecker {
     float r1, r2, r3, r4;
 public:
@@ -656,7 +660,28 @@ public:
     bool apply (Sample &s) {
         bool good = true;;
         if (!s.fb.found) return true;
+        if (!check_normal(s.sys_p)) {
+            LOG(ERROR) << "s.sys_p not normal: " << s.sys_p;
+            s.sys_p = s.fb.sys_p;
+            good = false;
+        }
+        if (!check_normal(s.dia_p)) {
+            LOG(ERROR) << "s.dia_p not normal: " << s.dia_p;
+            s.dia_p = s.fb.dia_p;
+            good = false;
+        }
+        if (!check_normal(s.sys_e)) {
+            LOG(ERROR) << "s.sys_e not normal: " << s.sys_e;
+            s.sys_e = s.fb.sys_e;
+            good = false;
+        }
+        if (!check_normal(s.dia_e)) {
+            LOG(ERROR) << "s.dia_e not normal: " << s.dia_e;
+            s.dia_e = s.fb.dia_e;
+            good = false;
+        }
         if (s.age < 10) return true;
+
         float sys_lb = s.fb.sys_p - s.fb.sys_e * r1;
         float sys_ub = s.fb.sys_p + s.fb.sys_e * r2;
         float dia_lb = s.fb.dia_p - s.fb.dia_e * r3;
