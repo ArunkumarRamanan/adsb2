@@ -269,6 +269,18 @@ namespace adsb2 {
         void get_dp2_th (cv::Mat image, vector<int> const &ctr, int lbb, int bound, vector<float> *ths) const {
             ths->resize(image.rows);
             float big_mean = cv::mean(image.colRange(0, margin1))[0];
+            float small_mean = big_mean;
+            for (int i = -lbb; i < bound; ++i) {
+                float x = contour_avg(image, ctr, i, bctrpct, 1);
+                if (x < small_mean) small_mean = x;
+            }
+            float th = small_mean + (big_mean - small_mean) * thr2;
+            ths->resize(image.rows);
+            std::fill(ths->begin(), ths->end(), th);
+
+#if 0       // fancy per line min, 
+
+
             cv::Mat kernel = cv::Mat::ones(mink, mink, CV_8U);
             cv::Mat eroded;
             cv::erode(image, eroded, kernel);
@@ -281,25 +293,6 @@ namespace adsb2 {
                 if (!(small_mean < big_mean)) return std::max(small_mean, big_mean);
                 th = small_mean + (big_mean - small_mean) * thr;
                 */
-#if 0
-                float small = 0; // big_mean;
-                float last = std::numeric_limits<float>::max();
-                for (int i = 0; i < lbb; ++i) {
-                    int x = ctr[y] + i;
-                    if (x < 0) x = 0;
-                    if (x >= image.cols) x = image.cols - 1;
-                    if (ptr[x] < last) last = ptr[x];
-                }
-                for (int i = lbb; i < bound; ++i) {
-                    int x = ctr[y] + i;
-                    if (x < 0) x = 0;
-                    if (x >= image.cols) x = image.cols - 1;
-                    if (ptr[x] < last) last = ptr[x];
-                    small += last;
-                    //if (ptr[x] < small) small = ptr[x];
-                }
-                small /= (bound - lbb);
-#else
                 float small = big_mean;
                 for (int i = -lbb; i < bound; ++i) {
                     int x = ctr[y] + i;
@@ -307,10 +300,10 @@ namespace adsb2 {
                     if (x >= image.cols) x = image.cols - 1;
                     if (ptr[x] < small) small = ptr[x];
                 }
-#endif
                 th = small + (big_mean - small) * thr2;
                 ths->at(y) = th;
             }
+#endif
         }
 
         // return absolute bound

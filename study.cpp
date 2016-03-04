@@ -19,21 +19,21 @@ using namespace adsb2;
 
 map<string, vector<pair<string, float>>> presets = {
     {"sys", {
-        {"adsb2.ca1.margin", 40},
+        {"adsb2.ca1.margin2", 40},
         {"adsb2.ca1.th1", 0.80},
         {"adsb2.ca1.th2", 0.05},
         {"adsb2.ca1.smooth1", 10},
-        {"adsb2.ca1.smooth2", 30},
+        {"adsb2.ca1.smooth2", 255},
         {"adsb2.ca1.ndisc", 0.2},
         {"adsb2.ca1.wctrpct", 1.0},
         {"adsb2.ca1.ctrpct", 1.0}
     }},
     {"dia", {
-        {"adsb2.ca1.margin", 40},
+        {"adsb2.ca1.margin2", 40},
         {"adsb2.ca1.th1", 0.83},
         {"adsb2.ca1.th2", 0.05},
         {"adsb2.ca1.smooth1", 10},
-        {"adsb2.ca1.smooth2", 30},
+        {"adsb2.ca1.smooth2", 255},
         {"adsb2.ca1.ndisc", 0.2},
         {"adsb2.ca1.wctrpct", 1.0},
         {"adsb2.ca1.ctrpct", 1.0}
@@ -202,7 +202,10 @@ int main(int argc, char **argv) {
     Volume min, max;
     FindMinMaxVol(study, &min, &max, config);
     if (!snapshot_path.empty()) {
-        fs::create_directories(snapshot_path.parent_path());
+        fs::path parent = snapshot_path.parent_path();
+        if (!parent.empty()) {
+            fs::create_directories(parent);
+        }
         study.save(snapshot_path);
     }
     if (!dir.empty()) {
