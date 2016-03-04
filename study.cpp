@@ -69,10 +69,11 @@ int main(int argc, char **argv) {
     ("output,o", po::value(&dir), "")
     ("ca", po::value(&ca)->default_value(1), "")
     ("bound", "")
-    ("no-gif", "")
     ("top", "")
     ("bottom", "")
     ("preset", po::value(&preset), "")
+    ("gif", "")
+    ("gnuplot", "")
     //("output,o", po::value(&output_dir), "")
     /*
     ("gif", po::value(&gif), "")
@@ -99,7 +100,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    bool do_gif = vm.count("no-gif") == 0;
+    bool do_gif = vm.count("gif") > 0;
 
     Config config;
     try {
@@ -282,7 +283,7 @@ int main(int argc, char **argv) {
                 os << std::endl;
             }
         }
-        {
+        if (vm.count("gnuplot")) {
             fs::path gp2(dir/fs::path("plot2.gp"));
             fs::ofstream gp(gp2);
             gp << "set terminal png;" << endl;

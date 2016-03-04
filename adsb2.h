@@ -69,7 +69,10 @@ namespace adsb2 {
         float raw_spacing;  // original spacing as in file
         float slice_location;
         float z;
-        vector<float> AcquisitionMatrix;
+        char placeholder[28]; // the vector takes 24 bytes,
+                              // and 4 bytes are padded before vector
+                              // for alignment
+        //vector<float> AcquisitionMatrix;
         float PercentPhaseFieldOfView;
         cv::Point3f pos;
         cv::Point3f ori_row;
