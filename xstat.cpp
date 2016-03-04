@@ -83,11 +83,14 @@ int main(int argc, char **argv) {
         for (auto const &sax: x) {
             vector<float> v;
             for (auto const &s: sax) {
-                v.push_back(s.data[SL_AREA]);
+                //v.push_back(s.data[SL_AREA]);
+                cout << s.study_id << '\t' << s.data[SL_AREA] << endl;
             }
+            /*
             if (v.size() < 4) continue;
             sort(v.begin(), v.end());
             cout << v[0] << '\t' << v[1] << '\t' << v[v.size()-3] << '\t' << v[v.size()-1] << endl;
+            */
 
         }
     }

@@ -364,16 +364,6 @@ void dump_ft (vector<float> const &ft, ostream &os) {
     }
 }
 
-void join (vector<string> const &v, string *acc) {
-    ostringstream os;
-    for (unsigned i = 0; i < v.size(); ++i) {
-        if (i) os << ' ';
-        os << v[i];
-    }
-    *acc = os.str();
-}
-
-
 void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, unordered_set<int> const &train,
         fs::path const &model, int round) {
     fs::create_directories(dir);
@@ -414,24 +404,23 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
         os << endl;
     }
     if (!model.empty()) {
-        LOG(INFO) << "RUNNING XGBOOST";
-        vector<string> cmd;
-        cmd.push_back((home_dir/fs::path("xgboost")).native());
-        cmd.push_back((home_dir/fs::path("xglinear.conf")).native());
-        cmd.push_back(fmt::format("data={}", train_path.native()));
-        if (ntest) {
-            cmd.push_back(fmt::format("eval[test]={}", test_path.native()));
+        if (round <= 0) {
+            xg::TuneParams tp;
+            xg::TuneResult tr;
+            tp.max_it = 10;
+            tp.max_round = 3000;
+            tp.tolerate = 0.2;
+            tp.seed = 2016;
+            xg::tune(train_path, tp, &tr);
+            round = (tr.round1 + tr.round2) / 2;
         }
-        cmd.push_back(fmt::format("num_round={}", round));
-        cmd.push_back(fmt::format("model_out={}", model.native()));
-        cmd.push_back("2>&1");
-        cmd.push_back(">");
-        cmd.push_back((dir/fs::path("log")).native());
-        string x;
-        join(cmd, &x);
-        fs::ofstream os(dir/fs::path("cmd"));
-        os << x << endl;
-        ::system(x.c_str());
+        xg::Params params;
+        params.round = round;
+        xg::run_xgboost(train_path, ntest ? test_path : fs::path(), model,
+                dir/fs::path("cmd"),
+                dir/fs::path("cout"),
+                dir/fs::path("cerr"),
+                params);
     }
 }
 
@@ -895,7 +884,7 @@ int main(int argc, char **argv) {
             if (bx.empty()) {
                 LOG(ERROR) << "Fail to load data file: " << buddy_path.native();
             }
-            preprocess(&bx, do_detail, do_top, config);
+            preprocess(&bx, do_detail, do_smooth, config);
             Sample bs;
             s.good = s.good && xtor->apply(bx, &bs);
             // 0 1 2 3     4   5
@@ -1012,13 +1001,14 @@ void SmoothHelper (vector<SliceReport> *sax,
 }
 
 void Smooth (StudyReport *study, Config const &conf) {
-    float Mr = conf.get<float>("adsb2.smooth.Mr", 0);
+    //float Mr = conf.get<float>("adsb2.smooth.Mr", 0);
     float Mg = conf.get<float>("adsb2.smooth.Mg", 0);
-    float mr = conf.get<float>("adsb2.smooth.mr", 0);
+    //float mr = conf.get<float>("adsb2.smooth.mr", 0);
     float mg = conf.get<float>("adsb2.smooth.mg", 90);
 #pragma omp parallel for
     for (unsigned i = 0; i < study->size(); ++i) {
-        SmoothHelper(&study->at(i), mr, mg, Mr, Mg);
+        //SmoothHelper(&study->at(i), mr, mg, Mr, Mg);
+        SmoothHelper(&study->at(i), mg, Mg);
     }
 
 }

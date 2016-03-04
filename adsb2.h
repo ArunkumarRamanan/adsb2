@@ -50,6 +50,8 @@ namespace adsb2 {
     // Overriding configuration options in the form of "KEY=VALUE"
     void OverrideConfig (std::vector<std::string> const &overrides, Config *);
 
+    extern fs::path home_dir;
+
     struct MetaBase {
         enum {
             SEX = 0,    // male: 0, female: 1
@@ -713,5 +715,41 @@ namespace adsb2 {
     void GaussianAcc (float v, float scale, vector<float> *s);
 
     extern char const *VERSION;
+
+
+    namespace xg {
+
+        struct TuneParams {
+            // input
+            int seed;
+            int max_it;
+            int max_round;
+            float tolerate;
+        };
+
+        struct TuneResult {
+            int round1;
+            int round2;
+        };
+
+        struct Params {
+            int round;
+        };
+
+        void probe (fs::path const &train, fs::path const &test,
+                      Params const &,
+                      float *log);
+
+        void run_xgboost (fs::path const &train,
+                      fs::path const &test,
+                      fs::path const &model,
+                      fs::path const &cmdout,
+                      fs::path const &out,
+                      fs::path const &err,
+                      Params const &params);
+
+        void tune (fs::path const &path, TuneParams const &, TuneResult *);
+    }
+
 }
 

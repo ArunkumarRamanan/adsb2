@@ -14,6 +14,7 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lcppformat \
 	 -lopencv_ml -lopencv_imgproc -lopencv_highgui -lopencv_core \
 	 -lboost_timer -lboost_chrono -lboost_thread -lboost_filesystem -lboost_system -lboost_program_options \
+	 -lboost_regex \
 	 -lprotoc -lprotobuf -lglog -lgflags -lleveldb -llmdb \
 	 -lhdf5_hl -lhdf5 \
 	 -ljson11 \
@@ -25,10 +26,10 @@ LDLIBS =  -Wl,--whole-archive -lcaffe -Wl,--no-whole-archive \
 	 -lunwind -lrt -lm -lpthread -ldl
 	 
 HEADERS = adsb2.h
-COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o bottom-detector.o
+COMMON = adsb2.o adsb2-ca1.o adsb2-ca2.o heuristics.o dicom.o detector-caffe.o caffex-fcn/caffex.o bottom-detector.o xgtune.o
 
 
-PROGS = xstat import_many sample_db propose touchup study #touchup dump-error dump-target detect-bottom dump-bottom-feature report score swap propose regroup check make_gif dump-1245 study-color import dump-2ch top dump-bottom submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
+PROGS = xg xstat import_many sample_db propose touchup study #touchup dump-error dump-target detect-bottom dump-bottom-feature report score swap propose regroup check make_gif dump-1245 study-color import dump-2ch top dump-bottom submit make_gif list-first-file fit ca2 study # detect import eval study score submit scc export-polar-tasks import-polar
 
 all:	$(PROGS)
 
