@@ -46,10 +46,7 @@ em:	em.cpp em.h
 	g++ -std=c++11 -O3 -o em em.cpp -lboost_program_options -lm
 
 release:	study touchup
-	rm -rf release
-	mkdir release
-	cp study touchup xgboost train.csv xglinear.conf dicom.dic run-submit.sh run-val.sh run-study.sh qsub-study.sh TRAIN TRAIN1 TRAIN2 TRAIN3 README.txt release/
-	git describe --always > release/git-tag
+	./make_release
 
 clean:
 	rm *.o $(PROGS)
