@@ -1331,8 +1331,8 @@ namespace adsb2 {
             sum += s * s;
         }
         for (unsigned i = 0; i < VALUES; ++i) {
-            CHECK(x[i] >= 0);
-            CHECK(x[i] <= 1);
+            CHECK(x[i] >= 0) << x[i];
+            CHECK(x[i] <= 1) << x[i];
             if (i > 0) CHECK(x[i] >= x[i-1]);
         }
         /*
@@ -1647,7 +1647,7 @@ namespace adsb2 {
         }
     }
 
-    void GaussianAcc (float v, float scale, vector<float> *s) {
+    void NaiveGaussianAcc (float v, float scale, vector<float> *s) {
         s->resize(Eval::VALUES);
         float sum = 0;
         for (unsigned i = 0; i < Eval::VALUES; ++i) {
@@ -1661,6 +1661,96 @@ namespace adsb2 {
             acc += v;
             v = acc / sum;
         }
+    }
+
+    void GaussianAcc::apply (float v, float scale,
+                             vector<float> *ps) const {
+        NaiveGaussianAcc(v, scale, ps);
+#if 0
+        if (extend < 0) {
+            return;
+        }
+        if (v < 1) v = 1;
+        if (v >= Eval::VALUES) v = Eval::VALUES-1;
+        if (scale < 1) scale = 1;
+
+        vector<float> s(Eval::VALUES);
+        for (int i = 0; i < Eval::VALUES; ++i) {
+            s[i] =  //0.5 * (1 + erf(float(i - v) / scale /sqrt(2)));
+                    0.5 * erfc(-(i-v)/scale/M_SQRT2);
+        }
+        if (extend > 1) {
+            LOG(WARNING) << "touchup gaussian acc";
+            float minl = s[0];
+            int lv = floor(v);
+            CHECK(lv > 0);
+            int rv = lv + 1;
+            // s[0]: minl => 0
+            // s[lv]: same
+            for (int i = 0; i < lv; ++i) {
+                s[i] -= minl * (lv - i) / lv;
+                if (s[i] < 0) s[i] = 0;
+            }
+
+            float gapR = 1.0 - s.back();
+            for (int i = rv; i < Eval::VALUES; ++i) {
+                s[i] += gapR * (1 + i - rv) / (Eval::VALUES - rv);
+                if (s[i] > 1) s[i] = 1;
+                
+            }
+        }
+        for (unsigned i = 0; i < s.size(); ++i) {
+            if (s[i] < 0) {
+                LOG(ERROR) << fmt::format("s[{}] < 0: {}", i, s[i]);
+                s[i] = 0;
+            }
+            if (s[i] > 1) {
+                LOG(ERROR) << fmt::format("s[{}] > 1: {}", i, s[i]);
+                s[i] = 1;
+            }
+            if (i > 0) {
+                if (s[i] < s[i-1]) {
+                    LOG(ERROR) << fmt::format("s[{}] < s[{}]", i, i-1);
+                    s[i] = s[i-1];
+                }
+            }
+        }
+
+        ps->swap(s);
+#endif
+        /*
+        float lgap = v;
+        float lscale = scale;
+        if (lgap < lscale * extend) {
+            lscale = lgap / extend;
+        }
+        float rgap = 600 - v;
+        float rscale = scale;
+        if (rgap < rscale * extend) {
+            rscale = rgap / extend;
+        }
+
+        int int_v = floor(v);
+        s->resize(Eval::VALUES);
+        float sum = 0;
+        for (unsigned i = 0; i <= int_v; ++i) {
+            float x = (float(i) - v) / lscale;
+            x = exp(-0.5 * x * x);
+            s->at(i) = x;
+            sum += x;
+        }
+        for (unsigned i = int_v + 1; i <= Eval::VALUES; ++i) {
+            float x = (float(i) - v) / rscale;
+            x = exp(-0.5 * x * x);
+            s->at(i) = x;
+            sum += x;
+        }
+        float acc = 0;
+        for (auto &v: *s) {
+            acc += v;
+            v = acc / sum;
+        }
+        */
     }
 
     bool Sampler::polar (cv::Mat from_image,

@@ -712,7 +712,17 @@ namespace adsb2 {
         StudyReport (Study const &sss);
         void dump (std::ostream &os);
     };
-    void GaussianAcc (float v, float scale, vector<float> *s);
+
+    class GaussianAcc {
+        //float extend;
+    public:
+        GaussianAcc (Config const &conf)
+           //: extend(conf.get<float>("adsb2.acc.extend", 2))
+        {
+        }
+
+        void apply (float v, float scale, vector<float> *s) const;
+    };
 
     extern char const *VERSION;
 

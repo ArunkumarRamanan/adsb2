@@ -812,6 +812,7 @@ int main(int argc, char **argv) {
 #endif
 
     Eval eval;
+    GaussianAcc gacc(config);
     Xtor *xtor = Xtor::create(xtor_name, config);
     CHECK(xtor);
     vector<Sample> samples;
@@ -930,8 +931,8 @@ int main(int argc, char **argv) {
             }
         }
         if (level >= 2) {
-            GaussianAcc(s.sys_p, s.sys_e, &s.sys_v);
-            GaussianAcc(s.dia_p, s.dia_e, &s.dia_v);
+            gacc.apply(s.sys_p, s.sys_e, &s.sys_v);
+            gacc.apply(s.dia_p, s.dia_e, &s.dia_v);
         }
         samples.push_back(s);
     }
@@ -976,7 +977,7 @@ int main(int argc, char **argv) {
 }
 
 void SmoothHelper (vector<SliceReport> *sax, 
-        float mr, float mg, float Mr, float Mg) {
+        float mg, float Mg, float MM) {
     vector<float> a;
     for (auto &s: *sax) {
         a.push_back(s.data[SL_AREA]);
@@ -985,10 +986,10 @@ void SmoothHelper (vector<SliceReport> *sax,
     sort(a.begin(), a.end());
     a.pop_back();
     float smax = a.back();
-    float max = std::max(smax + Mg, smax * (1 + Mr));
+    float max = std::min(smax + Mg, MM);
     //float min = a[1];
     float smin = a[1];
-    float min = std::min(smin - mg, smin * (1 - mr));
+    float min = smin - mg;
     
     for (auto &s: *sax) {
         if (s.data[SL_AREA] > max) {
@@ -1002,13 +1003,14 @@ void SmoothHelper (vector<SliceReport> *sax,
 
 void Smooth (StudyReport *study, Config const &conf) {
     //float Mr = conf.get<float>("adsb2.smooth.Mr", 0);
-    float Mg = conf.get<float>("adsb2.smooth.Mg", 0);
+    float Mg = conf.get<float>("adsb2.smooth.Mg", 20);
+    float MM = conf.get<float>("adsb2.smooth.MM", 5000);
     //float mr = conf.get<float>("adsb2.smooth.mr", 0);
     float mg = conf.get<float>("adsb2.smooth.mg", 90);
 #pragma omp parallel for
     for (unsigned i = 0; i < study->size(); ++i) {
         //SmoothHelper(&study->at(i), mr, mg, Mr, Mg);
-        SmoothHelper(&study->at(i), mg, Mg);
+        SmoothHelper(&study->at(i), mg, Mg, MM);
     }
 
 }
