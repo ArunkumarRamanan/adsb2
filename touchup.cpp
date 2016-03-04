@@ -768,7 +768,7 @@ int main(int argc, char **argv) {
     ("patch-cohort", "")
     ("buddy", po::value(&buddy_root), "")
     ("xa", "")
-    ("smooth", "")
+    ("no-smooth", "")
     ;
 
     po::positional_options_description p;
@@ -788,7 +788,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     bool do_detail = !(vm.count("keep-tail") > 0);
-    bool do_smooth = (vm.count("smooth") > 0);
+    bool do_smooth = !(vm.count("no-smooth") > 0);
     bool do_cohort = vm.count("cohort") > 0;
     do_xa = vm.count("xa") > 0;
 
@@ -1038,7 +1038,7 @@ void SmoothHelper (vector<SliceReport> *sax,
 void Smooth (StudyReport *study, Config const &conf) {
     //float Mr = conf.get<float>("adsb2.smooth.Mr", 0);
     float Mg = conf.get<float>("adsb2.smooth.Mg", 20);
-    float MM = conf.get<float>("adsb2.smooth.MM", 5000);
+    float MM = conf.get<float>("adsb2.smooth.MM", 4000);
     //float mr = conf.get<float>("adsb2.smooth.mr", 0);
     float mg = conf.get<float>("adsb2.smooth.mg", 90);
 #pragma omp parallel for
