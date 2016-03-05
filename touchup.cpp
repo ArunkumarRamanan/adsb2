@@ -43,7 +43,8 @@ struct Sample {
                         // and use fallback's prediction
     int cohort;
     float age;
-    vector<float> tft;  // target feature
+    vector<float> tft_sys;  // target feature
+    vector<float> tft_dia;  // target feature
     vector<float> eft;  // error feature
 
     float sys_p, dia_p; // prediction
@@ -107,30 +108,31 @@ public:
             LOG(ERROR) << "all DICOM paths failed for study " << s->study;
             return false;
         }
-        s->tft.clear();
-        s->tft.push_back(meta[Meta::SEX]);
-        s->tft.push_back(meta[Meta::AGE]);
+        s->tft_sys.clear();
+        s->tft_sys.push_back(meta[Meta::SEX]);
+        s->tft_sys.push_back(meta[Meta::AGE]);
         /*
-        s->tft.push_back(xage(meta[Meta::AGE], 181.712,6.073,1.821));
-        s->tft.push_back(xage(meta[Meta::AGE], 83.676,10.871,-6.782));
+        s->tft_sys.push_back(xage(meta[Meta::AGE], 181.712,6.073,1.821));
+        s->tft_sys.push_back(xage(meta[Meta::AGE], 83.676,10.871,-6.782));
         */
-        //s->tft.push_back(meta[Meta::AGE]);
-        s->tft.push_back(meta[Meta::SLICE_THICKNESS]);
-        s->tft.push_back(meta.raw_spacing);
-        s->tft.push_back(meta.PercentPhaseFieldOfView);
+        //s->tft_sys.push_back(meta[Meta::AGE]);
+        s->tft_sys.push_back(meta[Meta::SLICE_THICKNESS]);
+        s->tft_sys.push_back(meta.raw_spacing);
+        s->tft_sys.push_back(meta.PercentPhaseFieldOfView);
         /*
-        s->tft.push_back(meta.width);
-        s->tft.push_back(meta.height);
+        s->tft_sys.push_back(meta.width);
+        s->tft_sys.push_back(meta.height);
         */
-        s->tft.push_back(meta.pos.x);
-        s->tft.push_back(meta.pos.y);
+        s->tft_sys.push_back(meta.pos.x);
+        s->tft_sys.push_back(meta.pos.y);
         /*
-        s->tft.push_back(meta.pos.z);
+        s->tft_sys.push_back(meta.pos.z);
         */
         /*
-        s->tft.push_back(std::max(meta.AcquisitionMatrix[0], meta.AcquisitionMatrix[3]));
+        s->tft_sys.push_back(std::max(meta.AcquisitionMatrix[0], meta.AcquisitionMatrix[3]));
         */
-        s->eft = s->tft;
+        s->tft_dia = s->tft_sys;
+        s->eft = s->tft_sys;
         s->cohort = meta.cohort;
         s->age = meta[Meta::AGE];
         return true;
@@ -172,32 +174,33 @@ public:
         minmax(sr, &min, &max);
 #endif
 
-        s->tft.clear();
-        s->tft.push_back(meta[Meta::SEX]);
-        s->tft.push_back(meta[Meta::AGE]);
+        s->tft_sys.clear();
+        s->tft_sys.push_back(meta[Meta::SEX]);
+        s->tft_sys.push_back(meta[Meta::AGE]);
         /*
-        s->tft.push_back(xage(meta[Meta::AGE], 181.712,6.073,1.821));
-        s->tft.push_back(xage(meta[Meta::AGE], 83.676,10.871,-6.782));
+        s->tft_sys.push_back(xage(meta[Meta::AGE], 181.712,6.073,1.821));
+        s->tft_sys.push_back(xage(meta[Meta::AGE], 83.676,10.871,-6.782));
         */
-        //s->tft.push_back(meta[Meta::AGE]);
-        s->tft.push_back(meta[Meta::SLICE_THICKNESS]);
-        s->tft.push_back(meta.raw_spacing);
-        s->tft.push_back(meta.PercentPhaseFieldOfView);
+        //s->tft_sys.push_back(meta[Meta::AGE]);
+        s->tft_sys.push_back(meta[Meta::SLICE_THICKNESS]);
+        s->tft_sys.push_back(meta.raw_spacing);
+        s->tft_sys.push_back(meta.PercentPhaseFieldOfView);
         /*
-        s->tft.push_back(meta.width);
-        s->tft.push_back(meta.height);
+        s->tft_sys.push_back(meta.width);
+        s->tft_sys.push_back(meta.height);
         */
-        s->tft.push_back(meta.pos.x);
-        s->tft.push_back(meta.pos.y);
-        s->tft.push_back(min);
-        s->tft.push_back(max);
+        s->tft_sys.push_back(meta.pos.x);
+        s->tft_sys.push_back(meta.pos.y);
+        s->tft_sys.push_back(min);
+        s->tft_sys.push_back(max);
         /*
         s->tft.push_back(meta.pos.z);
         */
         /*
         s->tft.push_back(std::max(meta.AcquisitionMatrix[0], meta.AcquisitionMatrix[3]));
         */
-        s->eft = s->tft;
+        s->tft_dia = s->tft_sys;
+        s->eft = s->tft_sys;
         s->cohort = rep[0][0].data[SL_COHORT];
         s->age = rep[0][0].meta[Meta::AGE];
         return true;
@@ -301,7 +304,8 @@ public:
         s->dia1 = dia1;
         s->sys2 = sys2;
         s->dia2 = dia2;
-        s->tft = ft;
+        s->tft_sys = ft;
+        s->tft_dia = ft;
         s->eft = ft;
         if (do_xa) {
             s->eft.push_back(compute_xa(rep));
@@ -389,8 +393,14 @@ void run_train (vector<Sample> &ss, int level, int mode, fs::path const &dir, un
         float target;
         vector<float> *ft;
         if (level == 1) {
-            target = (mode == 0) ? s.sys_t : s.dia_t;
-            ft = &s.tft;
+            if (mode == 0) {
+                target = s.sys_t;
+                ft = &s.tft_sys;
+            }
+            else {
+                target = s.dia_t;
+                ft = &s.tft_dia;
+            }
         }
         else if (level == 2) {
             target = (mode == 0) ? fabs(s.sys_t - s.sys_p) : fabs(s.dia_t - s.dia_p);
@@ -746,6 +756,7 @@ int main(int argc, char **argv) {
     fs::path fallback_path;
     int round1, round2;
     float scale;
+    int CASE;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -769,6 +780,7 @@ int main(int argc, char **argv) {
     ("buddy", po::value(&buddy_roots), "")
     ("xa", "")
     ("no-smooth", "")
+    ("case", po::value(&CASE)->default_value(1), "")
     ;
 
     po::positional_options_description p;
@@ -906,6 +918,7 @@ int main(int argc, char **argv) {
         preprocess(&x, do_detail, do_smooth, config);
         s.good = s.good && xtor->apply(x, &s);
         if (s.good && (!buddy_roots.empty())) {
+            CHECK(xtor_name == "full");
             for (auto const &buddy_root: buddy_roots) {
                 fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
                 StudyReport bx(buddy_path);
@@ -921,8 +934,72 @@ int main(int argc, char **argv) {
                 s.tft[3] = bs.tft[3];
                 s.tft[5] = bs.tft[5];
                 */
+                /*
                 s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+                */
                 s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
+                // s: sys   s.dia1 good, s.sys1 good
+                // bs: dia  bs.dia1 good, bs.sys1 good
+
+                // 0 1     2    3    4    5
+                //        sys1  dia1 sys2 dia2
+/*
+model A: DIA.A1, DIA.A2, sys.a1, sys.a2
+     
+    bs   [3]     [5]     [4]     [2]
+         
+model B: dia.a1, dia.a2, SYS.A1, SYS.A2
+
+     s   [3]     [5]     [4]     [2]
+
+test1: DIA1, DIA2, SYS1, SYS2 ( you just did it today, right?, if not, test this first)
+
+test 2: DIA.A1, SYS.A1.
+
+test 3: for predicting DIA: DIA.A1, DIA.A2
+for predicting SYS: SYS.A1, SYS.A2, DIA.A1, DIA.A2
+
+test 4: for predicting DIA; DIA.A1.
+for predicting SYS, SYS.A1, DIA.A1
+*/
+                if (CASE == 0) {
+                    s.tft_sys.insert(s.tft_sys.end(), bs.tft_sys.begin() + 2, bs.tft_sys.end());
+                    s.tft_dia.insert(s.tft_dia.end(), bs.tft_dia.begin() + 2, bs.tft_dia.end());
+                }
+                else if (CASE == 1) {
+                    vector<float> tft{s.tft_sys[0], s.tft_sys[1],
+                                bs.tft_sys[3], bs.tft_sys[5], s.tft_sys[4], s.tft_sys[2]};
+                    s.tft_sys = tft;
+                    s.tft_dia = tft;
+                }
+                else if (CASE == 2) {
+                    vector<float> tft{s.tft_sys[0], s.tft_sys[1],
+                                bs.tft_sys[3], s.tft_sys[4]};
+                    s.tft_sys = tft;
+                    s.tft_dia = tft;
+                }
+                else if (CASE == 3) {
+                    vector<float> tft_sys{s.tft_sys[0], s.tft_sys[1],   // same as CASE 1 
+                                bs.tft_sys[3], bs.tft_sys[5], s.tft_sys[4], s.tft_sys[2]};
+                    vector<float> tft_dia{s.tft_sys[0], s.tft_sys[1],
+                                bs.tft_sys[3], bs.tft_sys[5]};
+                    s.tft_sys = tft_sys;
+                    s.tft_dia = tft_dia;
+                }
+                else if (CASE == 4) {
+                    vector<float> tft_sys{s.tft_sys[0], s.tft_sys[1],
+                                s.tft_sys[4], bs.tft_sys[3]};
+                    vector<float> tft_dia{s.tft_sys[0], s.tft_sys[1],
+                                bs.tft_sys[3]};
+                    s.tft_sys = tft_sys;
+                    s.tft_dia = tft_dia;
+                }
+                else CHECK(0);
+                
+                
+
+                
+                break;
             }
         }
 
@@ -939,8 +1016,8 @@ int main(int argc, char **argv) {
         }
         if (s.good) {
             if (level >= 1) {
-                s.sys_p = target_sys[c_id]->apply(s.tft);
-                s.dia_p = target_dia[c_id]->apply(s.tft);
+                s.sys_p = target_sys[c_id]->apply(s.tft_sys);
+                s.dia_p = target_dia[c_id]->apply(s.tft_dia);
             }
             if (level >= 2) {
                 s.sys_e = error_sys->apply(s.eft) * scale;
