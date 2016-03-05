@@ -25,18 +25,21 @@ map<string, vector<pair<string, float>>> presets = {
         {"adsb2.ca1.smooth1", 10},
         {"adsb2.ca1.smooth2", 255},
         {"adsb2.ca1.ndisc", 0.2},
-        {"adsb2.ca1.wctrpct", 1.0},
-        {"adsb2.ca1.ctrpct", 1.0}
+        {"adsb2.ca1.wctrpct", 0.9},
+        {"adsb2.ca1.ctrpct", 0.8},
+        {"adsb2.ca1.gth", 1}
     }},
     {"dia", {
-        {"adsb2.ca1.margin2", 40},
+        //{"adsb2.ca1.margin2", 40},
         {"adsb2.ca1.th1", 0.83},
+        /*
         {"adsb2.ca1.th2", 0.05},
         {"adsb2.ca1.smooth1", 10},
         {"adsb2.ca1.smooth2", 255},
         {"adsb2.ca1.ndisc", 0.2},
-        {"adsb2.ca1.wctrpct", 1.0},
-        {"adsb2.ca1.ctrpct", 1.0}
+        {"adsb2.ca1.wctrpct", 0.9},
+        {"adsb2.ca1.ctrpct", 0.8}
+        */
     }}
 };
 

@@ -65,15 +65,6 @@ namespace adsb2 {
             int best_cc = 0;
             for (int y = 0; y < rows; ++y) {
                 auto *e = &((*this)[y][0]);
-                // disable out of range items
-                /*
-                for (int x = 0; x < range[y].first; ++x) {
-                    e[x].opt = -std::numeric_limits<float>::max();
-                }
-                for (int x = range[y].second; x < cols; ++x) {
-                    e[x].opt = -std::numeric_limits<float>::max();
-                }
-                */
                 if (y == 0) {   // first row, no connection to previous
                     float acc = 0;
                     float last_delta = std::numeric_limits<float>::max();
@@ -188,6 +179,7 @@ namespace adsb2 {
         int mink;
         int W;
         float scost2;
+        bool gth2;
 #if 0
         float penalty (float dx) const {
             float v = smooth * dx;
@@ -267,20 +259,21 @@ namespace adsb2 {
         }
 
         void get_dp2_th (cv::Mat image, vector<int> const &ctr, int lbb, int bound, vector<float> *ths) const {
-            ths->resize(image.rows);
             float big_mean = cv::mean(image.colRange(0, margin1))[0];
-            float small_mean = big_mean;
-            for (int i = -lbb; i < bound; ++i) {
-                float x = contour_avg(image, ctr, i, bctrpct, 1);
-                if (x < small_mean) small_mean = x;
-            }
-            float th = small_mean + (big_mean - small_mean) * thr2;
             ths->resize(image.rows);
-            std::fill(ths->begin(), ths->end(), th);
-
-#if 0       // fancy per line min, 
-
-
+            if (gth2) {
+                float th = 0;
+                {
+                    float small_mean = big_mean;
+                    for (int i = -lbb; i < bound; ++i) {
+                        float x = contour_avg(image, ctr, i, bctrpct, 1);
+                        if (x < small_mean) small_mean = x;
+                    }
+                    th = small_mean + (big_mean - small_mean) * thr2;
+                }
+                std::fill(ths->begin(), ths->end(), th);
+                return; 
+            }
             cv::Mat kernel = cv::Mat::ones(mink, mink, CV_8U);
             cv::Mat eroded;
             cv::erode(image, eroded, kernel);
@@ -303,7 +296,6 @@ namespace adsb2 {
                 th = small + (big_mean - small) * thr2;
                 ths->at(y) = th;
             }
-#endif
         }
 
         // return absolute bound
@@ -447,7 +439,8 @@ namespace adsb2 {
             bctrpct(conf.get<float>("adsb2.ca1.ctrpct", 0.8)),
             mink(conf.get<int>("adsb2.ca1.mink", 3)),
             W(conf.get<int>("adsb2.ca1.W", 2)),
-            scost2(conf.get<float>("adsb2.ca1.scost2", 0))
+            scost2(conf.get<float>("adsb2.ca1.scost2", 0)),
+            gth2(conf.get<int>("adsb2.ca1.gth2", 0) != 0)
         {
         }
         void apply_slice (Slice *s, vector<int> *plb, int *pbound) {
