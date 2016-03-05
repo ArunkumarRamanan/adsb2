@@ -27,7 +27,7 @@ map<string, vector<pair<string, float>>> presets = {
         {"adsb2.ca1.ndisc", 0.2},
         {"adsb2.ca1.wctrpct", 0.9},
         {"adsb2.ca1.ctrpct", 0.8},
-        {"adsb2.ca1.gth", 1}
+        {"adsb2.ca1.gth2", 1}
     }},
     {"dia", {
         //{"adsb2.ca1.margin2", 40},
