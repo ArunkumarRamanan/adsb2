@@ -742,7 +742,7 @@ int main(int argc, char **argv) {
     string xtor_name;
     fs::path root;      // working directory
     fs::path data_root; // report directory
-    fs::path buddy_root;
+    vector<fs::path> buddy_roots;
     fs::path fallback_path;
     int round1, round2;
     float scale;
@@ -766,7 +766,7 @@ int main(int argc, char **argv) {
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
     ("cohort", "")
     ("patch-cohort", "")
-    ("buddy", po::value(&buddy_root), "")
+    ("buddy", po::value(&buddy_roots), "")
     ("xa", "")
     ("no-smooth", "")
     ;
@@ -905,23 +905,25 @@ int main(int argc, char **argv) {
 #endif
         preprocess(&x, do_detail, do_smooth, config);
         s.good = s.good && xtor->apply(x, &s);
-        if (s.good && (!buddy_root.empty())) {
-            fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
-            StudyReport bx(buddy_path);
-            if (bx.empty()) {
-                LOG(ERROR) << "Fail to load data file: " << buddy_path.native();
+        if (s.good && (!buddy_roots.empty())) {
+            for (auto const &buddy_root: buddy_roots) {
+                fs::path buddy_path = buddy_root / fs::path(lexical_cast<string>(s.study)) / fs::path("report.txt");
+                StudyReport bx(buddy_path);
+                if (bx.empty()) {
+                    LOG(ERROR) << "Fail to load data file: " << buddy_path.native();
+                }
+                preprocess(&bx, do_detail, do_smooth, config);
+                Sample bs;
+                s.good = s.good && xtor->apply(bx, &bs);
+                // 0 1 2 3     4   5
+                //       dia1      dia2
+                /*
+                s.tft[3] = bs.tft[3];
+                s.tft[5] = bs.tft[5];
+                */
+                s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+                s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
             }
-            preprocess(&bx, do_detail, do_smooth, config);
-            Sample bs;
-            s.good = s.good && xtor->apply(bx, &bs);
-            // 0 1 2 3     4   5
-            //       dia1      dia2
-            /*
-            s.tft[3] = bs.tft[3];
-            s.tft[5] = bs.tft[5];
-            */
-            s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
-            s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
         }
 
         s.sys_t = eval.get(s.study, 0);

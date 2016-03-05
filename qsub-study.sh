@@ -14,7 +14,7 @@ qsub <<FOO
 #PBS -S /bin/bash
 
 cd $BASE
-./study raw/$ID/study sum_study/$ID --no-gif
+./study raw/$ID/study sum_study/$ID 
 FOO
 
 done

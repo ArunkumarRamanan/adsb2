@@ -2,7 +2,7 @@
 
 rm -rf release
 mkdir release
-cp study touchup xgboost train.csv xglinear.conf dicom.dic run-submit.sh run-val.sh run-study.sh qsub-study.sh TRAIN TRAIN1 TRAIN2 TRAIN3 README.txt release/
+cp study touchup xgboost train.csv xglinear.conf dicom.dic run-submit.sh run-val.sh run-study.sh qsub-study.sh run-buddy.sh qsub-buddy.sh val-buddy.sh submit-buddy.sh TRAIN TRAIN1 TRAIN2 TRAIN3 README.txt release/
 git describe --always > release/git-tag
 cd release
 git clone ../../adsb2
