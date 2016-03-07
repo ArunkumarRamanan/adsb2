@@ -655,6 +655,7 @@ void preprocess (StudyReport *rep, bool detail, bool smooth, Config const &conf)
     }
 #endif
     //void Smooth (StudyReport *study, Config const &conf) {
+    if (rep->empty()) return;
     if (smooth) Smooth(rep, conf);
     if (detail) {
         for (auto &s: rep->back()) {
