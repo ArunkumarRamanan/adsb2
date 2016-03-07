@@ -749,7 +749,7 @@ namespace adsb2 {
             int round;
         };
 
-        void probe (fs::path const &train, fs::path const &test,
+        bool probe (fs::path const &train, fs::path const &test,
                       Params const &,
                       float *log);
 

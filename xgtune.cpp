@@ -56,7 +56,7 @@ namespace adsb2 { namespace xg {
         ::system(x.c_str());
     }
 
-    void probe (fs::path const &train,
+    bool probe (fs::path const &train,
                   fs::path const &test,
                   Params const &params,
                   float *log) {
@@ -75,8 +75,15 @@ namespace adsb2 { namespace xg {
                 ++n;
             }
         }
-        CHECK(n == params.round);
-        fs::remove(log_path);
+        if (n == params.round) {
+            fs::remove(log_path);
+            return true;
+        }
+        else {
+            //CHECK(n == params.round);
+            LOG(ERROR) << "xgboost probe failed, keeping log file at " << log_path;
+            return false;
+        }
     }
 
     void train (fs::path const &train,
@@ -141,10 +148,15 @@ namespace adsb2 { namespace xg {
         cv::Mat log(tp.max_it, tp.max_round, CV_32F);
         vector<OptRange> opts;
         vector<float> sum(tp.max_round, 0);
+        unsigned probed = 0;
         for (int it = 0; it < tp.max_it; ++it) {
             bootstrap(lines, temp_train, temp_test, rng);
-            float *ptr = log.ptr<float>(it);
-            probe(temp_train, temp_test, pp, ptr);
+            float *ptr = log.ptr<float>(probed);
+            if (!probe(temp_train, temp_test, pp, ptr)) {
+                LOG(ERROR) << "xgboost probe failed";
+                continue;
+            }
+            ++probed;
             OptRange range;
             range.opt = std::min_element(ptr, ptr + tp.max_round) - ptr;
             range.rmse = ptr[range.opt];
@@ -158,6 +170,14 @@ namespace adsb2 { namespace xg {
             for (unsigned i = 0; i < tp.max_round; ++i) {
                 sum[i] += ptr[i];
             }
+        }
+        if (probed == 0) {
+            LOG(ERROR) << "All probe failed, using max rounds";
+            LOG(ERROR) << "Keeping training files";
+            LOG(ERROR) << "Training: " << temp_train;
+            LOG(ERROR) << "Test: " << temp_test;
+            result->round1 = result->round2 = tp.max_round;
+            return;
         }
         fs::remove(temp_train);
         fs::remove(temp_test);

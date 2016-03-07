@@ -33,6 +33,9 @@ struct Fallback {
     bool found;
     float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
+
+    float sys_p_raw, dia_p_raw; // prediction
+    float sys_e_raw, dia_e_raw; // error
 };
 
 Fallback global_fb = { true, 50, 50, 100, 50};
@@ -47,9 +50,11 @@ struct Sample {
     vector<float> tft_dia;  // target feature
     vector<float> eft;  // error feature
 
-    float sys_p, dia_p; // prediction
     float sys_t, dia_t; // target
+    float sys_p, dia_p; // prediction
     float sys_e, dia_e; // error
+    float sys_p_raw, dia_p_raw; // prediction
+    float sys_e_raw, dia_e_raw; // error
     vector<float> sys_v;
     vector<float> dia_v;
 
@@ -57,6 +62,7 @@ struct Sample {
     float sys1, dia1;   // computed with method1
     float sys2, dia2;   // computed with method2
     Fallback fb;
+    Fallback fb2;
 };
 
 
@@ -552,7 +558,8 @@ void run_show (vector<Sample> const &samples) {
 
 void run_pred (vector<Sample> &ss) {
     for (auto &s: ss) {
-        cout << s.study << '\t' << s.sys_p << '\t' << s.sys_e << '\t' << s.dia_p << '\t' << s.dia_e << endl;
+        cout << s.study << '\t' << s.sys_p << '\t' << s.sys_e << '\t' << s.dia_p << '\t' << s.dia_e
+             << '\t' << s.sys_p_raw << '\t' << s.sys_e_raw << '\t' << s.dia_p_raw << '\t' << s.dia_e_raw << endl;
     }
 }
 
@@ -623,7 +630,7 @@ void load_fallback (fs::path const &path, unordered_map<int, Fallback> *data) {
         using namespace boost::algorithm;
         vector<string> ss;
         split(ss, line, is_any_of("\t"), token_compress_on);
-        if (ss.size() != 5) {
+        if (ss.size() != 9) {
             LOG(ERROR) << "Bad line: " << line;
         }
         int n = lexical_cast<int>(ss[0]);
@@ -633,6 +640,10 @@ void load_fallback (fs::path const &path, unordered_map<int, Fallback> *data) {
         fb.sys_e = lexical_cast<float>(ss[2]);
         fb.dia_p = lexical_cast<float>(ss[3]);
         fb.dia_e = lexical_cast<float>(ss[4]);
+        fb.sys_p_raw = lexical_cast<float>(ss[5]);
+        fb.sys_e_raw = lexical_cast<float>(ss[6]);
+        fb.dia_p_raw = lexical_cast<float>(ss[7]);
+        fb.dia_e_raw = lexical_cast<float>(ss[8]);
         (*data)[n] = fb;
     }
 }
@@ -754,6 +765,7 @@ int main(int argc, char **argv) {
     fs::path data_root; // report directory
     vector<fs::path> buddy_roots;
     fs::path fallback_path;
+    fs::path fallback2_path;
     int round1, round2;
     float scale;
     int CASE;
@@ -774,13 +786,14 @@ int main(int argc, char **argv) {
     ("data", po::value(&data_root), "dir containing report files")
     ("ws,w", po::value(&root), "working directory")
     ("fallback", po::value(&fallback_path), "")
+    ("fallback2", po::value(&fallback2_path), "")
     ("xtor", po::value(&xtor_name)->default_value("full"), "")
     ("cohort", "")
     ("patch-cohort", "")
     ("buddy", po::value(&buddy_roots), "")
     ("xa", "")
     ("no-smooth", "")
-    ("case", po::value(&CASE)->default_value(1), "")
+    ("case", po::value(&CASE)->default_value(0), "")
     ;
 
     po::positional_options_description p;
@@ -803,6 +816,11 @@ int main(int argc, char **argv) {
     bool do_smooth = !(vm.count("no-smooth") > 0);
     bool do_cohort = vm.count("cohort") > 0;
     bool is_one = (xtor_name == "one");
+    bool is_full = (xtor_name == "full");
+    if (!fallback2_path.empty()) {
+        CHECK(is_full);
+        LOG(WARNING) << "Detected fallback2, make sure fallback2 is clinical model, fallback1 is one sax model.";
+    }
     do_xa = vm.count("xa") > 0;
 
     if (studies.empty()) {
@@ -837,6 +855,11 @@ int main(int argc, char **argv) {
     unordered_map<int, Fallback> fallback;
     if (!fallback_path.empty()) {
         load_fallback(fallback_path, &fallback);
+    }
+
+    unordered_map<int, Fallback> fallback2;
+    if (!fallback2_path.empty()) {
+        load_fallback(fallback2_path, &fallback2);
     }
 
     // load cohort data
@@ -892,10 +915,20 @@ int main(int argc, char **argv) {
         s.good = true;
         s.cohort = 0;
         s.fb.found = false;
+        s.fb2.found = false;
         // check and load fallback
-        auto it = fallback.find(s.study);
-        if (it != fallback.end()) {
-            s.fb = it->second;
+        {
+            auto it = fallback.find(s.study);
+            if (it != fallback.end()) {
+                s.fb = it->second;
+            }
+        }
+
+        {
+            auto it = fallback2.find(s.study);
+            if (it != fallback2.end()) {
+                s.fb2 = it->second;
+            }
         }
 
         fs::path path(data_root / fs::path(lexical_cast<string>(study))/ fs::path("report.txt"));
@@ -1018,19 +1051,37 @@ for predicting SYS, SYS.A1, DIA.A1
             if (level >= 1) {
                 s.sys_p = target_sys[c_id]->apply(s.tft_sys);
                 s.dia_p = target_dia[c_id]->apply(s.tft_dia);
+                s.sys_p_raw = s.sys_p;
+                s.dia_p_raw = s.dia_p;
             }
             if (level >= 2) {
                 s.sys_e = error_sys->apply(s.eft) * scale;
                 s.dia_e = error_dia->apply(s.eft) * scale;
+                s.sys_e_raw = s.sys_e;
+                s.dia_e_raw = s.dia_e;
             }
             // check fallback
             if (s.fb.found) {
                 s.good &= fbcheck.apply(s);
             }
             if (is_one && s.fb.found) {
-                if ((s.dia_p * 2 <= s.fb.dia_p)
+                if ((s.dia_p * 2 <= s.fb.dia_p_raw)
                      || (s.sys_e < 0) || (s.dia_e < 0) || (s.sys_p < 0)) {
                     LOG(WARNING) << "Study " << s.study << " (one) not good, using fallback";
+                    s.sys_p = s.fb.sys_p;
+                    s.sys_e = s.fb.sys_e;
+                    s.dia_p = s.fb.dia_p;
+                    s.dia_e = s.fb.dia_e;
+                    s.good = false;
+                }
+            }
+            if (is_full && s.fb.found && s.fb2.found) {
+                float a = s.dia_p / (s.fb.dia_p_raw + s.fb2.dia_p_raw);
+                float b = s.dia_p / s.fb.dia_p_raw;    // one sax
+                float c = s.fb.dia_p / s.fb2.dia_p_raw;
+                if ((b < 0.6) && (s.age > 10)) {
+                    LOG(WARNING) << "Study " << s.study << "(full) not good, using fallback "
+                                 << s.dia_p << " => " << s.fb.dia_p << " (" << s.dia_t << ")";
                     s.sys_p = s.fb.sys_p;
                     s.sys_e = s.fb.sys_e;
                     s.dia_p = s.fb.dia_p;
@@ -1046,6 +1097,10 @@ for predicting SYS, SYS.A1, DIA.A1
                 s.sys_e = s.fb.sys_e;
                 s.dia_p = s.fb.dia_p;
                 s.dia_e = s.fb.dia_e;
+                s.sys_p_raw = s.fb.sys_p;
+                s.sys_e_raw = s.fb.sys_e;
+                s.dia_p_raw = s.fb.dia_p;
+                s.dia_e_raw = s.fb.dia_e;
             }
             else {
                 LOG(WARNING) << "Study " << s.study << " doesn not have fallback, using global value.";
@@ -1053,6 +1108,11 @@ for predicting SYS, SYS.A1, DIA.A1
                 s.sys_e = global_fb.sys_e;
                 s.dia_p = global_fb.dia_p;
                 s.dia_e = global_fb.dia_e;
+
+                s.sys_p_raw = global_fb.sys_p;
+                s.sys_e_raw = global_fb.sys_e;
+                s.dia_p_raw = global_fb.dia_p;
+                s.dia_e_raw = global_fb.dia_e;
             }
         }
         if (level >= 2) {
