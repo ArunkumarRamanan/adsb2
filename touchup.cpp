@@ -962,78 +962,76 @@ int main(int argc, char **argv) {
                 preprocess(&bx, do_detail, do_smooth, config);
                 Sample bs;
                 s.good = s.good && xtor->apply(bx, &bs);
-                // 0 1 2 3     4   5
-                //       dia1      dia2
-                /*
-                s.tft[3] = bs.tft[3];
-                s.tft[5] = bs.tft[5];
-                */
-                /*
-                s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
-                */
-                s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
-                // s: sys   s.dia1 good, s.sys1 good
-                // bs: dia  bs.dia1 good, bs.sys1 good
+                if (s.good) {
+                    // 0 1 2 3     4   5
+                    //       dia1      dia2
+                    /*
+                    s.tft[3] = bs.tft[3];
+                    s.tft[5] = bs.tft[5];
+                    */
+                    /*
+                    s.tft.insert(s.tft.end(), bs.tft.begin() + 2, bs.tft.end());
+                    */
+                    s.eft.insert(s.eft.end(), bs.eft.begin() + 2, bs.eft.end());
+                    // s: sys   s.dia1 good, s.sys1 good
+                    // bs: dia  bs.dia1 good, bs.sys1 good
 
-                // 0 1     2    3    4    5
-                //        sys1  dia1 sys2 dia2
-/*
-model A: DIA.A1, DIA.A2, sys.a1, sys.a2
-     
-    bs   [3]     [5]     [4]     [2]
+                    // 0 1     2    3    4    5
+                    //        sys1  dia1 sys2 dia2
+    /*
+    model A: DIA.A1, DIA.A2, sys.a1, sys.a2
          
-model B: dia.a1, dia.a2, SYS.A1, SYS.A2
+        bs   [3]     [5]     [4]     [2]
+             
+    model B: dia.a1, dia.a2, SYS.A1, SYS.A2
 
-     s   [3]     [5]     [4]     [2]
+         s   [3]     [5]     [4]     [2]
 
-test1: DIA1, DIA2, SYS1, SYS2 ( you just did it today, right?, if not, test this first)
+    test1: DIA1, DIA2, SYS1, SYS2 ( you just did it today, right?, if not, test this first)
 
-test 2: DIA.A1, SYS.A1.
+    test 2: DIA.A1, SYS.A1.
 
-test 3: for predicting DIA: DIA.A1, DIA.A2
-for predicting SYS: SYS.A1, SYS.A2, DIA.A1, DIA.A2
+    test 3: for predicting DIA: DIA.A1, DIA.A2
+    for predicting SYS: SYS.A1, SYS.A2, DIA.A1, DIA.A2
 
-test 4: for predicting DIA; DIA.A1.
-for predicting SYS, SYS.A1, DIA.A1
-*/
-                if (CASE == 0) {
-                    s.tft_sys.insert(s.tft_sys.end(), bs.tft_sys.begin() + 2, bs.tft_sys.end());
-                    s.tft_dia.insert(s.tft_dia.end(), bs.tft_dia.begin() + 2, bs.tft_dia.end());
+    test 4: for predicting DIA; DIA.A1.
+    for predicting SYS, SYS.A1, DIA.A1
+    */
+                    if (CASE == 0) {
+                        s.tft_sys.insert(s.tft_sys.end(), bs.tft_sys.begin() + 2, bs.tft_sys.end());
+                        s.tft_dia.insert(s.tft_dia.end(), bs.tft_dia.begin() + 2, bs.tft_dia.end());
+                    }
+                    else if (CASE == 1) {
+                        vector<float> tft{s.tft_sys[0], s.tft_sys[1],
+                                    bs.tft_sys[3], bs.tft_sys[5], s.tft_sys[4], s.tft_sys[2]};
+                        s.tft_sys = tft;
+                        s.tft_dia = tft;
+                    }
+                    else if (CASE == 2) {
+                        vector<float> tft{s.tft_sys[0], s.tft_sys[1],
+                                    bs.tft_sys[3], s.tft_sys[4]};
+                        s.tft_sys = tft;
+                        s.tft_dia = tft;
+                    }
+                    else if (CASE == 3) {
+                        vector<float> tft_sys{s.tft_sys[0], s.tft_sys[1],   // same as CASE 1 
+                                    bs.tft_sys[3], bs.tft_sys[5], s.tft_sys[4], s.tft_sys[2]};
+                        vector<float> tft_dia{s.tft_sys[0], s.tft_sys[1],
+                                    bs.tft_sys[3], bs.tft_sys[5]};
+                        s.tft_sys = tft_sys;
+                        s.tft_dia = tft_dia;
+                    }
+                    else if (CASE == 4) {
+                        vector<float> tft_sys{s.tft_sys[0], s.tft_sys[1],
+                                    s.tft_sys[4], bs.tft_sys[3]};
+                        vector<float> tft_dia{s.tft_sys[0], s.tft_sys[1],
+                                    bs.tft_sys[3]};
+                        s.tft_sys = tft_sys;
+                        s.tft_dia = tft_dia;
+                    }
+                    else CHECK(0);
+                    break;
                 }
-                else if (CASE == 1) {
-                    vector<float> tft{s.tft_sys[0], s.tft_sys[1],
-                                bs.tft_sys[3], bs.tft_sys[5], s.tft_sys[4], s.tft_sys[2]};
-                    s.tft_sys = tft;
-                    s.tft_dia = tft;
-                }
-                else if (CASE == 2) {
-                    vector<float> tft{s.tft_sys[0], s.tft_sys[1],
-                                bs.tft_sys[3], s.tft_sys[4]};
-                    s.tft_sys = tft;
-                    s.tft_dia = tft;
-                }
-                else if (CASE == 3) {
-                    vector<float> tft_sys{s.tft_sys[0], s.tft_sys[1],   // same as CASE 1 
-                                bs.tft_sys[3], bs.tft_sys[5], s.tft_sys[4], s.tft_sys[2]};
-                    vector<float> tft_dia{s.tft_sys[0], s.tft_sys[1],
-                                bs.tft_sys[3], bs.tft_sys[5]};
-                    s.tft_sys = tft_sys;
-                    s.tft_dia = tft_dia;
-                }
-                else if (CASE == 4) {
-                    vector<float> tft_sys{s.tft_sys[0], s.tft_sys[1],
-                                s.tft_sys[4], bs.tft_sys[3]};
-                    vector<float> tft_dia{s.tft_sys[0], s.tft_sys[1],
-                                bs.tft_sys[3]};
-                    s.tft_sys = tft_sys;
-                    s.tft_dia = tft_dia;
-                }
-                else CHECK(0);
-                
-                
-
-                
-                break;
             }
         }
 
