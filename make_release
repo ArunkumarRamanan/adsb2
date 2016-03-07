@@ -2,7 +2,7 @@
 
 rm -rf release
 mkdir release
-cp study touchup xgboost xglinear.conf dicom.dic run-submit1.sh run-submit2.sh run-val.sh run-study.sh TRAIN TRAIN1 TRAIN2 TRAIN3 README.txt release/
+cp study touchup xgboost xglinear.conf dicom.dic run-submit1.sh run-submit2.sh run-val.sh run-study.sh TRAIN TRAIN1 TRAIN2 TRAIN3 README.md release/
 cp -r val release/
 cp -r pre release/
 cp -r models release/models
