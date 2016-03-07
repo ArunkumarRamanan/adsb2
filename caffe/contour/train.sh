@@ -16,7 +16,7 @@ cd caffe/contour
 CAFFE=caffe
 
 mkdir -p snapshots
-rm -rf snapshots/*
+#rm -rf snapshots/*
 
 $CAFFE train --solver solver.prototxt $* 2>&1 | tee log
 

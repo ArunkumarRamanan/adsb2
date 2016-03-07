@@ -1,4 +1,0 @@
-topdown.txt
-	if second column is 1, then the study is topdown, i.e. big side of heart is in the bottom series.
-topdown.sqlite3
-	original DB, if the image is "done", then it's picked as topdown.
