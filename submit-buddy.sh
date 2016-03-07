@@ -23,7 +23,8 @@ then
     echo Cannot sum_study
     exit
 fi
-mkdir -p ws_cli ws_one ws_full
+
+mkdir -p ws_cli ws_one ws_full ws_full2
 
 ./touchup sum_study ws_cli train1 --xtor cli --cohort --patch-cohort --shuffle < TRAIN 2>&1 | tee ws_cli/train1.log
 ./touchup sum_study ws_cli train1 --xtor cli --cohort --patch-cohort --shuffle < TRAIN 2>&1 | tee ws_cli/train1.log
@@ -38,6 +39,11 @@ mkdir -p ws_cli ws_one ws_full
 
 ./touchup sum_study ws_full train1 --buddy dia --xtor full --cohort --patch-cohort --shuffle < TRAIN 2>&1 | tee ws_full/train1.log
 ./touchup sum_study ws_full train2 --buddy dia --xtor full --cohort --patch-cohort --shuffle < TRAIN 2>&1 | tee ws_full/train2.log
+
 ./touchup sum_study ws_full pred --buddy dia --xtor full --cohort --patch-cohort --fallback ws_one/pred < TEST > ws_full/pred 2> ws_full/pred.log
 ./touchup sum_study ws_full submit --buddy dia --xtor full --cohort --patch-cohort --fallback ws_one/pred < TEST > ws_full/submit 2> ws_full/submit.log
+
+./touchup sum_study ws_full pred --buddy dia --xtor full --cohort --patch-cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws2_full/pred 2> ws2_full/pred.log
+./touchup sum_study ws_full submit --buddy dia --xtor full --cohort --patch-cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws2_full/submit 2> ws2_full/submit.log
+
 
