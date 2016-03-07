@@ -50,8 +50,6 @@ function safe_train {
     done
 }
 
-if false
-then
 safe_train sum_study ws_cli train1 cli 1000 
 safe_train sum_study ws_cli train2 cli 200
 ./touchup sum_study ws_cli pred --xtor cli --cohort  < TEST > ws_cli/pred 2> ws_cli/pred.log
@@ -66,7 +64,6 @@ safe_train sum_study ws_full0 train1 full 1000
 safe_train sum_study ws_full0 train2 full 200
 ./touchup sum_study ws_full0 pred --xtor full --cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws_full0/pred 2> ws_full0/pred.log
 ./touchup sum_study ws_full0 submit --xtor full --cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws_full0/submit 2> ws_full0/submit.log
-fi
 
 safe_train sys ws_full1 train1 full 1500 --buddy dia  --fallback ws_one/pred --fallback2 ws_cli/pred 
 safe_train sys ws_full1 train2 full 500 --buddy dia  --fallback ws_one/pred --fallback2 ws_cli/pred 
