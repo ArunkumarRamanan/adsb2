@@ -151,8 +151,8 @@ class OneSaxXtor: public Xtor {
         float M = m;
         for (unsigned i = 1; i < sr.size(); ++i){
             float v = sr[i].data[SL_AREA];
-            if (v < m) v = m;
-            if (v > M) v = M;
+            if (v < m) m = v;
+            if (v > M) M = v;
         }
         *pm = m;
         *pM = M;
