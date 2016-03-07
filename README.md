@@ -1,11 +1,16 @@
-# ADSB2: Annual Data Science Bow
+# Annual Data Science Bow Model Submission
+
+Wei Dong	wdong@wdong.org
+Yuanfang Guan	yuanfang.guan@gmail.com
 
 ## How to run model on test set.
 
-Our model consists of a set of binary programs (study, touch) and
-a set of offline pre-trained model files (models/).  These
+Our model (scientific approach) consists of a set of binary programs (study,
+touchup) and a set of offline pre-trained model files (models/, pre/).  These
 pre-trained models are frozen at model submission and are not
-to be retrained for the final test set.
+to be retrained for the final test set.  The bash scripts included in the
+submission specify the running order and parameters of study and touchup.
+They might need to be slightly altered to accomodate test data layout.
 
 ### System Dependency
 
@@ -13,7 +18,9 @@ Hardware: any x86_64 machine with > 16GB memory.
 Software: 64-bit Linux with a modern kernel (Centos > 2.6, Ubuntu > 12.04)
 
 The package doesn't depend on other software to produce the submission
-files.  The programs needs ImageMagick to produce visualization.
+files.  The study program needs ImageMagick to produce GIF visualization, but
+this is not needed for producing the submission files.
+for producing the submission files.
 
 ### Data Preparation
 
@@ -43,32 +50,59 @@ data should be merged into this file.
 
 ```
 ./run-study.sh
-./run-submit.sh
+./run-submit1.sh
+./run-submit2.sh
 ```
 
-The first script processes each study directory and produce
-initial predictions.  The second script post-process the
-initial predictions with linear regression.  The second
-script is capable of handling cases when the first script
-fails at certain models.
+The first script does common computation of the two submissions;
+the following two scripts generate two versions of final submissions.
+Each of the run-submit scripts generates a series of submit files
+with priorities specified as below:
 
-The second script produces a series of submission files:
+{pre/}ws_full1/submit
+{pre/}ws_full0/submit
+{pre/}ws_one/submit
+{pre/}ws_cli/submit
 
-ws_full2/submit
-ws_full1/submit
-ws_full0/submit
-ws_one/submit
-ws_cli/submit
+(run-submit1.sh output do not have "pre", run-submit2.sh output has "pre".)
 
-The top 2 of the successfully produced submit files shall
-be used for final submission. (If run-submit.sh fails
-due to non-model-related issues, justifiable means
-should be used to recover the failure before resorting to
-an sub-optimal submission file).
+The top submit file in the specified rank that is successfully
+produced should be used as final submission.  In the rare/unexpected event when
+a high ranked submit file has NaN/Inf entries due to unforeseen failure modes,
+ lines containing such bad entries in the submit file should be manually replaced
+with the corresponding lines in the next highest ranked submit file that doesn't
+have any NaN/Inf in the corresponding lines.
+This manual check and possible replacement is considered one
+step in our scientific approach.
+
+## Training pre-computed models.
+
+### Training caffe models.
+
+Our caffe models included in the submission are trained with
+annotated training set only.  These models are considered frozen
+with the submission and is not to be retrained after the release
+of test set.
+
+Following recipe is just for reference.
+
+Build the code, run.
+```
+caffe/bound/import.sh
+caffe/bound/train.sh
+caffe/contour/import.sh
+caffe/contour/train.sh
+```
+We pick the bound parameter of the 562000th iteration
+and contour parameter of the 450000th iteration.
+
+We haven't tested the binary reproducibility of this process.
+Our submitted models should be used to produce the final submissions
+as they are.
 
 ## Visualizing Predictions
 
-!!! This is not part of our model submission.
+Our study program can visualize contour predictions.
 
 ```
 ./study .../10/study  output --gif
