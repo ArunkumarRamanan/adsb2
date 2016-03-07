@@ -292,7 +292,7 @@ public:
     }
     bool apply (StudyReport const &rep,
                 Sample *s) const {
-        if (rep.size() < 4) return false;
+        if (rep.size() < 6) return false;
         float sys1, dia1;
         float sys2, dia2;
         compute2(rep, &sys2, &dia2);
