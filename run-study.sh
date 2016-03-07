@@ -35,13 +35,11 @@ do
     mkdir $P
     cat TRAIN TEST | while read a
     do
-        ./study -s -preset $P snapshot/$a $P/$a
+        ./study -s --preset $P snapshot/$a $P/$a
         if [ ! -f $P/$a/report.txt ]
         then
-            ./study -preset $P raw/$a/study $P/$a
+            ./study --preset $P raw/$a/study $P/$a
         fi
     done
 done
 
-
-#ln -s sys sum_study
