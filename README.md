@@ -1,72 +1,81 @@
 # ADSB2: Annual Data Science Bow
 
-## Build programs
+## How to run model on test set.
+
+Our model consists of a set of binary programs (study, touch) and
+a set of offline pre-trained model files (models/).  These
+pre-trained models are frozen at model submission and are not
+to be retrained for the final test set.
+
+### System Dependency
+
+Hardware: any x86_64 machine with > 16GB memory.
+Software: 64-bit Linux with a modern kernel (Centos > 2.6, Ubuntu > 12.04)
+
+The package doesn't depend on other software to produce the submission
+files.  The programs needs ImageMagick to produce visualization.
+
+### Data Preparation
+
+Training and validation studies are numbered from 1-700.
+It is assumed that testing data are also similarly numbered, not using
+numbers between 1-700 which are already used.
+
+Prepare a file named TEST and list the test study numbers, like the
+provided TRAIN FILE.
+
+Prepare a directory (or a symbolic link to a directory) named "raw",
+containing all the training, validating and testing data, like the
+following structure:
+
+raw/1/study/2ch_21/...
+raw/1/study/sax_10/...
+...
+raw/700/study/2ch_15/..
+raw/700/study/sax_10/..
+....
+
+There is a train.csv file in the directory, which contains the
+groundtruth data.  When validation set is released, the groundtruth
+data should be merged into this file.
+
+### Running the Programs
 
 ```
-git submodule init
-git submodule update
-ln -s Makefile.shared Makefile
-make 
+./run-study.sh
+./run-submit.sh
 ```
 
-## import images
+The first script processes each study directory and produce
+initial predictions.  The second script post-process the
+initial predictions with linear regression.  The second
+script is capable of handling cases when the first script
+fails at certain models.
 
-The bbox.txt is a bounding box listing file.
+The second script produces a series of submission files:
 
-```
-./import --root /ssd/wdong/adsb2/train/ -f 50 bbox.txt f50
-```
+ws_full2/submit
+ws_full1/submit
+ws_full0/submit
+ws_one/submit
+ws_cli/submit
 
-After that, f50/train and f50/val will be produced
-these dirs will be used by Caffe.
-"-f" specify the number of fold.  The command
-only generate one of the 50 cross validation
-configurations.  To generate all, add "--full" to
-command line.
+The top 2 of the successfully produced submit files shall
+be used for final submission. (If run-submit.sh fails
+due to non-model-related issues, justifiable means
+should be used to recover the failure before resorting to
+an sub-optimal submission file).
 
-## Generate Caffe Training Directory
+## Visualizing Predictions
 
-```
-caffex-fcn/finetune-init.py
-```
-This will produce a file named config.json.
-Edit the file, change "val_source" to "f50/val"
-and "train_source" to "f50/train".  These are the two
-database directories produced in the import step.
-
-## Train Caffe
+!!! This is not part of our model submission.
 
 ```
-caffex-fcn/fintune-generate.py
-./train.sh	
+./study .../10/study  output --gif
 ```
-This step will produce the following files in the current
-directory.  If you have files of the same name, they'll be
-overwritten:
 
-- solver.prototxt
-- train.prototxt
-- val.prototxt
-- train.sh
-- model
-- log
-- snapshots
+Then use a browser to open output/index.html to see the
+visualization.
 
-After traing is done, copy one of the caffemodel files
-into model/caffe.params.  The model directory should then
-be ready to go.
 
-To change Caffe setting, either edit config.json and run
-finetune-generate.py again, or directly modify the Caffe
-prototxt files (those will be overwritten by subsequent
-runs of finetune-generate.py).
-
-## Testing Model
-
-```
-./detect /ssd/wdong/adsb2/train/337/study/sax_17 --gif x.gif
-```
-The detect command assumes a "model" directory under the
-current directory.  Otherwise, specify the model with
-"-D adsb2.caffe.model=model-dir".
 

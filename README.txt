@@ -2,27 +2,6 @@ How to produce testing results.
 
 1. Data Preparation
 
-Training and validation studies are numbered from 1-700.
-It is assumed that testing data are also similarly numbered, not using
-numbers between 1-700 which are already used.
-
-Prepare a file named TEST and list the test study numbers, like the
-provided TRAIN FILE.
-
-Prepare a directory (or a symbolic link to a directory) named "raw",
-containing all the training, validating and testing data, like the
-following structure:
-
-raw/1/study/2ch_21/...
-raw/1/study/sax_10/...
-...
-raw/700/study/2ch_15/..
-raw/700/study/sax_10/..
-....
-
-There is a train.csv file in the directory, which contains the
-groundtruth data.  When validation set is released, the groundtruth
-data should be merged into this file.
 
 2. Process all the study files.
 
