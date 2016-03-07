@@ -65,8 +65,8 @@ safe_train sum_study ws_full0 train2 full 200
 ./touchup sum_study ws_full0 pred --xtor full --cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws_full0/pred 2> ws_full0/pred.log
 ./touchup sum_study ws_full0 submit --xtor full --cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws_full0/submit 2> ws_full0/submit.log
 
-safe_train sys ws_full1 train1 full 1500 --buddy dia  --fallback ws_one/pred --fallback2 ws_cli/pred 
-safe_train sys ws_full1 train2 full 500 --buddy dia  --fallback ws_one/pred --fallback2 ws_cli/pred 
+safe_train sys ws_full1 train1 full 1500 --buddy dia  
+safe_train sys ws_full1 train2 full 500 --buddy dia  
 ./touchup sys ws_full1 pred --buddy dia --xtor full --cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws_full1/pred 2> ws_full1/pred.log
 ./touchup sys ws_full1 submit --buddy dia --xtor full --cohort --fallback ws_one/pred --fallback2 ws_cli/pred < TEST > ws_full1/submit 2> ws_full1/submit.log
 
