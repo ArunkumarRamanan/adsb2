@@ -12,13 +12,13 @@ then
     exit
 fi
 
-for i in 1 2 3
+rm -rf val1 val2 val3 val4
+
+for i in 1 2 3 4
 do
-    mkdir val$i
-    echo train1
-    seq 1 500 | ./touchup sum_study val$i train1 $* --cohort --shuffle --train TRAIN$i >& val$i/train1.log
-    echo train2
-    seq 1 500 | ./touchup sum_study val$i train2 $* --cohort --shuffle --train TRAIN$i >& val$i/train2.log
-    echo eval
-    seq 1 500 | ./touchup sum_study val$i eval $* --cohort --train TRAIN$i | tee val$i/eval.log | tail -n 4
+    mkdir val$i 2> /dev/null
+    seq 1 500 | ./touchup sum_study val$i train1 $* --cohort --patch-cohort --shuffle --train TRAIN$i >& val$i/train1.log
+    seq 1 500 | ./touchup sum_study val$i train2 $* --cohort --patch-cohort --shuffle --train TRAIN$i >& val$i/train2.log
+    #seq 1 500 | ./touchup sum_study val$i submit $* --cohort --patch-cohort --train TRAIN$i 2> val$i/sub.err > val$i/sub
+    seq 1 500 | ./touchup sum_study val$i eval $* --cohort --patch-cohort --train TRAIN$i 2> val$i/val.err | tee val$i/eval.log | tail -n 4 | head -n 1
 done

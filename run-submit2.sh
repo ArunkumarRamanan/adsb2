@@ -27,7 +27,7 @@ fi
 ./touchup sum_study pre/ws_full0 pred --xtor full --cohort --fallback pre/ws_one/pred < TEST > pre/ws_full0/pred 2> pre/ws_full0/pred.log
 ./touchup sum_study pre/ws_full0 submit --xtor full --cohort --fallback pre/ws_one/pred < TEST > pre/ws_full0/submit 2> pre/ws_full0/submit.log
 
-./touchup sum_study pre/ws_full1 pred --buddy dia --xtor full --cohort  --fallback pre/ws_one/pred < TEST > pre/ws_full1/pred 2> pre/ws_full1/pred.log
-./touchup sum_study pre/ws_full1 submit --buddy dia --xtor full --cohort  --fallback pre/ws_one/pred < TEST > pre/ws_full1/submit 2> pre/ws_full1/submit.log
+./touchup sys pre/ws_full1 pred --buddy dia --xtor full --cohort  --fallback pre/ws_one/pred --fallback2 pre/ws_cli/pred < TEST > pre/ws_full1/pred 2> pre/ws_full1/pred.log
+./touchup sys pre/ws_full1 submit --buddy dia --xtor full --cohort  --fallback pre/ws_one/pred --fallback2 pre/ws_cli/pred < TEST > pre/ws_full1/submit 2> pre/ws_full1/submit.log
 
 
