@@ -17,9 +17,12 @@ or hardware dependency.
 ./study test/10/study  output --gif
 ```
 
-The study program can be run from any directory.
 Then use a browser to open output/index.html to see the
 visualization. 
+
+Our binary release is a compressed version of our
+final submission and it binary-reproduces the rank 9
+score of 0.011645.
 
 ## How to run model on test set.
 
