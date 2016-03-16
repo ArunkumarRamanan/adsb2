@@ -3,6 +3,24 @@
 Wei Dong	wdong@wdong.org
 Yuanfang Guan	yuanfang.guan@gmail.com
 
+## Quick Start
+
+Download the binary release from
+http://a2genomics.com/static/aaalgo-adsb2.tar.bz2
+Our binary release can be run from any X86_64 linux
+machine.  It depends on the ImageMagick package
+to produce the gif animation (if you have the "convert"
+command then it's already satisfied).  No other software
+or hardware dependency.
+
+```
+./study test/10/study  output --gif
+```
+
+The study program can be run from any directory.
+Then use a browser to open output/index.html to see the
+visualization. 
+
 ## How to run model on test set.
 
 Our model (scientific approach) consists of a set of binary programs (study,
