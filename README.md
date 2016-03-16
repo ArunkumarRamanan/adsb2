@@ -35,7 +35,7 @@ They might need to be slightly altered to accomodate test data layout.
 
 ### System Dependency
 
-Hardware: any x86_64 machine with > 16GB memory.
+Hardware: any x86_64 machine with > 4GB memory.
 Software: 64-bit Linux with a modern kernel (Centos > 2.6, Ubuntu > 12.04)
 
 The package doesn't depend on other software to produce the submission
