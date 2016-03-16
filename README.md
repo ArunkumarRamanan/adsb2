@@ -6,7 +6,7 @@ Yuanfang Guan	yuanfang.guan@gmail.com
 ## Quick Start
 
 Download the binary release from
-http://a2genomics.com/static/aaalgo-adsb2.tar.bz2
+http://a2genomics.com/static/aaalgo-adbs2.tar.bz2
 Our binary release can be run from any X86_64 linux
 machine.  It depends on the ImageMagick package
 to produce the gif animation (if you have the "convert"
@@ -117,17 +117,3 @@ and contour parameter of the 450000th iteration.
 We haven't tested the binary reproducibility of this process.
 Our submitted models should be used to produce the final submissions
 as they are.
-
-## Visualizing Predictions
-
-Our study program can visualize contour predictions.
-
-```
-./study .../10/study  output --gif
-```
-
-Then use a browser to open output/index.html to see the
-visualization.
-
-
-
